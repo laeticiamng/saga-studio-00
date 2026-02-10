@@ -1,0 +1,31 @@
+project_id = "zgqkfanldpstxjjvpaqz"
+
+[functions.create-project]
+verify_jwt = false
+
+[functions.analyze-audio]
+verify_jwt = false
+
+[functions.plan-project]
+verify_jwt = false
+
+[functions.generate-shots]
+verify_jwt = false
+
+[functions.check-shot-status]
+verify_jwt = false
+
+[functions.stitch-render]
+verify_jwt = false
+
+[functions.project-status]
+verify_jwt = false
+
+[functions.estimate-cost]
+verify_jwt = false
+
+[functions.admin-actions]
+verify_jwt = false
+
+[functions.pipeline-worker]
+verify_jwt = false
