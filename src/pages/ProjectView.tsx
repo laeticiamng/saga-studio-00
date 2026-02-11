@@ -1,16 +1,22 @@
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import { PipelineProgress } from "@/components/PipelineProgress";
 import { ShotGrid } from "@/components/ShotGrid";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Play, Download, Film } from "lucide-react";
+import { Loader2, Play, Download, Film, RefreshCw } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useState, useCallback } from "react";
 
 export default function ProjectView() {
   const { id } = useParams<{ id: string }>();
+  const { session } = useAuth();
+  const { toast } = useToast();
+  const [pipelineRunning, setPipelineRunning] = useState(false);
 
   const { data: project, isLoading } = useQuery({
     queryKey: ["project", id],
@@ -20,7 +26,7 @@ export default function ProjectView() {
       return data;
     },
     enabled: !!id,
-    refetchInterval: 5000,
+    refetchInterval: 3000,
   });
 
   const { data: shots } = useQuery({
@@ -31,7 +37,7 @@ export default function ProjectView() {
       return data;
     },
     enabled: !!id,
-    refetchInterval: 5000,
+    refetchInterval: 3000,
   });
 
   const { data: render } = useQuery({
@@ -41,8 +47,46 @@ export default function ProjectView() {
       return data;
     },
     enabled: !!id,
-    refetchInterval: 5000,
+    refetchInterval: 3000,
   });
+
+  const callEdgeFunction = useCallback(async (name: string, body: any) => {
+    const res = await supabase.functions.invoke(name, { body });
+    if (res.error) throw res.error;
+    return res.data;
+  }, []);
+
+  const startPipeline = async () => {
+    if (!project || !session) return;
+    setPipelineRunning(true);
+    try {
+      // Step 1: Set to analyzing
+      await supabase.from("projects").update({ status: "analyzing" as const }).eq("id", project.id);
+      
+      // Step 2: Analyze audio
+      toast({ title: "Pipeline started", description: "Analyzing audio..." });
+      await callEdgeFunction("analyze-audio", { project_id: project.id });
+      
+      // Step 3: Plan project
+      toast({ title: "Planning", description: "Generating shotlist with AI..." });
+      await callEdgeFunction("plan-project", { project_id: project.id });
+      
+      // Step 4: Generate shots
+      toast({ title: "Generating", description: "Creating shots..." });
+      await callEdgeFunction("generate-shots", { project_id: project.id, batch_size: 50 });
+      
+      // Step 5: Stitch
+      toast({ title: "Stitching", description: "Assembling final video..." });
+      await callEdgeFunction("stitch-render", { project_id: project.id });
+      
+      toast({ title: "Complete!", description: "Your video is ready" });
+    } catch (err: any) {
+      toast({ title: "Pipeline Error", description: err.message, variant: "destructive" });
+      await supabase.from("projects").update({ status: "failed" as const }).eq("id", project.id);
+    } finally {
+      setPipelineRunning(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -65,9 +109,7 @@ export default function ProjectView() {
     );
   }
 
-  const startPipeline = async () => {
-    await supabase.from("projects").update({ status: "analyzing" as const }).eq("id", project.id);
-  };
+  const isActive = ["analyzing", "planning", "generating", "stitching"].includes(project.status);
 
   return (
     <div className="min-h-screen bg-background">
@@ -80,11 +122,21 @@ export default function ProjectView() {
               <Badge variant="outline">{project.type}</Badge>
               <Badge variant="secondary" className="capitalize">{project.style_preset}</Badge>
               <Badge variant="secondary">{project.status}</Badge>
+              {project.mode && <Badge variant="outline" className="capitalize">{project.mode}</Badge>}
             </div>
+            {project.synopsis && (
+              <p className="mt-3 text-sm text-muted-foreground max-w-2xl">{project.synopsis}</p>
+            )}
           </div>
           {project.status === "draft" && (
-            <Button variant="hero" onClick={startPipeline} className="gap-2">
-              <Play className="h-4 w-4" /> Start Pipeline
+            <Button variant="hero" onClick={startPipeline} disabled={pipelineRunning} className="gap-2">
+              {pipelineRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+              {pipelineRunning ? "Running..." : "Start Pipeline"}
+            </Button>
+          )}
+          {project.status === "failed" && (
+            <Button variant="hero" onClick={startPipeline} disabled={pipelineRunning} className="gap-2">
+              <RefreshCw className="h-4 w-4" /> Retry Pipeline
             </Button>
           )}
         </div>
@@ -93,7 +145,9 @@ export default function ProjectView() {
 
         {shots && shots.length > 0 && (
           <div className="mt-8">
-            <h2 className="text-xl font-semibold mb-4">Shots ({shots.length})</h2>
+            <h2 className="text-xl font-semibold mb-4">
+              Shots ({shots.filter(s => s.status === "completed").length}/{shots.length} completed)
+            </h2>
             <ShotGrid shots={shots} />
           </div>
         )}
@@ -115,14 +169,14 @@ export default function ProjectView() {
               )}
               {render.master_url_9_16 && (
                 <a href={render.master_url_9_16} target="_blank" rel="noopener noreferrer">
-                  <Button variant="glass" className="w-full justify-start gap-2">
+                  <Button variant="glass" className="w-full justify-start gap-2 mt-2">
                     <Download className="h-4 w-4" /> Download 9:16 Vertical
                   </Button>
                 </a>
               )}
               {render.teaser_url && (
                 <a href={render.teaser_url} target="_blank" rel="noopener noreferrer">
-                  <Button variant="glass" className="w-full justify-start gap-2">
+                  <Button variant="glass" className="w-full justify-start gap-2 mt-2">
                     <Download className="h-4 w-4" /> Download 15s Teaser
                   </Button>
                 </a>
