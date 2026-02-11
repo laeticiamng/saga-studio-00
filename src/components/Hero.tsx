@@ -1,8 +1,17 @@
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Video, Zap } from "lucide-react";
 import heroImage from "@/assets/hero-cinema.jpg";
 
 const Hero = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const handleGetStarted = () => {
+    navigate(user ? "/dashboard" : "/auth");
+  };
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background with gradient overlay */}
@@ -37,13 +46,13 @@ const Hero = () => {
         </p>
         
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <Button variant="hero" size="lg" className="group">
+          <Button variant="hero" size="lg" className="group" onClick={handleGetStarted}>
             <Video className="w-5 h-5 group-hover:scale-110 transition-transform" />
             Commencer gratuitement
           </Button>
-          <Button variant="glass" size="lg">
+          <Button variant="glass" size="lg" onClick={() => navigate("/pricing")}>
             <Zap className="w-5 h-5" />
-            Voir la démo
+            Voir les plans
           </Button>
         </div>
         
