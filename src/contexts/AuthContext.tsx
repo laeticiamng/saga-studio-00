@@ -72,8 +72,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => authSub.unsubscribe();
-
-    return () => authSub.unsubscribe();
   }, [checkSubscription]);
 
   const signUp = async (email: string, password: string, displayName?: string) => {

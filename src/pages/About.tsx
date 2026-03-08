@@ -1,7 +1,7 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { Film, Sparkles, Shield, Users, Send, CheckCircle } from "lucide-react";
+import { Film, Sparkles, Shield, Users, Send, CheckCircle, Loader2 } from "lucide-react";
 import AnimatedSection from "@/components/AnimatedSection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const values = [
   {
@@ -47,11 +48,19 @@ function ContactForm() {
       return;
     }
     setSending(true);
-    // Simulate send — replace with real endpoint later
-    await new Promise((r) => setTimeout(r, 1200));
-    setSending(false);
-    setSent(true);
-    toast({ title: "Message envoyé !", description: "Nous vous répondrons sous 24 heures." });
+    try {
+      const { data, error } = await supabase.functions.invoke("send-contact", {
+        body: { name: name.trim(), email: email.trim(), message: message.trim() },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setSent(true);
+      toast({ title: "Message envoyé !", description: "Nous vous répondrons sous 24 heures." });
+    } catch (err: any) {
+      toast({ title: "Erreur d'envoi", description: err.message || "Veuillez réessayer.", variant: "destructive" });
+    } finally {
+      setSending(false);
+    }
   };
 
   if (sent) {
@@ -76,10 +85,10 @@ function ContactForm() {
       </div>
       <div className="space-y-2">
         <Label htmlFor="contact-message">Votre message</Label>
-        <Textarea id="contact-message" placeholder="Décrivez votre question ou besoin…" value={message} onChange={(e) => setMessage(e.target.value)} maxLength={1000} rows={4} required />
+        <Textarea id="contact-message" placeholder="Décrivez votre question ou besoin…" value={message} onChange={(e) => setMessage(e.target.value)} maxLength={2000} rows={4} required />
       </div>
       <Button type="submit" className="w-full" disabled={sending}>
-        {sending ? "Envoi en cours…" : <><Send className="h-4 w-4" /> Envoyer</>}
+        {sending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Envoi en cours…</> : <><Send className="h-4 w-4 mr-2" /> Envoyer</>}
       </Button>
       <p className="text-xs text-muted-foreground text-center">
         Ou écrivez-nous directement à <a href="mailto:contact@cineclip.ai" className="text-primary hover:underline">contact@cineclip.ai</a>
