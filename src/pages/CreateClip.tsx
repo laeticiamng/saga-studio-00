@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Upload, Music, ArrowRight, ArrowLeft, Coins, Loader2, Cpu, Sparkles, ImagePlus, Video, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 const STEPS = ["Médias", "Mode & Style", "Confirmer"];
 
@@ -20,6 +21,7 @@ export default function CreateClip() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  usePageTitle("Générer un clip");
   const [step, setStep] = useState(0);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [faceFiles, setFaceFiles] = useState<File[]>([]);
@@ -295,7 +297,7 @@ export default function CreateClip() {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="auto">Auto (meilleur disponible)</SelectItem>
-                    <SelectItem value="openai">OpenAI Sora 2</SelectItem>
+                    <SelectItem value="openai">OpenAI</SelectItem>
                     <SelectItem value="runway">Runway Gen-4</SelectItem>
                     <SelectItem value="luma">Luma Dream Machine</SelectItem>
                     <SelectItem value="google_veo">Google Veo</SelectItem>

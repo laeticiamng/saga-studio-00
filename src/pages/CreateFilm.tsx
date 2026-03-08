@@ -18,7 +18,7 @@ import { usePageTitle } from "@/hooks/usePageTitle";
 
 const PROVIDER_LABELS: Record<string, string> = {
   auto: "Auto",
-  openai: "Sora 2",
+  openai: "OpenAI",
   runway: "Runway",
   luma: "Luma",
   google_veo: "Veo",
