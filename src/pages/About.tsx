@@ -1,8 +1,14 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { Film, Sparkles, Shield, Users } from "lucide-react";
+import { Film, Sparkles, Shield, Users, Send, CheckCircle } from "lucide-react";
 import AnimatedSection from "@/components/AnimatedSection";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { useState } from "react";
+import { toast } from "@/hooks/use-toast";
 
 const values = [
   {
