@@ -68,6 +68,13 @@ export default function ProjectView() {
           queryClient.invalidateQueries({ queryKey: ["shots", id] });
         }
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "renders", filter: `project_id=eq.${id}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["render", id] });
+        }
+      )
       .subscribe();
 
     return () => {
