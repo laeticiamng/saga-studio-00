@@ -130,8 +130,8 @@ export default function Admin() {
     queryKey: ["isAdmin", user?.id],
     queryFn: async () => {
       if (!user) return false;
-      const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin");
-      return (data && data.length > 0) || false;
+      const { data } = await supabase.rpc("has_role", { _role: "admin" as const, _user_id: user.id });
+      return !!data;
     },
     enabled: !!user,
   });

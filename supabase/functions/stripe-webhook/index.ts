@@ -150,8 +150,10 @@ serve(async (req) => {
         return ok();
       }
 
-      const credits = 200; // Monthly renewal credits
-      log(`Subscription renewal`, { userId: user.id, invoiceId: invoice.id, credits });
+      // Determine credits based on invoice amount
+      const invoiceAmount = invoice.amount_paid || 0;
+      const credits = invoiceAmount <= 2000 ? 100 : 500;
+      log(`Subscription renewal`, { userId: user.id, invoiceId: invoice.id, credits, invoiceAmount });
 
       const { data: success } = await supabase.rpc("topup_credits", {
         p_user_id: user.id,

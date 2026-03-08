@@ -71,19 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    // Then listen for changes
-    const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-      if (session?.user && !subscriptionChecked.current) {
-        subscriptionChecked.current = true;
-        checkSubscription();
-      }
-      if (!session?.user) {
-        subscriptionChecked.current = false;
-      }
-    });
+    return () => authSub.unsubscribe();
 
     return () => authSub.unsubscribe();
   }, [checkSubscription]);
