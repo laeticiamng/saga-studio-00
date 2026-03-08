@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,22 +9,33 @@ import { GlobalNotifications } from "@/components/GlobalNotifications";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import CookieBanner from "@/components/CookieBanner";
+import { Loader2 } from "lucide-react";
+
+// Eager: landing page (critical path)
 import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
-import CreateClip from "./pages/CreateClip";
-import CreateFilm from "./pages/CreateFilm";
-import ProjectView from "./pages/ProjectView";
-import Pricing from "./pages/Pricing";
-import Settings from "./pages/Settings";
-import ShareView from "./pages/ShareView";
-import Admin from "./pages/Admin";
-import Privacy from "./pages/Privacy";
-import Terms from "./pages/Terms";
-import Legal from "./pages/Legal";
-import About from "./pages/About";
-import ResetPassword from "./pages/ResetPassword";
-import NotFound from "./pages/NotFound";
+
+// Lazy: everything else
+const Auth = lazy(() => import("./pages/Auth"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const CreateClip = lazy(() => import("./pages/CreateClip"));
+const CreateFilm = lazy(() => import("./pages/CreateFilm"));
+const ProjectView = lazy(() => import("./pages/ProjectView"));
+const Pricing = lazy(() => import("./pages/Pricing"));
+const Settings = lazy(() => import("./pages/Settings"));
+const ShareView = lazy(() => import("./pages/ShareView"));
+const Admin = lazy(() => import("./pages/Admin"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Terms = lazy(() => import("./pages/Terms"));
+const Legal = lazy(() => import("./pages/Legal"));
+const About = lazy(() => import("./pages/About"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+const PageLoader = () => (
+  <div className="min-h-screen bg-background flex items-center justify-center">
+    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  </div>
+);
 
 const queryClient = new QueryClient();
 
