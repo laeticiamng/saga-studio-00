@@ -59,7 +59,7 @@ const CTA = () => {
             </div>
 
             <p className="text-sm text-muted-foreground mt-8">
-              Crédits gratuits inclus • Sans engagement • Export 4K
+              Crédits gratuits inclus • Sans engagement • Jusqu'à 4K selon votre plan
             </p>
           </div>
         </AnimatedSection>
