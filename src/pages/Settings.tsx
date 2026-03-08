@@ -102,7 +102,7 @@ export default function Settings() {
     }
   };
 
-
+  const handleAddWebhook = async () => {
     if (!user || !newWebhookUrl.trim()) return;
     try {
       new URL(newWebhookUrl); // validate URL
