@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Upload, Music, ArrowRight, ArrowLeft, Coins, Loader2, Cpu } from "lucide-react";
+import { Upload, Music, ArrowRight, ArrowLeft, Coins, Loader2, Cpu, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const STEPS = ["Upload Audio", "Mode & Style", "Confirm"];
@@ -54,16 +54,18 @@ export default function CreateClip() {
   const estimatedShots = estimate?.estimated_shots ?? (audioFile ? Math.ceil((audioFile.size / 100000) * 5) : 30);
   const estimatedCredits = estimate?.estimated_credits ?? (5 + estimatedShots * 2);
 
-  const handleCreate = async () => {
+  const handleOneClickGenerate = async () => {
     if (!user || !audioFile) return;
     setLoading(true);
     try {
+      // 1. Upload audio
       const filePath = `${user.id}/${Date.now()}-${audioFile.name}`;
       const { error: uploadError } = await supabase.storage
         .from("audio-uploads")
         .upload(filePath, audioFile);
       if (uploadError) throw uploadError;
 
+      // 2. Create project with status "analyzing" to auto-start pipeline
       const { data: project, error } = await supabase
         .from("projects")
         .insert({
@@ -74,13 +76,22 @@ export default function CreateClip() {
           style_preset: style,
           audio_url: filePath,
           provider_default: provider === "auto" ? null : provider,
-          status: "draft" as const,
+          status: "analyzing" as const,
         })
         .select()
         .single();
 
       if (error) throw error;
+
+      toast({ title: "🎬 Pipeline launched!", description: "Your clip is being generated automatically..." });
+
+      // 3. Navigate immediately — user sees realtime progress
       navigate(`/project/${project.id}`);
+
+      // 4. Fire pipeline-worker in background (fire-and-forget)
+      supabase.functions.invoke("pipeline-worker", {
+        body: { project_id: project.id },
+      }).catch(console.error);
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
@@ -223,9 +234,9 @@ export default function CreateClip() {
               </div>
               <div className="flex gap-3">
                 <Button variant="ghost" onClick={() => setStep(1)}><ArrowLeft className="h-4 w-4 mr-2" /> Back</Button>
-                <Button variant="hero" className="flex-1" onClick={handleCreate} disabled={loading}>
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                  Generate Clip
+                <Button variant="hero" className="flex-1" onClick={handleOneClickGenerate} disabled={loading}>
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                  {loading ? "Launching pipeline..." : "Generate My Clip"}
                 </Button>
               </div>
             </CardContent>
