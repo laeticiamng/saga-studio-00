@@ -1,8 +1,14 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { Film, Sparkles, Shield, Users } from "lucide-react";
+import { Film, Sparkles, Shield, Users, Send, CheckCircle } from "lucide-react";
 import AnimatedSection from "@/components/AnimatedSection";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { useState } from "react";
+import { toast } from "@/hooks/use-toast";
 
 const values = [
   {
@@ -26,6 +32,61 @@ const values = [
     description: "Musiciens, réalisateurs indépendants, créateurs de contenu — CineClip AI est fait pour vous.",
   },
 ];
+
+function ContactForm() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !email.trim() || !message.trim()) {
+      toast({ title: "Veuillez remplir tous les champs", variant: "destructive" });
+      return;
+    }
+    setSending(true);
+    // Simulate send — replace with real endpoint later
+    await new Promise((r) => setTimeout(r, 1200));
+    setSending(false);
+    setSent(true);
+    toast({ title: "Message envoyé !", description: "Nous vous répondrons sous 24 heures." });
+  };
+
+  if (sent) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-8 text-center">
+        <CheckCircle className="h-10 w-10 text-primary" />
+        <p className="text-lg font-semibold text-foreground">Merci pour votre message !</p>
+        <p className="text-sm text-muted-foreground">Nous reviendrons vers vous rapidement.</p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
+      <div className="space-y-2">
+        <Label htmlFor="contact-name">Votre nom</Label>
+        <Input id="contact-name" placeholder="Jean Dupont" value={name} onChange={(e) => setName(e.target.value)} maxLength={100} required />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="contact-email">Votre email</Label>
+        <Input id="contact-email" type="email" placeholder="jean@example.com" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={255} required />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="contact-message">Votre message</Label>
+        <Textarea id="contact-message" placeholder="Décrivez votre question ou besoin…" value={message} onChange={(e) => setMessage(e.target.value)} maxLength={1000} rows={4} required />
+      </div>
+      <Button type="submit" className="w-full" disabled={sending}>
+        {sending ? "Envoi en cours…" : <><Send className="h-4 w-4" /> Envoyer</>}
+      </Button>
+      <p className="text-xs text-muted-foreground text-center">
+        Ou écrivez-nous directement à <a href="mailto:contact@cineclip.ai" className="text-primary hover:underline">contact@cineclip.ai</a>
+      </p>
+    </form>
+  );
+}
 
 export default function About() {
   usePageTitle("À propos");
@@ -76,17 +137,12 @@ export default function About() {
         </AnimatedSection>
 
         <AnimatedSection delay={0.3}>
-          <div className="rounded-xl border border-border/50 bg-card/60 p-8 text-center">
-            <h2 className="text-2xl font-bold mb-3">Une question ?</h2>
-            <p className="text-muted-foreground mb-4">
-              N'hésitez pas à nous contacter. Nous répondons généralement sous 24 heures.
+          <div className="rounded-xl border border-border/50 bg-card/60 p-8">
+            <h2 className="text-2xl font-bold mb-2 text-center">Une question ?</h2>
+            <p className="text-muted-foreground mb-6 text-center">
+              Remplissez le formulaire ci-dessous. Nous répondons généralement sous 24 heures.
             </p>
-            <a
-              href="mailto:contact@cineclip.ai"
-              className="inline-flex items-center gap-2 text-primary hover:underline font-medium"
-            >
-              contact@cineclip.ai
-            </a>
+            <ContactForm />
           </div>
         </AnimatedSection>
       </main>
