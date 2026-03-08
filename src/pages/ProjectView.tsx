@@ -35,6 +35,7 @@ const modeLabels: Record<string, string> = {
 export default function ProjectView() {
   const { id } = useParams<{ id: string }>();
   const { session } = useAuth();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [pipelineRunning, setPipelineRunning] = useState(false);
