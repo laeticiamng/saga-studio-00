@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Upload, Music, ArrowRight, ArrowLeft, Coins, Loader2, Cpu } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -24,25 +25,45 @@ export default function CreateClip() {
   const [mode, setMode] = useState("story");
   const [style, setStyle] = useState("cinematic");
   const [provider, setProvider] = useState("auto");
+  const [aspectRatio, setAspectRatio] = useState("16:9");
   const [loading, setLoading] = useState(false);
+  const [estimate, setEstimate] = useState<{ estimated_shots: number; estimated_credits: number } | null>(null);
+  const [estimating, setEstimating] = useState(false);
 
-  const estimatedShots = audioFile ? Math.ceil((audioFile.size / 100000) * 5) : 30;
-  const estimatedCredits = 5 + estimatedShots * 2;
+  const fetchEstimate = useCallback(async () => {
+    if (!audioFile) return;
+    setEstimating(true);
+    try {
+      const durationSec = Math.min(270, Math.max(30, Math.round(audioFile.size / 16000)));
+      const providerKey = provider === "auto" ? "sora" : provider === "openai" ? "sora" : provider === "google_veo" ? "veo" : provider;
+      const { data } = await supabase.functions.invoke("estimate-cost", {
+        body: { duration_sec: durationSec, provider: providerKey },
+      });
+      if (data) setEstimate(data);
+    } catch {
+      // fallback
+    } finally {
+      setEstimating(false);
+    }
+  }, [audioFile, provider]);
+
+  useEffect(() => {
+    fetchEstimate();
+  }, [fetchEstimate]);
+
+  const estimatedShots = estimate?.estimated_shots ?? (audioFile ? Math.ceil((audioFile.size / 100000) * 5) : 30);
+  const estimatedCredits = estimate?.estimated_credits ?? (5 + estimatedShots * 2);
 
   const handleCreate = async () => {
     if (!user || !audioFile) return;
     setLoading(true);
     try {
-      // Upload audio
       const filePath = `${user.id}/${Date.now()}-${audioFile.name}`;
       const { error: uploadError } = await supabase.storage
         .from("audio-uploads")
         .upload(filePath, audioFile);
       if (uploadError) throw uploadError;
 
-      const audioUrl = filePath;
-
-      // Create project
       const { data: project, error } = await supabase
         .from("projects")
         .insert({
@@ -51,7 +72,7 @@ export default function CreateClip() {
           title: title || audioFile.name.replace(/\.[^/.]+$/, ""),
           mode,
           style_preset: style,
-          audio_url: audioUrl,
+          audio_url: filePath,
           provider_default: provider === "auto" ? null : provider,
           status: "draft" as const,
         })
@@ -74,7 +95,6 @@ export default function CreateClip() {
         <h1 className="text-3xl font-bold mb-2">Generate a Clip</h1>
         <p className="text-muted-foreground mb-8">Upload your audio and let AI create a full music video</p>
 
-        {/* Step indicators */}
         <div className="flex items-center gap-2 mb-8">
           {STEPS.map((label, i) => (
             <div key={label} className="flex items-center gap-2">
@@ -154,6 +174,23 @@ export default function CreateClip() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <Label>Export Format</Label>
+                <RadioGroup value={aspectRatio} onValueChange={setAspectRatio} className="flex gap-4">
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="16:9" id="clip-landscape" />
+                    <Label htmlFor="clip-landscape" className="cursor-pointer">16:9</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="9:16" id="clip-portrait" />
+                    <Label htmlFor="clip-portrait" className="cursor-pointer">9:16</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="both" id="clip-both" />
+                    <Label htmlFor="clip-both" className="cursor-pointer">Both</Label>
+                  </div>
+                </RadioGroup>
+              </div>
               <div className="flex gap-3">
                 <Button variant="ghost" onClick={() => setStep(0)}><ArrowLeft className="h-4 w-4 mr-2" /> Back</Button>
                 <Button variant="hero" className="flex-1" onClick={() => setStep(2)}>
@@ -174,10 +211,14 @@ export default function CreateClip() {
                 <div className="flex justify-between"><span className="text-muted-foreground">Audio</span><span>{audioFile?.name}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Mode</span><span className="capitalize">{mode}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Style</span><span className="capitalize">{style}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Format</span><span>{aspectRatio}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Est. Shots</span><span>~{estimatedShots}</span></div>
                 <div className="flex justify-between border-t border-border pt-2 font-medium">
                   <span className="flex items-center gap-1"><Coins className="h-4 w-4 text-primary" /> Estimated Cost</span>
-                  <span className="text-primary">{estimatedCredits} credits</span>
+                  <span className="text-primary flex items-center gap-1">
+                    {estimating && <Loader2 className="h-3 w-3 animate-spin" />}
+                    {estimatedCredits} credits
+                  </span>
                 </div>
               </div>
               <div className="flex gap-3">
