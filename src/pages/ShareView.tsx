@@ -10,6 +10,8 @@ const typeLabels: Record<string, string> = { clip: "Clip", film: "Film" };
 const styleLabels: Record<string, string> = {
   cinematic: "Cinématique", anime: "Anime", watercolor: "Aquarelle",
   "3d_render": "Rendu 3D", noir: "Noir", vintage: "Vintage", neon: "Néon", realistic: "Réaliste",
+  hyperpop: "Hyperpop", afrofuturism: "Afrofuturisme", synthwave: "Synthwave",
+  documentary: "Documentaire", fantasy: "Fantaisie",
 };
 
 export default function ShareView() {
