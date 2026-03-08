@@ -9,6 +9,8 @@ import { usePageTitle } from "@/hooks/usePageTitle";
 const NotFound = () => {
   const location = useLocation();
 
+  usePageTitle("Page introuvable");
+
   useEffect(() => {
     console.error("404 Error: User attempted to access non-existent route:", location.pathname);
   }, [location.pathname]);
