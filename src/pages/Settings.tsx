@@ -22,6 +22,9 @@ export default function Settings() {
   const queryClient = useQueryClient();
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   // Webhook state
   const [newWebhookUrl, setNewWebhookUrl] = useState("");
