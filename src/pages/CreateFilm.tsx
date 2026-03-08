@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Film, Coins, Loader2 } from "lucide-react";
+import { Film, Coins, Loader2, Cpu } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function CreateFilm() {
