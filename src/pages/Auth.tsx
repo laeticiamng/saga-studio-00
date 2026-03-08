@@ -21,6 +21,7 @@ export default function Auth() {
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  usePageTitle("Connexion");
 
   // Fix: redirect in useEffect instead of during render
   useEffect(() => {

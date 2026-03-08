@@ -56,6 +56,8 @@ const statusIcons: Record<string, React.ReactNode> = {
 export default function Dashboard() {
   const { user } = useAuth();
 
+  usePageTitle("Mes projets");
+
   const { data: projects, isLoading } = useQuery({
     queryKey: ["projects", user?.id],
     queryFn: async () => {

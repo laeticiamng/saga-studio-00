@@ -70,6 +70,7 @@ export default function Pricing() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  usePageTitle("Tarifs");
 
   useEffect(() => {
     if (searchParams.get("success") === "true") {
