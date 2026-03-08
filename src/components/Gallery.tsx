@@ -1,7 +1,7 @@
 import example1 from "@/assets/example-1.jpg";
 import example2 from "@/assets/example-2.jpg";
 import example3 from "@/assets/example-3.jpg";
-import { Play, Eye, Heart } from "lucide-react";
+import { Eye, Heart } from "lucide-react";
 import { motion } from "framer-motion";
 import AnimatedSection from "./AnimatedSection";
 
@@ -43,15 +43,11 @@ const Gallery = () => {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-300" />
 
-                  {/* Play button */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <motion.div
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      whileHover={{ scale: 1.1 }}
-                      className="w-16 h-16 rounded-full bg-primary flex items-center justify-center shadow-glow opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                    >
-                      <Play className="w-8 h-8 text-primary-foreground fill-current ml-1" />
-                    </motion.div>
+                  {/* Example badge instead of misleading play button */}
+                  <div className="absolute top-4 left-4">
+                    <span className="inline-flex items-center gap-1 text-xs text-white/90 bg-black/40 backdrop-blur-sm rounded-full px-3 py-1 font-medium">
+                      Exemple
+                    </span>
                   </div>
 
                   {/* Stats overlay */}

@@ -1,19 +1,18 @@
 import { Film } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import AnimatedSection from "./AnimatedSection";
 
 const footerLinks = {
   Produit: [
     { label: "Fonctionnalités", href: "#features" },
     { label: "Galerie", href: "#gallery" },
-    { label: "Tarifs", href: "/pricing" },
     { label: "Comment ça marche", href: "#how-it-works" },
+    { label: "Tarifs", href: "/pricing" },
   ],
   Ressources: [
-    { label: "Comment ça marche", href: "#how-it-works" },
-    { label: "Tarifs", href: "/pricing" },
     { label: "Créer un clip", href: "/create/clip" },
     { label: "Créer un film", href: "/create/film" },
+    { label: "Tableau de bord", href: "/dashboard" },
   ],
   Légal: [
     { label: "Confidentialité", href: "/privacy" },
@@ -23,20 +22,35 @@ const footerLinks = {
 };
 
 const Footer = () => {
+  const navigate = useNavigate();
+
+  const handleAnchorClick = (href: string) => {
+    if (href.startsWith("#")) {
+      if (window.location.pathname !== "/") {
+        navigate("/");
+        setTimeout(() => {
+          document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
+        }, 300);
+      } else {
+        document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  };
+
   return (
     <footer className="border-t border-border/50 pt-16 pb-8 px-4">
       <div className="container mx-auto">
         <AnimatedSection>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
             <div className="col-span-2 md:col-span-1">
-              <div className="flex items-center gap-2 mb-4">
+              <Link to="/" className="flex items-center gap-2 mb-4">
                 <div className="w-9 h-9 rounded-lg bg-gradient-primary flex items-center justify-center">
                   <Film className="w-5 h-5 text-primary-foreground" />
                 </div>
                 <span className="text-lg font-bold" style={{ fontFamily: "var(--font-display)" }}>
                   CineClip AI
                 </span>
-              </div>
+              </Link>
               <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
                 La première plateforme de création vidéo IA avec cohérence visuelle parfaite et export 4K.
               </p>
@@ -48,20 +62,20 @@ const Footer = () => {
                 <ul className="space-y-2.5">
                   {links.map((link) => (
                     <li key={link.label}>
-                      {link.href.startsWith("/") ? (
+                      {link.href.startsWith("#") ? (
+                        <button
+                          onClick={() => handleAnchorClick(link.href)}
+                          className="text-sm text-muted-foreground hover:text-foreground transition-colors text-left"
+                        >
+                          {link.label}
+                        </button>
+                      ) : (
                         <Link
                           to={link.href}
                           className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                         >
                           {link.label}
                         </Link>
-                      ) : (
-                        <a
-                          href={link.href}
-                          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          {link.label}
-                        </a>
                       )}
                     </li>
                   ))}
@@ -75,11 +89,6 @@ const Footer = () => {
           <p className="text-xs text-muted-foreground">
             © {new Date().getFullYear()} CineClip AI. Tous droits réservés.
           </p>
-          <div className="flex gap-6">
-            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Twitter</a>
-            <a href="https://discord.gg" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Discord</a>
-            <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-foreground transition-colors">YouTube</a>
-          </div>
         </div>
       </div>
     </footer>
