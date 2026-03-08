@@ -41,7 +41,6 @@ export function ShotPreviewPlayer({ shots, audioUrl, bpm }: ShotPreviewPlayerPro
     }
   }, [currentIdx, completedShots.length]);
 
-  // Auto-advance when playing
   useEffect(() => {
     if (!isPlaying || !currentShot) return;
 
@@ -93,7 +92,6 @@ export function ShotPreviewPlayer({ shots, audioUrl, bpm }: ShotPreviewPlayerPro
 
   return (
     <Card ref={containerRef} className="border-border/50 bg-card/60 overflow-hidden">
-      {/* Video area */}
       <div className="relative aspect-video bg-black flex items-center justify-center">
         {currentShot?.output_url ? (
           <video
@@ -105,19 +103,16 @@ export function ShotPreviewPlayer({ shots, audioUrl, bpm }: ShotPreviewPlayerPro
             onEnded={() => { if (isPlaying) playNext(); }}
           />
         ) : (
-          <span className="text-muted-foreground">No preview</span>
+          <span className="text-muted-foreground">Pas d'aperçu</span>
         )}
 
-        {/* Shot indicator overlay */}
         <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm rounded-md px-2.5 py-1 text-xs text-white">
-          Shot {currentShot?.idx + 1} / {completedShots.length}
+          Plan {currentShot?.idx + 1} / {completedShots.length}
           {bpm && <span className="ml-2 text-primary">♪ {Math.round(bpm)} BPM</span>}
         </div>
       </div>
 
-      {/* Controls */}
       <div className="p-3 space-y-2">
-        {/* Timeline slider */}
         <Slider
           value={[currentIdx]}
           max={completedShots.length - 1}
@@ -150,7 +145,6 @@ export function ShotPreviewPlayer({ shots, audioUrl, bpm }: ShotPreviewPlayerPro
         </div>
       </div>
 
-      {/* Hidden audio player for sync */}
       {audioUrl && <audio ref={audioRef} src={audioUrl} preload="auto" />}
     </Card>
   );
