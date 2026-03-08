@@ -11,6 +11,7 @@ const footerLinks = {
   ],
   Ressources: [
     { label: "FAQ", href: "#faq" },
+    { label: "À propos", href: "/about" },
     { label: "Tableau de bord", href: "/dashboard" },
     { label: "Contact", href: "mailto:contact@cineclip.ai" },
   ],

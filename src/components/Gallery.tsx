@@ -5,9 +5,9 @@ import { motion } from "framer-motion";
 import AnimatedSection from "./AnimatedSection";
 
 const examples = [
-  { image: example1, title: "Clip musical futuriste", style: "Sci-Fi / Cyberpunk" },
-  { image: example2, title: "Animation cohérente", style: "Animation 3D" },
-  { image: example3, title: "Court-métrage dramatique", style: "Cinématique réaliste" },
+  { image: example1, title: "Clip musical futuriste", style: "Sci-Fi / Cyberpunk", alt: "Exemple de clip musical futuriste généré par CineClip AI dans un style cyberpunk" },
+  { image: example2, title: "Animation cohérente", style: "Animation 3D", alt: "Exemple d'animation 3D avec personnages cohérents générée par CineClip AI" },
+  { image: example3, title: "Court-métrage dramatique", style: "Cinématique réaliste", alt: "Exemple de court-métrage dramatique au style cinématique réaliste par CineClip AI" },
 ];
 
 const Gallery = () => {
@@ -17,10 +17,10 @@ const Gallery = () => {
         <AnimatedSection>
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold mb-4">
-              Exemples de créations
+              Voyez ce que l'IA peut créer
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Découvrez ce que vous pourrez créer avec notre plateforme
+              Ces images illustrent les styles visuels disponibles. Chaque style peut être appliqué à votre propre projet.
             </p>
           </div>
         </AnimatedSection>
@@ -36,7 +36,7 @@ const Gallery = () => {
                 <div className="aspect-[4/5] relative">
                   <img
                     src={example.image}
-                    alt={example.title}
+                    alt={example.alt}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                     loading="lazy"
                   />
