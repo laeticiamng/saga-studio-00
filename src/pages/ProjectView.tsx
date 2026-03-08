@@ -99,46 +99,11 @@ export default function ProjectView() {
     if (!project || !session) return;
     setPipelineRunning(true);
     try {
-      // Use the pipeline-worker to orchestrate
       await supabase.from("projects").update({ status: "analyzing" as const }).eq("id", project.id);
-
       toast({ title: "Pipeline started", description: "Processing your project..." });
 
-      // Kick off the worker — it will chain steps automatically
+      // Fire the worker — realtime will handle UI updates
       await callEdgeFunction("pipeline-worker", { project_id: project.id });
-
-      // Continue polling the worker until done
-      const pollWorker = async () => {
-        for (let i = 0; i < 60; i++) { // Max 5 minutes
-          await new Promise(r => setTimeout(r, 5000));
-
-          const { data: p } = await supabase
-            .from("projects")
-            .select("status")
-            .eq("id", project.id)
-            .single();
-
-          if (!p) break;
-
-          if (p.status === "completed") {
-            toast({ title: "Complete!", description: "Your video is ready" });
-            break;
-          }
-          if (p.status === "failed") {
-            toast({ title: "Pipeline failed", description: "Check project for details", variant: "destructive" });
-            break;
-          }
-
-          // Keep the worker running for active states
-          if (["analyzing", "planning", "generating", "stitching"].includes(p.status)) {
-            try {
-              await callEdgeFunction("pipeline-worker", { project_id: project.id });
-            } catch { /* worker will retry */ }
-          }
-        }
-      };
-
-      pollWorker();
     } catch (err: any) {
       toast({ title: "Pipeline Error", description: err.message, variant: "destructive" });
       await supabase.from("projects").update({ status: "failed" as const }).eq("id", project.id);
