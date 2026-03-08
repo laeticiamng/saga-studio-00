@@ -74,28 +74,31 @@ Generate a JSON response with this exact structure:
 
 Make ${numShots} shots that cover the full ${durationSec} seconds. Each shot should be 5-10 seconds. The prompts should be highly detailed for video generation AI. Respond ONLY with valid JSON, no markdown.`;
 
-    const aiResponse = await fetch("https://ai.lovable.dev/api/generate", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: 8000,
-      }),
-    });
-
     let plan;
-    if (aiResponse.ok) {
-      const aiData = await aiResponse.json();
-      const content = aiData.choices?.[0]?.message?.content || "";
-      // Try to parse JSON from the response
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        plan = JSON.parse(jsonMatch[0]);
+    try {
+      const aiResponse = await fetch("https://ai.lovable.dev/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [{ role: "user", content: prompt }],
+          max_tokens: 8000,
+        }),
+      });
+
+      if (aiResponse.ok) {
+        const aiData = await aiResponse.json();
+        const content = aiData.choices?.[0]?.message?.content || "";
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          plan = JSON.parse(jsonMatch[0]);
+        }
       }
+    } catch (aiErr) {
+      console.warn("AI call failed, using fallback plan:", aiErr.message);
     }
 
     // Fallback: generate a simple plan if AI fails
@@ -156,7 +159,7 @@ Make ${numShots} shots that cover the full ${durationSec} seconds. Each shot sho
     return new Response(JSON.stringify({ 
       success: true, 
       shots_created: plan.shotlist.length,
-      has_ai_plan: !!aiResponse?.ok
+      has_ai_plan: !!plan.style_bible?.visual_rules
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
