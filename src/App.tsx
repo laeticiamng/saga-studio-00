@@ -49,24 +49,26 @@ const App = () => (
           <AuthProvider>
             <GlobalNotifications />
             <CookieBanner />
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/create/clip" element={<ProtectedRoute><CreateClip /></ProtectedRoute>} />
-              <Route path="/create/film" element={<ProtectedRoute><CreateFilm /></ProtectedRoute>} />
-              <Route path="/project/:id" element={<ProtectedRoute><ProjectView /></ProtectedRoute>} />
-              <Route path="/pricing" element={<Pricing />} />
-              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/share/:id" element={<ShareView />} />
-              <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-              <Route path="/privacy" element={<Privacy />} />
-              <Route path="/terms" element={<Terms />} />
-              <Route path="/legal" element={<Legal />} />
-              <Route path="/about" element={<About />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                <Route path="/create/clip" element={<ProtectedRoute><CreateClip /></ProtectedRoute>} />
+                <Route path="/create/film" element={<ProtectedRoute><CreateFilm /></ProtectedRoute>} />
+                <Route path="/project/:id" element={<ProtectedRoute><ProjectView /></ProtectedRoute>} />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                <Route path="/share/:id" element={<ShareView />} />
+                <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/terms" element={<Terms />} />
+                <Route path="/legal" element={<Legal />} />
+                <Route path="/about" element={<About />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
