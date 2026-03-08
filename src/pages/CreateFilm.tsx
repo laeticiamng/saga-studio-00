@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,8 +10,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Film, Coins, Loader2, Cpu } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+const PROVIDER_LABELS: Record<string, string> = {
+  auto: "Auto",
+  openai: "Sora 2",
+  runway: "Runway",
+  luma: "Luma",
+  google_veo: "Veo",
+};
 
 export default function CreateFilm() {
   const { user } = useAuth();
@@ -22,11 +31,33 @@ export default function CreateFilm() {
   const [duration, setDuration] = useState("120");
   const [style, setStyle] = useState("cinematic");
   const [provider, setProvider] = useState("auto");
+  const [aspectRatio, setAspectRatio] = useState("16:9");
   const [loading, setLoading] = useState(false);
+  const [estimate, setEstimate] = useState<{ estimated_shots: number; estimated_credits: number } | null>(null);
+  const [estimating, setEstimating] = useState(false);
+
+  const fetchEstimate = useCallback(async () => {
+    setEstimating(true);
+    try {
+      const providerKey = provider === "auto" ? "sora" : provider === "openai" ? "sora" : provider === "google_veo" ? "veo" : provider;
+      const { data } = await supabase.functions.invoke("estimate-cost", {
+        body: { duration_sec: parseInt(duration), provider: providerKey },
+      });
+      if (data) setEstimate(data);
+    } catch {
+      // fallback
+    } finally {
+      setEstimating(false);
+    }
+  }, [duration, provider]);
+
+  useEffect(() => {
+    fetchEstimate();
+  }, [fetchEstimate]);
 
   const durationSec = parseInt(duration);
-  const estimatedShots = Math.ceil(durationSec / 7);
-  const estimatedCredits = 10 + estimatedShots * 2;
+  const estimatedShots = estimate?.estimated_shots ?? Math.ceil(durationSec / 7);
+  const estimatedCredits = estimate?.estimated_credits ?? (10 + estimatedShots * 2);
 
   const handleCreate = async () => {
     if (!user) return;
@@ -41,7 +72,7 @@ export default function CreateFilm() {
           synopsis,
           style_preset: style,
           duration_sec: durationSec,
-          mode: "story",
+          mode: aspectRatio === "both" ? "story" : "story",
           provider_default: provider === "auto" ? null : provider,
           status: "draft" as const,
         })
@@ -109,12 +140,39 @@ export default function CreateFilm() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label>Export Format</Label>
+              <RadioGroup value={aspectRatio} onValueChange={setAspectRatio} className="flex gap-4">
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="16:9" id="r-landscape" />
+                  <Label htmlFor="r-landscape" className="cursor-pointer">16:9 Landscape</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="9:16" id="r-portrait" />
+                  <Label htmlFor="r-portrait" className="cursor-pointer">9:16 Portrait</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="both" id="r-both" />
+                  <Label htmlFor="r-both" className="cursor-pointer">Both</Label>
+                </div>
+              </RadioGroup>
+            </div>
 
             <div className="rounded-xl bg-secondary/50 p-4 space-y-2">
-              <div className="flex justify-between"><span className="text-muted-foreground">Est. Shots</span><span>~{estimatedShots}</span></div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Provider</span>
+                <span>{PROVIDER_LABELS[provider]}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Est. Shots</span>
+                <span>~{estimatedShots}</span>
+              </div>
               <div className="flex justify-between font-medium">
                 <span className="flex items-center gap-1"><Coins className="h-4 w-4 text-primary" /> Estimated Cost</span>
-                <span className="text-primary">{estimatedCredits} credits</span>
+                <span className="text-primary flex items-center gap-1">
+                  {estimating && <Loader2 className="h-3 w-3 animate-spin" />}
+                  {estimatedCredits} credits
+                </span>
               </div>
             </div>
 

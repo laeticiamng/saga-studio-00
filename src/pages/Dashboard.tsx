@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Film, Music, Plus, Clock, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { OnboardingTour } from "@/components/OnboardingTour";
 
 const statusIcons: Record<string, React.ReactNode> = {
   draft: <Clock className="h-4 w-4" />,
@@ -36,6 +37,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
+      <OnboardingTour />
       <Navbar />
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8 flex items-center justify-between">
