@@ -142,19 +142,25 @@ export default function CreateFilm() {
               <Label>Style</Label>
               <StylePresetPicker value={style} onChange={setStyle} />
             </div>
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1.5"><Cpu className="h-3.5 w-3.5 text-primary" /> Fournisseur vidéo</Label>
-              <Select value={provider} onValueChange={setProvider}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="auto">Auto (meilleur disponible)</SelectItem>
-                  <SelectItem value="openai">OpenAI</SelectItem>
-                  <SelectItem value="runway">Runway Gen-4</SelectItem>
-                  <SelectItem value="luma">Luma Dream Machine</SelectItem>
-                  <SelectItem value="google_veo">Google Veo</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <details className="group">
+              <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5">
+                <Cpu className="h-3.5 w-3.5 text-primary" /> Options avancées
+              </summary>
+              <div className="mt-3 space-y-2">
+                <Label>Moteur IA</Label>
+                <Select value={provider} onValueChange={setProvider}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto">Automatique (recommandé)</SelectItem>
+                    <SelectItem value="openai">OpenAI</SelectItem>
+                    <SelectItem value="runway">Runway Gen-4</SelectItem>
+                    <SelectItem value="luma">Luma Dream Machine</SelectItem>
+                    <SelectItem value="google_veo">Google Veo</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">En mode automatique, le meilleur moteur est choisi pour vous.</p>
+              </div>
+            </details>
             <div className="space-y-2">
               <Label>Format d'export</Label>
               <RadioGroup value={aspectRatio} onValueChange={setAspectRatio} className="flex gap-4">
