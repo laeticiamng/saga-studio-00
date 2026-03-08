@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -31,6 +31,17 @@ export default function CreateClip() {
   const [loading, setLoading] = useState(false);
   const [estimate, setEstimate] = useState<{ estimated_shots: number; estimated_credits: number } | null>(null);
   const [estimating, setEstimating] = useState(false);
+
+  // Object URL management to prevent memory leaks
+  const faceObjectUrls = useMemo(() => faceFiles.map(f => f.type.startsWith("image/") ? URL.createObjectURL(f) : null), [faceFiles]);
+  const refObjectUrls = useMemo(() => refPhotos.map(f => URL.createObjectURL(f)), [refPhotos]);
+
+  useEffect(() => {
+    return () => {
+      faceObjectUrls.forEach(url => url && URL.revokeObjectURL(url));
+      refObjectUrls.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [faceObjectUrls, refObjectUrls]);
 
   const fetchEstimate = useCallback(async () => {
     if (!audioFile) return;
@@ -107,23 +118,28 @@ export default function CreateClip() {
         if (!refErr) refUrls.push(refPath);
       }
 
-      // 4. Create project
-      const { data: project, error } = await supabase
-        .from("projects")
-        .insert({
-          user_id: user.id,
-          type: "clip" as const,
+      // 4. Create project via edge function (handles credit debit)
+      const { data, error } = await supabase.functions.invoke("create-project", {
+        body: {
+          type: "clip",
           title: title || audioFile.name.replace(/\.[^/.]+$/, ""),
           mode,
           style_preset: style,
           audio_url: filePath,
-          provider_default: provider === "auto" ? null : provider,
-          status: "analyzing" as const,
-        })
-        .select()
-        .single();
+          duration_sec: Math.min(270, Math.max(30, Math.round(audioFile.size / 16000))),
+          aspect_ratio: aspectRatio,
+          face_urls: faceUrls,
+          ref_photo_urls: refUrls,
+        },
+      });
 
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const project = data.project;
+
+      // Update status to analyzing to start pipeline
+      await supabase.from("projects").update({ status: "analyzing" as const }).eq("id", project.id);
 
       toast({ title: "🎬 Pipeline lancé !", description: "Votre clip est en cours de génération…" });
       navigate(`/project/${project.id}`);
@@ -165,13 +181,11 @@ export default function CreateClip() {
               <CardDescription>Musique, photos/vidéos de visages et références visuelles</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Title */}
               <div className="space-y-2">
                 <Label htmlFor="title">Titre du projet</Label>
                 <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Mon super clip" />
               </div>
 
-              {/* Audio upload */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2"><Music className="h-4 w-4 text-primary" /> Musique *</Label>
                 <label className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/50 bg-card/20 p-8 cursor-pointer hover:border-primary/50 transition-colors">
@@ -191,15 +205,14 @@ export default function CreateClip() {
                 </label>
               </div>
 
-              {/* Face references */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2"><Video className="h-4 w-4 text-primary" /> Visages (photos/vidéos)</Label>
                 <p className="text-xs text-muted-foreground">Importez jusqu'à 5 photos ou vidéos de visages à intégrer dans votre clip</p>
                 <div className="flex flex-wrap gap-3">
                   {faceFiles.map((file, i) => (
                     <div key={i} className="relative group rounded-lg border border-border/50 bg-card/40 p-2 flex items-center gap-2">
-                      {file.type.startsWith("image/") ? (
-                        <img src={URL.createObjectURL(file)} alt="" className="h-12 w-12 rounded object-cover" />
+                      {faceObjectUrls[i] ? (
+                        <img src={faceObjectUrls[i]!} alt="" className="h-12 w-12 rounded object-cover" />
                       ) : (
                         <Video className="h-12 w-12 text-muted-foreground p-2" />
                       )}
@@ -222,14 +235,13 @@ export default function CreateClip() {
                 </div>
               </div>
 
-              {/* Reference photos */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2"><ImagePlus className="h-4 w-4 text-primary" /> Photos de référence (optionnel)</Label>
                 <p className="text-xs text-muted-foreground">Ajoutez des images d'inspiration pour guider le style visuel</p>
                 <div className="flex flex-wrap gap-3">
                   {refPhotos.map((file, i) => (
                     <div key={i} className="relative group rounded-lg border border-border/50 bg-card/40 overflow-hidden">
-                      <img src={URL.createObjectURL(file)} alt="" className="h-16 w-16 object-cover" />
+                      <img src={refObjectUrls[i]} alt="" className="h-16 w-16 object-cover" />
                       <button
                         onClick={() => removeRefPhoto(i)}
                         className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"

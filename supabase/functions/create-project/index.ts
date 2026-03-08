@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 serve(async (req) => {
@@ -15,6 +15,7 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Validate JWT
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("No authorization header");
 
@@ -24,7 +25,7 @@ serve(async (req) => {
     if (authErr || !user) throw new Error("Unauthorized");
 
     const body = await req.json();
-    const { type, title, mode, style_preset, duration_sec, synopsis, audio_url } = body;
+    const { type, title, mode, style_preset, duration_sec, synopsis, audio_url, aspect_ratio, face_urls, ref_photo_urls } = body;
 
     if (!type || !["clip", "film"].includes(type)) throw new Error("Invalid project type");
 
@@ -32,11 +33,11 @@ serve(async (req) => {
     const { data: debited } = await supabase.rpc("debit_credits", {
       p_user_id: user.id,
       p_amount: 5,
-      p_reason: "Project creation",
+      p_reason: "Création de projet",
       p_ref_type: "project_creation",
     });
     if (!debited) {
-      throw new Error("Insufficient credits (need at least 5)");
+      throw new Error("Crédits insuffisants (5 requis minimum)");
     }
 
     const { data: project, error } = await supabase
@@ -44,12 +45,15 @@ serve(async (req) => {
       .insert({
         user_id: user.id,
         type,
-        title: title || "Untitled",
+        title: title || "Sans titre",
         mode: mode || "story",
         style_preset: style_preset || "cinematic",
         duration_sec: duration_sec || null,
         synopsis: synopsis || null,
         audio_url: audio_url || null,
+        aspect_ratio: aspect_ratio || "16:9",
+        face_urls: face_urls || [],
+        ref_photo_urls: ref_photo_urls || [],
         status: "draft",
       })
       .select()

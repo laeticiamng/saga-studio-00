@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { lovable } from "@/integrations/lovable/index";
@@ -20,10 +20,12 @@ export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  if (user) {
-    navigate("/dashboard", { replace: true });
-    return null;
-  }
+  // Fix: redirect in useEffect instead of during render
+  useEffect(() => {
+    if (user) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,6 +52,8 @@ export default function Auth() {
       toast({ title: "Erreur", description: String(error), variant: "destructive" });
     }
   };
+
+  if (user) return null;
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">

@@ -63,23 +63,29 @@ export default function CreateFilm() {
     if (!user) return;
     setLoading(true);
     try {
-      const { data: project, error } = await supabase
-        .from("projects")
-        .insert({
-          user_id: user.id,
-          type: "film" as const,
+      // Use create-project edge function for proper credit debit
+      const { data, error } = await supabase.functions.invoke("create-project", {
+        body: {
+          type: "film",
           title,
           synopsis,
           style_preset: style,
           duration_sec: durationSec,
           mode: "story",
-          provider_default: provider === "auto" ? null : provider,
-          status: "planning" as const,
-        })
-        .select()
-        .single();
+          aspect_ratio: aspectRatio,
+        },
+      });
 
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const project = data.project;
+
+      // Update to planning status and set provider
+      await supabase.from("projects").update({
+        status: "planning" as const,
+        provider_default: provider === "auto" ? null : provider,
+      }).eq("id", project.id);
 
       toast({ title: "🎬 Pipeline lancé !", description: "Votre film est en cours de génération…" });
       navigate(`/project/${project.id}`);

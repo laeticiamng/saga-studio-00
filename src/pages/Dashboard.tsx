@@ -20,6 +20,22 @@ const statusLabels: Record<string, string> = {
   cancelled: "Annulé",
 };
 
+const typeLabels: Record<string, string> = {
+  clip: "Clip",
+  film: "Film",
+};
+
+const styleLabels: Record<string, string> = {
+  cinematic: "Cinématique",
+  anime: "Anime",
+  watercolor: "Aquarelle",
+  "3d_render": "Rendu 3D",
+  noir: "Noir",
+  vintage: "Vintage",
+  neon: "Néon",
+  realistic: "Réaliste",
+};
+
 const statusIcons: Record<string, React.ReactNode> = {
   draft: <Clock className="h-4 w-4" />,
   completed: <CheckCircle className="h-4 w-4 text-green-500" />,
@@ -96,7 +112,7 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between">
                       <Badge variant="outline" className="text-xs">
                         {project.type === "clip" ? <Music className="h-3 w-3 mr-1" /> : <Film className="h-3 w-3 mr-1" />}
-                        {project.type}
+                        {typeLabels[project.type] || project.type}
                       </Badge>
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         {statusIcons[project.status] || <Clock className="h-4 w-4" />}
@@ -109,7 +125,7 @@ export default function Dashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <span>{project.style_preset || "Pas de style"}</span>
+                      <span>{styleLabels[project.style_preset || ""] || project.style_preset || "Pas de style"}</span>
                       <span>{project.duration_sec ? `${Math.round(project.duration_sec / 60)} min` : "—"}</span>
                     </div>
                   </CardContent>
