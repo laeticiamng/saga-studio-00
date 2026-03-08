@@ -11,17 +11,16 @@ const log = (step: string, details?: any) => {
   console.log(`[STRIPE-WEBHOOK] ${step}${details ? ` - ${JSON.stringify(details)}` : ""}`);
 };
 
-// Credit pack tiers by amount in cents
-const CREDIT_PACKS: { maxCents: number; credits: number }[] = [
-  { maxCents: 499, credits: 25 },
-  { maxCents: 999, credits: 50 },
-  { maxCents: 2499, credits: 150 },
-  { maxCents: 4999, credits: 350 },
+// Credit pack tiers by price_id (must match STRIPE_CONFIG in Pricing.tsx)
+const CREDIT_PACKS_BY_CENTS: { maxCents: number; credits: number }[] = [
+  { maxCents: 500, credits: 50 },    // 5€ = 50 credits
+  { maxCents: 1500, credits: 200 },   // 15€ = 200 credits
+  { maxCents: 3000, credits: 500 },   // 30€ = 500 credits
   { maxCents: Infinity, credits: 500 },
 ];
 
 function creditsForAmount(cents: number): number {
-  return CREDIT_PACKS.find(p => cents <= p.maxCents)?.credits || 50;
+  return CREDIT_PACKS_BY_CENTS.find(p => cents <= p.maxCents)?.credits || 50;
 }
 
 serve(async (req) => {
