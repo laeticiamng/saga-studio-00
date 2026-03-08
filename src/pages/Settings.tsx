@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { Loader2, ArrowUp, ArrowDown, Webhook, Plus, Trash2, Eye, EyeOff, Copy } from "lucide-react";
+import { Loader2, ArrowUp, ArrowDown, Webhook, Plus, Trash2, Eye, EyeOff, Copy, KeyRound } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export default function Settings() {
@@ -22,6 +22,9 @@ export default function Settings() {
   const queryClient = useQueryClient();
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   // Webhook state
   const [newWebhookUrl, setNewWebhookUrl] = useState("");
@@ -77,6 +80,26 @@ export default function Settings() {
     setLoading(false);
     if (error) toast({ title: "Erreur", description: error.message, variant: "destructive" });
     else toast({ title: "Enregistré", description: "Profil mis à jour" });
+  };
+  const handleChangePassword = async () => {
+    if (newPassword.length < 6) {
+      toast({ title: "Erreur", description: "Le mot de passe doit contenir au moins 6 caractères.", variant: "destructive" });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast({ title: "Erreur", description: "Les mots de passe ne correspondent pas.", variant: "destructive" });
+      return;
+    }
+    setChangingPassword(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setChangingPassword(false);
+    if (error) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Mot de passe modifié", description: "Votre nouveau mot de passe est actif." });
+      setNewPassword("");
+      setConfirmPassword("");
+    }
   };
 
   const handleAddWebhook = async () => {
@@ -146,6 +169,32 @@ export default function Settings() {
             </div>
             <Button variant="hero" onClick={handleSave} disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />} Enregistrer
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Change password */}
+        <Card className="border-border/50 bg-card/60 mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><KeyRound className="h-5 w-5 text-primary" /> Changer le mot de passe</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nouveau mot de passe</Label>
+              <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••••" minLength={6} />
+            </div>
+            <div className="space-y-2">
+              <Label>Confirmer le mot de passe</Label>
+              <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" />
+            </div>
+            {newPassword && newPassword.length < 6 && (
+              <p className="text-xs text-destructive">Minimum 6 caractères</p>
+            )}
+            {confirmPassword && newPassword !== confirmPassword && (
+              <p className="text-xs text-destructive">Les mots de passe ne correspondent pas</p>
+            )}
+            <Button variant="hero" onClick={handleChangePassword} disabled={changingPassword || !newPassword || newPassword !== confirmPassword || newPassword.length < 6}>
+              {changingPassword && <Loader2 className="h-4 w-4 animate-spin mr-2" />} Modifier le mot de passe
             </Button>
           </CardContent>
         </Card>
