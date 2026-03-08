@@ -11,12 +11,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { Loader2, ArrowUp, ArrowDown, Webhook, Plus, Trash2, Eye, EyeOff, Copy } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export default function Settings() {
   const { user } = useAuth();
   const { toast } = useToast();
+  usePageTitle("Paramètres");
   const queryClient = useQueryClient();
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);

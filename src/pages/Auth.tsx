@@ -8,9 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Film, ArrowLeft, Mail } from "lucide-react";
+import { Film, Mail, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import Navbar from "@/components/Navbar";
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -88,13 +89,9 @@ export default function Auth() {
   // Forgot password mode
   if (forgotMode) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
-        <button
-          onClick={() => { setForgotMode(false); navigate("/"); }}
-          className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" /> Retour à l'accueil
-        </button>
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="flex flex-col items-center justify-center px-4 py-16">
         <Card className="w-full max-w-md border-border/50 bg-card/80 backdrop-blur">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
@@ -134,18 +131,15 @@ export default function Auth() {
             )}
           </CardContent>
         </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
-      <button
-        onClick={() => navigate("/")}
-        className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" /> Retour à l'accueil
-      </button>
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      <div className="flex flex-col items-center justify-center px-4 py-16">
       <Card className="w-full max-w-md border-border/50 bg-card/80 backdrop-blur">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
@@ -217,6 +211,7 @@ export default function Auth() {
           </p>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
