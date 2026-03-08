@@ -53,7 +53,7 @@ const Footer = () => {
                 </span>
               </Link>
               <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
-                La première plateforme de création vidéo IA avec cohérence visuelle parfaite, jusqu'à 4K.
+                Créez des clips vidéo et courts-métrages complets grâce à l'IA, directement depuis votre navigateur.
               </p>
             </div>
 

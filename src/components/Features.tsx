@@ -22,7 +22,7 @@ const Features = () => {
               Tout ce dont vous avez besoin pour créer
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Une plateforme complète avec les technologies les plus avancées du marché
+              Des outils simples pour des vidéos de qualité professionnelle
             </p>
           </div>
         </AnimatedSection>

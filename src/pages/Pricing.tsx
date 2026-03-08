@@ -126,7 +126,7 @@ export default function Pricing() {
               <Card key={plan.name} className={`border-border/50 bg-card/60 relative ${plan.highlight ? "border-primary ring-2 ring-primary/20" : ""} ${current ? "ring-2 ring-green-500/40" : ""}`}>
                 {plan.highlight && !current && (
                   <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground">
-                    Le plus populaire
+                    Recommandé
                   </Badge>
                 )}
                 {current && (
