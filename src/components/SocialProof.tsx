@@ -1,6 +1,6 @@
 import { motion, useMotionValue, useTransform, animate, useScroll } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
-import { Star } from "lucide-react";
+import AnimatedSection from "./AnimatedSection";
 import AnimatedSection from "./AnimatedSection";
 
 function Counter({ target, suffix = "" }: { target: number; suffix?: string }) {
