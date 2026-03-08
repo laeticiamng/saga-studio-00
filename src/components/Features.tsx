@@ -43,7 +43,7 @@ const Features = () => {
                       Populaire
                     </span>
                   )}
-                  {feature.isNew && (
+                  {(feature as any).isNew && (
                     <span className="absolute top-4 right-4 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/20">
                       Nouveau
                     </span>
