@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Film, Music, Plus, Clock, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { OnboardingTour } from "@/components/OnboardingTour";
 
 const statusIcons: Record<string, React.ReactNode> = {
   draft: <Clock className="h-4 w-4" />,
