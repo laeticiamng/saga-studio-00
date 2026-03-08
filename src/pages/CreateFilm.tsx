@@ -42,6 +42,7 @@ export default function CreateFilm() {
           style_preset: style,
           duration_sec: durationSec,
           mode: "story",
+          provider_default: provider === "auto" ? null : provider,
           status: "draft" as const,
         })
         .select()
