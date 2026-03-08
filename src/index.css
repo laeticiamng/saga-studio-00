@@ -2,12 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Design System — CineClip AI
+   All colors MUST be HSL. */
 
 @layer base {
   :root {
+    --font-display: 'Syne', sans-serif;
+    --font-body: 'Space Grotesk', sans-serif;
+
     --background: 0 0% 5%;
     --foreground: 40 100% 95%;
 
@@ -42,11 +44,11 @@ All colors MUST be HSL.
     --gradient-primary: linear-gradient(135deg, hsl(35 100% 55%), hsl(15 100% 50%));
     --gradient-hero: linear-gradient(180deg, hsl(0 0% 5%), hsl(35 100% 10%));
     --gradient-card: linear-gradient(135deg, hsl(0 0% 8% / 0.6), hsl(35 50% 15% / 0.4));
-    
+
     /* Glows and shadows */
     --glow-primary: 0 0 40px hsl(35 100% 55% / 0.3);
     --shadow-elevated: 0 20px 60px -10px hsl(35 100% 20% / 0.4);
-    
+
     /* Transitions */
     --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }
@@ -58,6 +60,11 @@ All colors MUST be HSL.
   }
 
   body {
+    font-family: var(--font-body);
     @apply bg-background text-foreground;
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-display);
   }
 }

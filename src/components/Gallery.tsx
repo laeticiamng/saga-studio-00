@@ -1,73 +1,80 @@
 import example1 from "@/assets/example-1.jpg";
 import example2 from "@/assets/example-2.jpg";
 import example3 from "@/assets/example-3.jpg";
-import { Play } from "lucide-react";
+import { Play, Eye, Heart } from "lucide-react";
+import { motion } from "framer-motion";
+import AnimatedSection from "./AnimatedSection";
 
 const examples = [
-  {
-    image: example1,
-    title: "Clip musical futuriste",
-    duration: "4:32",
-    style: "Sci-Fi / Cyberpunk"
-  },
-  {
-    image: example2,
-    title: "Animation cohérente",
-    duration: "5:15",
-    style: "Animation 3D"
-  },
-  {
-    image: example3,
-    title: "Court-métrage dramatique",
-    duration: "4:48",
-    style: "Cinématique réaliste"
-  }
+  { image: example1, title: "Clip musical futuriste", duration: "4:32", style: "Sci-Fi / Cyberpunk", views: "12.4k", likes: "1.2k" },
+  { image: example2, title: "Animation cohérente", duration: "5:15", style: "Animation 3D", views: "8.7k", likes: "943" },
+  { image: example3, title: "Court-métrage dramatique", duration: "4:48", style: "Cinématique réaliste", views: "15.1k", likes: "2.1k" },
 ];
 
 const Gallery = () => {
   return (
-    <section className="py-24 px-4 bg-gradient-to-b from-background to-secondary/20">
+    <section id="gallery" className="py-24 px-4 bg-gradient-to-b from-background to-secondary/20">
       <div className="container mx-auto">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            Exemples de créations
-          </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Découvrez ce que vous pourrez créer avec notre plateforme
-          </p>
-        </div>
-        
+        <AnimatedSection>
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+              Exemples de créations
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Découvrez ce que vous pourrez créer avec notre plateforme
+            </p>
+          </div>
+        </AnimatedSection>
+
         <div className="grid md:grid-cols-3 gap-8">
           {examples.map((example, index) => (
-            <div 
-              key={index}
-              className="group relative rounded-xl overflow-hidden cursor-pointer"
-            >
-              <div className="aspect-square relative">
-                <img 
-                  src={example.image} 
-                  alt={example.title}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                
-                {/* Play button overlay */}
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center shadow-glow">
-                    <Play className="w-8 h-8 text-primary-foreground fill-current ml-1" />
+            <AnimatedSection key={index} delay={0.1 * (index + 1)}>
+              <motion.div
+                whileHover={{ y: -8 }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                className="group relative rounded-xl overflow-hidden cursor-pointer"
+              >
+                <div className="aspect-[4/5] relative">
+                  <img
+                    src={example.image}
+                    alt={example.title}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-300" />
+
+                  {/* Play button */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <motion.div
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      whileHover={{ scale: 1.1 }}
+                      className="w-16 h-16 rounded-full bg-primary flex items-center justify-center shadow-glow opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                    >
+                      <Play className="w-8 h-8 text-primary-foreground fill-current ml-1" />
+                    </motion.div>
+                  </div>
+
+                  {/* Stats overlay */}
+                  <div className="absolute top-4 right-4 flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <span className="inline-flex items-center gap-1 text-xs text-white/90 bg-black/40 backdrop-blur-sm rounded-full px-2 py-1">
+                      <Eye className="w-3 h-3" /> {example.views}
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-xs text-white/90 bg-black/40 backdrop-blur-sm rounded-full px-2 py-1">
+                      <Heart className="w-3 h-3" /> {example.likes}
+                    </span>
                   </div>
                 </div>
-              </div>
-              
-              <div className="absolute bottom-0 left-0 right-0 p-6 text-white transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
-                <h3 className="text-xl font-semibold mb-1">{example.title}</h3>
-                <div className="flex items-center gap-3 text-sm text-white/80">
-                  <span>{example.duration}</span>
-                  <span>•</span>
-                  <span>{example.style}</span>
+
+                <div className="absolute bottom-0 left-0 right-0 p-6 text-white transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                  <h3 className="text-xl font-semibold mb-1">{example.title}</h3>
+                  <div className="flex items-center gap-3 text-sm text-white/80">
+                    <span>{example.duration}</span>
+                    <span>•</span>
+                    <span>{example.style}</span>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </motion.div>
+            </AnimatedSection>
           ))}
         </div>
       </div>
