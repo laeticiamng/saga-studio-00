@@ -151,10 +151,10 @@ export default function Settings() {
         <Card className="border-border/50 bg-card/60 mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Webhook className="h-5 w-5 text-primary" /> Webhooks
+              <Webhook className="h-5 w-5 text-primary" /> Notifications webhook
             </CardTitle>
             <CardDescription>
-              Recevez une notification HTTP quand un rendu est terminé. Chaque requête inclut un header <code className="text-xs bg-secondary px-1 rounded">X-Webhook-Signature</code> (HMAC SHA-256) pour vérifier l'authenticité.
+              Recevez automatiquement un appel HTTP sur votre serveur quand un rendu vidéo est terminé. Utile si vous intégrez CineClip à votre propre application ou workflow.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
