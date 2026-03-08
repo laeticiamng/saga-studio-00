@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Film, Home, ArrowLeft } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 
 const NotFound = () => {
   const location = useLocation();
@@ -32,6 +33,7 @@ const NotFound = () => {
           </Button>
         </div>
       </div>
+      <Footer />
     </div>
   );
 };

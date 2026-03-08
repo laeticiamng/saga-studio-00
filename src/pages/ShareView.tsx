@@ -110,6 +110,9 @@ export default function ShareView() {
           Créé avec <Link to="/" className="text-primary hover:underline">CineClip AI</Link>
         </p>
       </div>
+      <footer className="border-t border-border/50 py-6 text-center text-xs text-muted-foreground mt-12">
+        © {new Date().getFullYear()} CineClip AI. Tous droits réservés.
+      </footer>
     </div>
   );
 }

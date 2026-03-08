@@ -17,7 +17,7 @@ export default function ClientLogos() {
     <section className="py-16 px-4 border-y border-border/30 relative overflow-hidden">
       <AnimatedSection>
         <p className="text-center text-sm text-muted-foreground mb-8 tracking-widest uppercase">
-          Utilisé par les créateurs sur
+          Compatible avec vos plateformes favorites
         </p>
       </AnimatedSection>
 
