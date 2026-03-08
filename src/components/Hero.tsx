@@ -66,7 +66,7 @@ const Hero = () => {
         >
           <Sparkles className="w-4 h-4 text-primary" />
           <span className="text-sm text-muted-foreground">
-            Propulsé par SORA 2 et l'IA de nouvelle génération
+            Propulsé par l'IA vidéo de nouvelle génération
           </span>
         </motion.div>
 

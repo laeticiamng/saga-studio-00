@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Film, Music, Plus, Clock, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { OnboardingTour } from "@/components/OnboardingTour";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 const statusLabels: Record<string, string> = {
   draft: "Brouillon",
@@ -54,6 +55,8 @@ const statusIcons: Record<string, React.ReactNode> = {
 
 export default function Dashboard() {
   const { user } = useAuth();
+
+  usePageTitle("Mes projets");
 
   const { data: projects, isLoading } = useQuery({
     queryKey: ["projects", user?.id],

@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Film, Coins, Loader2, Cpu, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 const PROVIDER_LABELS: Record<string, string> = {
   auto: "Auto",
@@ -27,6 +28,7 @@ export default function CreateFilm() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  usePageTitle("Générer un film");
   const [title, setTitle] = useState("");
   const [synopsis, setSynopsis] = useState("");
   const [duration, setDuration] = useState("120");
@@ -189,10 +191,13 @@ export default function CreateFilm() {
               </div>
             </div>
 
-            <Button variant="hero" className="w-full" onClick={handleOneClickGenerate} disabled={loading || !title || !synopsis}>
+            <Button variant="hero" className="w-full" onClick={handleOneClickGenerate} disabled={loading || !title || synopsis.length < 50}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
               {loading ? "Lancement du pipeline…" : "Générer mon film"}
             </Button>
+            {synopsis.length > 0 && synopsis.length < 50 && (
+              <p className="text-xs text-destructive text-center">Le synopsis doit contenir au moins 50 caractères ({synopsis.length}/50)</p>
+            )}
           </CardContent>
         </Card>
       </main>
