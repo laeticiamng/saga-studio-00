@@ -32,7 +32,7 @@ serve(async (req) => {
     if (customers.data.length > 0) customerId = customers.data[0].id;
 
     const sessionMode = mode === "subscription" ? "subscription" : "payment";
-    const origin = req.headers.get("origin") || "https://id-preview--4506d537-3bcb-44da-9272-c9e4e687868d.lovable.app";
+    const origin = req.headers.get("origin") || req.headers.get("referer")?.replace(/\/[^/]*$/, "") || "https://saga-studio-00.lovable.app";
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
