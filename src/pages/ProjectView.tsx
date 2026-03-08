@@ -15,6 +15,20 @@ import { Loader2, Play, Film, RefreshCw, Music, Palette, List, Share2, Eye } fro
 import { useToast } from "@/hooks/use-toast";
 import { useState, useCallback, useEffect } from "react";
 
+const statusLabels: Record<string, string> = {
+  draft: "Brouillon", analyzing: "Analyse…", planning: "Planification…",
+  generating: "Génération…", stitching: "Assemblage…", completed: "Terminé",
+  failed: "Échoué", cancelled: "Annulé",
+};
+const typeLabels: Record<string, string> = { clip: "Clip", film: "Film" };
+const styleLabels: Record<string, string> = {
+  cinematic: "Cinématique", anime: "Anime", watercolor: "Aquarelle",
+  "3d_render": "Rendu 3D", noir: "Noir", vintage: "Vintage", neon: "Néon", realistic: "Réaliste",
+};
+const modeLabels: Record<string, string> = {
+  story: "Narratif", performance: "Performance", abstract: "Abstrait",
+};
+
 export default function ProjectView() {
   const { id } = useParams<{ id: string }>();
   const { session } = useAuth();
