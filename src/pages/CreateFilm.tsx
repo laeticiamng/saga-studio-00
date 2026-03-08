@@ -21,6 +21,7 @@ export default function CreateFilm() {
   const [synopsis, setSynopsis] = useState("");
   const [duration, setDuration] = useState("120");
   const [style, setStyle] = useState("cinematic");
+  const [provider, setProvider] = useState("auto");
   const [loading, setLoading] = useState(false);
 
   const durationSec = parseInt(duration);
