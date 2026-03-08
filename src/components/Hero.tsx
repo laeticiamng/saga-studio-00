@@ -16,7 +16,6 @@ const Hero = () => {
     offset: ["start start", "end start"],
   });
 
-  // Parallax layers: background moves slower, text moves slightly faster
   const bgY = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
   const glowY = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
   const contentY = useTransform(scrollYProgress, [0, 1], ["0%", "15%"]);
@@ -30,7 +29,6 @@ const Hero = () => {
     <section ref={ref} className="relative min-h-screen flex items-center justify-center overflow-hidden">
       <div className="absolute inset-0 bg-gradient-hero" />
 
-      {/* Parallax background image */}
       <motion.div
         style={{ y: bgY }}
         className="absolute inset-0 opacity-20"
@@ -45,7 +43,6 @@ const Hero = () => {
         />
       </motion.div>
 
-      {/* Parallax glow */}
       <motion.div
         style={{ y: glowY }}
         animate={{ scale: [1, 1.15, 1], opacity: [0.2, 0.35, 0.2] }}
@@ -53,7 +50,6 @@ const Hero = () => {
         className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-primary/20 rounded-full blur-3xl"
       />
 
-      {/* Content with parallax fade */}
       <motion.div
         style={{ y: contentY, opacity: contentOpacity }}
         className="relative z-10 container mx-auto px-4 text-center"
@@ -66,7 +62,7 @@ const Hero = () => {
         >
           <Sparkles className="w-4 h-4 text-primary" />
           <span className="text-sm text-muted-foreground">
-            10 crédits offerts — Aucune carte bancaire requise
+            🎁 10 crédits offerts — Aucune carte bancaire requise
           </span>
         </motion.div>
 
@@ -76,9 +72,9 @@ const Hero = () => {
           transition={{ duration: 0.7, delay: 0.15 }}
           className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent"
         >
-          Créez des clips vidéo épiques
+          Transformez votre musique
           <br />
-          <span className="text-primary">en quelques minutes</span>
+          <span className="text-primary">en clip vidéo avec l'IA</span>
         </motion.h1>
 
         <motion.p
@@ -87,8 +83,9 @@ const Hero = () => {
           transition={{ duration: 0.7, delay: 0.3 }}
           className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-12"
         >
-          Décrivez votre idée, uploadez votre musique, et obtenez une vidéo complète de 4-5 minutes
-          avec un style visuel uniforme. Votre visage, votre histoire, votre musique.
+          Uploadez votre musique, choisissez un style visuel, et recevez une vidéo complète de 1 à 5 minutes.
+          <br className="hidden md:block" />
+          <span className="text-foreground/80">Aucune compétence en montage requise.</span>
         </motion.p>
 
         <motion.div
@@ -99,11 +96,11 @@ const Hero = () => {
         >
           <Button variant="hero" size="lg" className="group" onClick={handleGetStarted}>
             <Video className="w-5 h-5 group-hover:scale-110 transition-transform" />
-            Commencer gratuitement
+            Essai gratuit — Créer ma vidéo
           </Button>
           <Button variant="glass" size="lg" onClick={() => navigate("/pricing")}>
             <Zap className="w-5 h-5" />
-            Voir les plans
+            Voir les tarifs
           </Button>
         </motion.div>
 
@@ -113,7 +110,7 @@ const Hero = () => {
           transition={{ duration: 0.8, delay: 0.7 }}
           className="mt-16 flex flex-wrap justify-center gap-8 text-sm text-muted-foreground"
         >
-          {["Jusqu'à 4K selon plan", "Style uniforme garanti", "Export en une seule fois"].map((t) => (
+          {["Jusqu'à 4K selon le plan", "13 styles visuels au choix", "Vidéo prête en ~10 min"].map((t) => (
             <div key={t} className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
               <span>{t}</span>

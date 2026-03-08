@@ -5,11 +5,12 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Coins, Loader2, ExternalLink } from "lucide-react";
+import { Check, Coins, Loader2, ExternalLink, HelpCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const STRIPE_CONFIG = {
   plans: {
@@ -29,7 +30,7 @@ const PLANS = [
     price: "0 €",
     period: "/mois",
     credits: 10,
-    features: ["10 crédits/mois", "Exports 720p", "Génération standard", "Support communautaire"],
+    features: ["10 crédits offerts", "Exports en 720p", "Génération standard", "Support communautaire"],
     cta: "Plan actuel",
     highlight: false,
     stripe_key: null as string | null,
@@ -40,7 +41,7 @@ const PLANS = [
     price: "19 €",
     period: "/mois",
     credits: 100,
-    features: ["100 crédits/mois", "Exports 1080p", "Génération rapide", "Tous les styles", "Support email"],
+    features: ["100 crédits/mois", "Exports en Full HD (1080p)", "Génération plus rapide", "Tous les styles visuels", "Support par email"],
     cta: "Passer en Pro",
     highlight: true,
     stripe_key: "pro" as const,
@@ -51,7 +52,7 @@ const PLANS = [
     price: "49 €",
     period: "/mois",
     credits: 500,
-    features: ["500 crédits/mois", "Exports 4K", "Génération prioritaire", "Guide de style sur mesure", "Personnages cohérents entre les scènes", "Support dédié"],
+    features: ["500 crédits/mois", "Exports en 4K", "Génération prioritaire", "Guide de style sur mesure", "Personnages cohérents entre les scènes", "Support dédié"],
     cta: "Passer en Studio",
     highlight: false,
     stripe_key: "studio" as const,
@@ -115,8 +116,27 @@ export default function Pricing() {
       <Navbar />
       <main className="container mx-auto px-4 py-12">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-3">Tarifs simples</h1>
-          <p className="text-lg text-muted-foreground">Choisissez un abonnement ou achetez des packs de crédits</p>
+          <h1 className="text-4xl font-bold mb-3">Des tarifs simples et transparents</h1>
+          <p className="text-lg text-muted-foreground max-w-xl mx-auto">
+            Commencez gratuitement avec 10 crédits. Passez à un abonnement ou achetez des packs quand vous en avez besoin.
+          </p>
+        </div>
+
+        {/* Credit explainer */}
+        <div className="max-w-2xl mx-auto mb-10 rounded-xl border border-border/50 bg-card/40 p-4 text-center">
+          <p className="text-sm text-muted-foreground flex items-center justify-center gap-2 flex-wrap">
+            <Coins className="h-4 w-4 text-primary" />
+            <strong className="text-foreground">1 crédit ≈ 1 scène générée.</strong>
+            Un clip de 2 minutes contient environ 15 à 25 scènes selon le style choisi.
+            <Tooltip>
+              <TooltipTrigger>
+                <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-[260px]">
+                <p className="text-xs">Le coût exact dépend de la durée de la vidéo et du moteur IA utilisé. Un estimateur de coût est affiché avant chaque génération.</p>
+              </TooltipContent>
+            </Tooltip>
+          </p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-3 max-w-4xl mx-auto mb-16">
@@ -141,14 +161,14 @@ export default function Pricing() {
                     <span className="text-muted-foreground">{plan.period}</span>
                   </div>
                   <CardDescription className="flex items-center justify-center gap-1 mt-1">
-                    <Coins className="h-4 w-4 text-primary" /> {plan.credits} crédits
+                    <Coins className="h-4 w-4 text-primary" /> {plan.credits} crédits{plan.stripe_key ? "/mois" : ""}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-2 mb-6">
                     {plan.features.map((f) => (
                       <li key={f} className="flex items-center gap-2 text-sm">
-                        <Check className="h-4 w-4 text-primary" /> {f}
+                        <Check className="h-4 w-4 text-primary shrink-0" /> {f}
                       </li>
                     ))}
                   </ul>
@@ -180,7 +200,8 @@ export default function Pricing() {
         </div>
 
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-2xl font-bold text-center mb-6">Packs de crédits</h2>
+          <h2 className="text-2xl font-bold text-center mb-2">Besoin de plus de crédits ?</h2>
+          <p className="text-center text-muted-foreground mb-6 text-sm">Achetez des packs ponctuels, sans abonnement. Les crédits n'expirent pas.</p>
           <div className="grid gap-4 md:grid-cols-3">
             {PACKS.map((pack) => (
               <Card key={pack.credits} className="border-border/50 bg-card/40">
@@ -190,7 +211,7 @@ export default function Pricing() {
                     <span className="font-medium">{pack.credits} crédits</span>
                   </div>
                   <Button variant="glass" size="sm" onClick={() => handleCheckout(pack.price_id, "payment")}>
-                    Acheter — {pack.price}
+                    {pack.price}
                   </Button>
                 </CardContent>
               </Card>

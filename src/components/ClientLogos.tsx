@@ -1,46 +1,24 @@
-import { motion } from "framer-motion";
 import AnimatedSection from "./AnimatedSection";
+import { Shield, Zap, Download } from "lucide-react";
 
-const formats = [
-  { name: "MP4", label: "MP4" },
-  { name: "16:9", label: "16:9" },
-  { name: "9:16", label: "9:16" },
-  { name: "720p", label: "720p" },
-  { name: "1080p", label: "1080p" },
-  { name: "4K", label: "4K" },
-];
-
-const platforms = [
-  { name: "YouTube" },
-  { name: "TikTok" },
-  { name: "Instagram" },
-  { name: "Vimeo" },
+const reassurances = [
+  { icon: Shield, text: "Données sécurisées et hébergées en Europe" },
+  { icon: Zap, text: "Vidéo prête en 5 à 15 minutes" },
+  { icon: Download, text: "Export MP4 — compatible YouTube, TikTok, Instagram" },
 ];
 
 export default function ClientLogos() {
   return (
-    <section className="py-12 px-4 border-y border-border/30 relative overflow-hidden">
+    <section className="py-10 px-4 border-y border-border/30">
       <AnimatedSection>
-        <p className="text-center text-sm text-muted-foreground mb-6 tracking-widest uppercase">
-          Exportez vos vidéos dans le format de votre choix
-        </p>
-      </AnimatedSection>
-
-      <div className="flex flex-wrap justify-center gap-3 max-w-2xl mx-auto">
-        {formats.map((f) => (
-          <span
-            key={f.name}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border/50 bg-card/40 px-4 py-2 text-sm font-medium text-muted-foreground"
-          >
-            {f.label}
-          </span>
-        ))}
-      </div>
-
-      <AnimatedSection>
-        <p className="text-center text-xs text-muted-foreground/60 mt-6">
-          Compatible YouTube, TikTok, Instagram, Vimeo et toute plateforme vidéo
-        </p>
+        <div className="flex flex-wrap justify-center gap-6 md:gap-10 max-w-3xl mx-auto">
+          {reassurances.map((r) => (
+            <div key={r.text} className="flex items-center gap-2 text-sm text-muted-foreground">
+              <r.icon className="h-4 w-4 text-primary shrink-0" />
+              <span>{r.text}</span>
+            </div>
+          ))}
+        </div>
       </AnimatedSection>
     </section>
   );

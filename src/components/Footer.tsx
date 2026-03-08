@@ -1,29 +1,31 @@
 import { Film } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import AnimatedSection from "./AnimatedSection";
-
-const footerLinks = {
-  Produit: [
-    { label: "Fonctionnalités", href: "#features" },
-    { label: "Galerie", href: "#gallery" },
-    { label: "Comment ça marche", href: "#how-it-works" },
-    { label: "Tarifs", href: "/pricing" },
-  ],
-  Ressources: [
-    { label: "FAQ", href: "#faq" },
-    { label: "À propos", href: "/about" },
-    { label: "Tableau de bord", href: "/dashboard" },
-    { label: "Contact", href: "mailto:contact@cineclip.ai" },
-  ],
-  Légal: [
-    { label: "Confidentialité", href: "/privacy" },
-    { label: "CGU", href: "/terms" },
-    { label: "Mentions légales", href: "/legal" },
-  ],
-};
 
 const Footer = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const footerLinks = {
+    Produit: [
+      { label: "Fonctionnalités", href: "#features" },
+      { label: "Galerie", href: "#gallery" },
+      { label: "Comment ça marche", href: "#how-it-works" },
+      { label: "Tarifs", href: "/pricing" },
+    ],
+    Ressources: [
+      { label: "FAQ", href: "#faq" },
+      { label: "À propos", href: "/about" },
+      ...(user ? [{ label: "Mes projets", href: "/dashboard" }] : []),
+      { label: "Contact", href: "mailto:contact@cineclip.ai" },
+    ],
+    Légal: [
+      { label: "Confidentialité", href: "/privacy" },
+      { label: "CGU", href: "/terms" },
+      { label: "Mentions légales", href: "/legal" },
+    ],
+  };
 
   const handleAnchorClick = (href: string) => {
     if (href.startsWith("#")) {
