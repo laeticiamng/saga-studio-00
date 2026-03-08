@@ -159,7 +159,7 @@ Make ${numShots} shots that cover the full ${durationSec} seconds. Each shot sho
     return new Response(JSON.stringify({ 
       success: true, 
       shots_created: plan.shotlist.length,
-      has_ai_plan: !!aiResponse?.ok
+      has_ai_plan: !!plan.style_bible?.visual_rules
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
