@@ -96,8 +96,10 @@ serve(async (req) => {
       }
 
       if (mode === "subscription") {
-        const credits = 200; // Monthly subscription credits
-        log(`New subscription`, { userId, credits });
+        // Pro = 100 credits, Studio = 500 credits — determine from amount
+        const amount = session.amount_total || 0;
+        const credits = amount <= 2000 ? 100 : 500; // Pro ≤ 20€, Studio > 20€
+        log(`New subscription`, { userId, credits, amount });
 
         const { data: success } = await supabase.rpc("topup_credits", {
           p_user_id: userId,
