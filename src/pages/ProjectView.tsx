@@ -175,10 +175,10 @@ export default function ProjectView() {
           <div>
             <h1 className="text-3xl font-bold">{project.title}</h1>
             <div className="mt-2 flex items-center gap-3 flex-wrap">
-              <Badge variant="outline">{project.type}</Badge>
-              <Badge variant="secondary" className="capitalize">{project.style_preset}</Badge>
-              <Badge variant={project.status === "failed" ? "destructive" : "secondary"} className="capitalize">{project.status}</Badge>
-              {project.mode && <Badge variant="outline" className="capitalize">{project.mode}</Badge>}
+              <Badge variant="outline">{typeLabels[project.type] || project.type}</Badge>
+              <Badge variant="secondary">{styleLabels[project.style_preset || ""] || project.style_preset}</Badge>
+              <Badge variant={project.status === "failed" ? "destructive" : "secondary"}>{statusLabels[project.status] || project.status}</Badge>
+              {project.mode && <Badge variant="outline">{modeLabels[project.mode] || project.mode}</Badge>}
               {project.provider_default && <Badge variant="outline" className="capitalize">{project.provider_default}</Badge>}
             </div>
             {project.synopsis && <p className="mt-3 text-sm text-muted-foreground max-w-2xl">{project.synopsis}</p>}

@@ -57,8 +57,8 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
         <CardTitle className="flex items-center gap-2">
           <Download className="h-5 w-5 text-primary" /> Export & Téléchargements
           {render && (
-            <Badge variant={render.status === "completed" ? "secondary" : "outline"} className="ml-2 capitalize">
-              {render.status}
+            <Badge variant={render.status === "completed" ? "secondary" : "outline"} className="ml-2">
+              {{ completed: "Terminé", pending: "En attente", processing: "En cours", failed: "Échoué" }[render.status as string] || render.status}
             </Badge>
           )}
         </CardTitle>
