@@ -456,6 +456,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      topup_credits: {
+        Args: {
+          p_amount: number
+          p_reason: string
+          p_ref_id?: string
+          p_ref_type?: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
