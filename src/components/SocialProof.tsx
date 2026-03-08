@@ -29,29 +29,26 @@ function Counter({ target, suffix = "" }: { target: number; suffix?: string }) {
 }
 
 const stats = [
-  { value: 500, suffix: "+", label: "Vidéos créées en bêta" },
-  { value: 50, suffix: "+", label: "Créateurs early-access" },
-  { value: 95, suffix: "%", label: "Taux de satisfaction" },
+  { value: 4, suffix: "", label: "Modèles IA intégrés" },
+  { value: 13, suffix: "", label: "Styles visuels disponibles" },
+  { value: 5, suffix: " min", label: "Durée max par vidéo" },
 ];
 
-const testimonials = [
+const highlights = [
   {
-    name: "Marie L.",
-    role: "Réalisatrice indépendante",
-    text: "CineClip AI a transformé ma façon de prototyper mes projets. Le résultat est bluffant pour un outil aussi simple.",
-    rating: 5,
+    title: "Cohérence visuelle",
+    text: "Notre pipeline garantit un style uniforme du premier au dernier plan, grâce aux style bibles générés par IA.",
+    icon: "🎨",
   },
   {
-    name: "Thomas D.",
-    role: "Créateur YouTube",
-    text: "La cohérence visuelle entre les plans est impressionnante. Un vrai gain de temps pour mes previsualisations.",
-    rating: 5,
+    title: "Pipeline automatisé",
+    text: "De l'analyse audio à l'export final, tout est orchestré automatiquement. Vous décrivez, l'IA produit.",
+    icon: "⚡",
   },
   {
-    name: "Sofia R.",
-    role: "Directrice artistique",
-    text: "L'un des meilleurs outils de création vidéo IA que j'ai testé. La qualité cinématique est au rendez-vous.",
-    rating: 4,
+    title: "Multi-fournisseurs",
+    text: "Choisissez parmi OpenAI, Runway, Luma ou Google Veo — ou laissez le mode Auto sélectionner le meilleur.",
+    icon: "🔄",
   },
 ];
 
