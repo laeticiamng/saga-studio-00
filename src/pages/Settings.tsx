@@ -52,29 +52,29 @@ export default function Settings() {
     setLoading(true);
     const { error } = await supabase.from("profiles").update({ display_name: displayName }).eq("id", user.id);
     setLoading(false);
-    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
-    else toast({ title: "Saved", description: "Profile updated" });
+    if (error) toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    else toast({ title: "Enregistré", description: "Profil mis à jour" });
   };
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="container mx-auto max-w-2xl px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8">Settings</h1>
+        <h1 className="text-3xl font-bold mb-8">Paramètres</h1>
 
         <Card className="border-border/50 bg-card/60 mb-6">
-          <CardHeader><CardTitle>Profile</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Profil</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>Email</Label>
               <Input value={user?.email || ""} disabled />
             </div>
             <div className="space-y-2">
-              <Label>Display Name</Label>
+              <Label>Nom d'affichage</Label>
               <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
             </div>
             <Button variant="hero" onClick={handleSave} disabled={loading}>
-              {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />} Save Changes
+              {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />} Enregistrer
             </Button>
           </CardContent>
         </Card>
@@ -82,10 +82,10 @@ export default function Settings() {
         <Card className="border-border/50 bg-card/60">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              Credit History
+              Historique des crédits
               {wallet && (
                 <Badge variant="secondary" className="text-base">
-                  Balance: {wallet.balance} credits
+                  Solde : {wallet.balance} crédits
                 </Badge>
               )}
             </CardTitle>
@@ -94,21 +94,21 @@ export default function Settings() {
             {ledgerLoading ? (
               <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
             ) : !ledger?.length ? (
-              <p className="text-sm text-muted-foreground text-center py-8">No transactions yet</p>
+              <p className="text-sm text-muted-foreground text-center py-8">Aucune transaction pour le moment</p>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Date</TableHead>
-                    <TableHead>Reason</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Raison</TableHead>
+                    <TableHead className="text-right">Montant</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {ledger.map((entry) => (
                     <TableRow key={entry.id}>
                       <TableCell className="text-muted-foreground text-xs">
-                        {new Date(entry.created_at).toLocaleDateString()}
+                        {new Date(entry.created_at).toLocaleDateString("fr-FR")}
                       </TableCell>
                       <TableCell className="text-sm capitalize">{entry.reason.replace(/_/g, " ")}</TableCell>
                       <TableCell className="text-right">

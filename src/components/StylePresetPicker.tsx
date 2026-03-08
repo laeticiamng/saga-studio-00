@@ -1,14 +1,14 @@
 import { cn } from "@/lib/utils";
 
 const STYLE_PRESETS = [
-  { id: "cinematic", label: "Cinematic", emoji: "🎬", color: "from-amber-500/20 to-orange-500/20" },
+  { id: "cinematic", label: "Cinématique", emoji: "🎬", color: "from-amber-500/20 to-orange-500/20" },
   { id: "anime", label: "Anime", emoji: "🌸", color: "from-pink-500/20 to-purple-500/20" },
   { id: "noir", label: "Noir", emoji: "🌑", color: "from-gray-500/20 to-gray-800/20" },
   { id: "hyperpop", label: "Hyperpop", emoji: "💿", color: "from-cyan-500/20 to-fuchsia-500/20" },
-  { id: "afrofuturism", label: "Afrofuturism", emoji: "✨", color: "from-yellow-500/20 to-violet-500/20" },
+  { id: "afrofuturism", label: "Afrofuturisme", emoji: "✨", color: "from-yellow-500/20 to-violet-500/20" },
   { id: "synthwave", label: "Synthwave", emoji: "🌆", color: "from-indigo-500/20 to-pink-500/20" },
-  { id: "documentary", label: "Documentary", emoji: "📹", color: "from-stone-500/20 to-slate-500/20" },
-  { id: "fantasy", label: "Fantasy", emoji: "🐉", color: "from-emerald-500/20 to-teal-500/20" },
+  { id: "documentary", label: "Documentaire", emoji: "📹", color: "from-stone-500/20 to-slate-500/20" },
+  { id: "fantasy", label: "Fantaisie", emoji: "🐉", color: "from-emerald-500/20 to-teal-500/20" },
 ];
 
 interface Props {

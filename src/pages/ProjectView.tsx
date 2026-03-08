@@ -69,7 +69,6 @@ export default function ProjectView() {
     enabled: !!id,
   });
 
-  // Realtime subscriptions
   useEffect(() => {
     if (!id) return;
     const channel = supabase
@@ -77,8 +76,8 @@ export default function ProjectView() {
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "projects", filter: `id=eq.${id}` }, (payload) => {
         queryClient.invalidateQueries({ queryKey: ["project", id] });
         const newStatus = payload.new?.status;
-        if (newStatus === "completed") toast({ title: "🎉 Complete!", description: "Your video is ready to download!" });
-        else if (newStatus === "failed") toast({ title: "Pipeline failed", description: "Check project for details", variant: "destructive" });
+        if (newStatus === "completed") toast({ title: "🎉 Terminé !", description: "Votre vidéo est prête à télécharger !" });
+        else if (newStatus === "failed") toast({ title: "Pipeline échoué", description: "Vérifiez les détails du projet", variant: "destructive" });
         queryClient.invalidateQueries({ queryKey: ["plan", id] });
         queryClient.invalidateQueries({ queryKey: ["audio-analysis", id] });
       })
@@ -109,10 +108,10 @@ export default function ProjectView() {
     setPipelineRunning(true);
     try {
       await supabase.from("projects").update({ status: "analyzing" as const }).eq("id", project.id);
-      toast({ title: "Pipeline started", description: "Processing your project..." });
+      toast({ title: "Pipeline lancé", description: "Traitement de votre projet en cours…" });
       await callEdgeFunction("pipeline-worker", { project_id: project.id });
     } catch (err: any) {
-      toast({ title: "Pipeline Error", description: err.message, variant: "destructive" });
+      toast({ title: "Erreur du pipeline", description: err.message, variant: "destructive" });
       await supabase.from("projects").update({ status: "failed" as const }).eq("id", project.id);
     } finally {
       setPipelineRunning(false);
@@ -122,7 +121,7 @@ export default function ProjectView() {
   const handleShare = () => {
     const shareUrl = `${window.location.origin}/share/${id}`;
     navigator.clipboard.writeText(shareUrl);
-    toast({ title: "Link copied!", description: "Share link copied to clipboard" });
+    toast({ title: "Lien copié !", description: "Le lien de partage a été copié dans le presse-papier" });
   };
 
   if (isLoading) {
@@ -140,7 +139,7 @@ export default function ProjectView() {
         <Navbar />
         <div className="flex flex-col items-center py-20 text-muted-foreground">
           <Film className="h-16 w-16 mb-4" />
-          <p>Project not found</p>
+          <p>Projet introuvable</p>
         </div>
       </div>
     );
@@ -158,7 +157,6 @@ export default function ProjectView() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="container mx-auto px-4 py-8">
-        {/* Header */}
         <div className="mb-6 flex items-start justify-between">
           <div>
             <h1 className="text-3xl font-bold">{project.title}</h1>
@@ -174,18 +172,18 @@ export default function ProjectView() {
           <div className="flex gap-2">
             {project.status === "completed" && (
               <Button variant="glass" size="sm" onClick={handleShare} className="gap-2">
-                <Share2 className="h-4 w-4" /> Share
+                <Share2 className="h-4 w-4" /> Partager
               </Button>
             )}
             {project.status === "draft" && (
               <Button variant="hero" onClick={startPipeline} disabled={pipelineRunning} className="gap-2">
                 {pipelineRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-                {pipelineRunning ? "Running..." : "Start Pipeline"}
+                {pipelineRunning ? "En cours…" : "Lancer le pipeline"}
               </Button>
             )}
             {project.status === "failed" && (
               <Button variant="hero" onClick={startPipeline} disabled={pipelineRunning} className="gap-2">
-                <RefreshCw className="h-4 w-4" /> Retry Pipeline
+                <RefreshCw className="h-4 w-4" /> Réessayer
               </Button>
             )}
           </div>
@@ -195,40 +193,33 @@ export default function ProjectView() {
 
         <Tabs defaultValue={hasCompletedShots ? "preview" : "shots"} className="mt-8">
           <TabsList>
-            {hasCompletedShots && <TabsTrigger value="preview"><Eye className="h-3.5 w-3.5 mr-1.5" />Preview</TabsTrigger>}
-            <TabsTrigger value="shots">Shots ({totalShots})</TabsTrigger>
+            {hasCompletedShots && <TabsTrigger value="preview"><Eye className="h-3.5 w-3.5 mr-1.5" />Aperçu</TabsTrigger>}
+            <TabsTrigger value="shots">Plans ({totalShots})</TabsTrigger>
             {plan && <TabsTrigger value="plan">Plan</TabsTrigger>}
             {audioAnalysis && <TabsTrigger value="audio">Audio</TabsTrigger>}
             {(render || project.status === "completed") && <TabsTrigger value="render">Export</TabsTrigger>}
           </TabsList>
 
-          {/* Preview Tab */}
           {hasCompletedShots && (
             <TabsContent value="preview" className="mt-4">
-              <ShotPreviewPlayer
-                shots={shots || []}
-                audioUrl={project.audio_url}
-                bpm={audioAnalysis?.bpm}
-              />
+              <ShotPreviewPlayer shots={shots || []} audioUrl={project.audio_url} bpm={audioAnalysis?.bpm} />
             </TabsContent>
           )}
 
-          {/* Shots Tab */}
           <TabsContent value="shots" className="mt-4">
             {shots && shots.length > 0 ? (
               <ShotGrid shots={shots} />
             ) : (
-              <p className="text-muted-foreground text-sm py-8 text-center">No shots generated yet. Start the pipeline to begin.</p>
+              <p className="text-muted-foreground text-sm py-8 text-center">Aucun plan généré. Lancez le pipeline pour commencer.</p>
             )}
           </TabsContent>
 
-          {/* Plan Tab */}
           {plan && (
             <TabsContent value="plan" className="mt-4 space-y-4">
               {styleBible && Object.keys(styleBible).length > 0 && (
                 <Card className="border-border/50 bg-card/60">
                   <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2"><Palette className="h-4 w-4 text-primary" /> Style Bible</CardTitle>
+                    <CardTitle className="text-lg flex items-center gap-2"><Palette className="h-4 w-4 text-primary" /> Bible de style</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-2 gap-3">
@@ -245,7 +236,7 @@ export default function ProjectView() {
               {shotlistJson && shotlistJson.length > 0 && (
                 <Card className="border-border/50 bg-card/60">
                   <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2"><List className="h-4 w-4 text-primary" /> Shot List ({shotlistJson.length} shots)</CardTitle>
+                    <CardTitle className="text-lg flex items-center gap-2"><List className="h-4 w-4 text-primary" /> Liste des plans ({shotlistJson.length})</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2 max-h-96 overflow-auto">
@@ -262,12 +253,11 @@ export default function ProjectView() {
             </TabsContent>
           )}
 
-          {/* Audio Tab */}
           {audioAnalysis && (
             <TabsContent value="audio" className="mt-4">
               <Card className="border-border/50 bg-card/60">
                 <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2"><Music className="h-4 w-4 text-primary" /> Audio Analysis</CardTitle>
+                  <CardTitle className="text-lg flex items-center gap-2"><Music className="h-4 w-4 text-primary" /> Analyse audio</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {audioAnalysis.bpm && (
@@ -294,14 +284,9 @@ export default function ProjectView() {
             </TabsContent>
           )}
 
-          {/* Export Tab (replaces old Render tab) */}
           {(render || project.status === "completed") && (
             <TabsContent value="render" className="mt-4">
-              <RenderExportPanel
-                projectId={project.id}
-                render={render}
-                projectStatus={project.status}
-              />
+              <RenderExportPanel projectId={project.id} render={render} projectStatus={project.status} />
             </TabsContent>
           )}
         </Tabs>
