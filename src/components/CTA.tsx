@@ -1,65 +1,68 @@
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ArrowRight, Sparkles } from "lucide-react";
-import { useState } from "react";
-import { useToast } from "@/components/ui/use-toast";
+import { ArrowRight, Sparkles, Video } from "lucide-react";
+import { motion } from "framer-motion";
+import AnimatedSection from "./AnimatedSection";
 
 const CTA = () => {
-  const [email, setEmail] = useState("");
-  const { toast } = useToast();
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast({
-      title: "Merci de votre intérêt !",
-      description: "Nous vous contacterons dès que possible.",
-    });
-    setEmail("");
-  };
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
   return (
     <section className="py-24 px-4 relative overflow-hidden">
       {/* Animated background */}
       <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10" />
-      <div className="absolute top-1/2 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-pulse" />
-      <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-accent/20 rounded-full blur-3xl animate-pulse delay-1000" />
-      
+      <motion.div
+        animate={{ scale: [1, 1.2, 1], opacity: [0.15, 0.3, 0.15] }}
+        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute top-1/2 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl"
+      />
+      <motion.div
+        animate={{ scale: [1.2, 1, 1.2], opacity: [0.15, 0.3, 0.15] }}
+        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+        className="absolute top-1/4 right-1/4 w-96 h-96 bg-accent/20 rounded-full blur-3xl"
+      />
+
       <div className="container mx-auto relative z-10">
-        <div className="max-w-3xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card/40 backdrop-blur-sm border border-border/50 mb-8">
-            <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm text-muted-foreground">Rejoignez la liste d'attente</span>
+        <AnimatedSection>
+          <div className="max-w-3xl mx-auto text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card/40 backdrop-blur-sm border border-border/50 mb-8">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <span className="text-sm text-muted-foreground">Commencez dès maintenant</span>
+            </div>
+
+            <h2 className="text-4xl md:text-6xl font-bold mb-6">
+              Prêt à révolutionner
+              <br />
+              <span className="text-primary">vos créations vidéo ?</span>
+            </h2>
+
+            <p className="text-xl text-muted-foreground mb-12">
+              Créez votre premier clip en quelques minutes. Aucune compétence technique requise.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <Button
+                variant="hero"
+                size="lg"
+                className="group"
+                onClick={() => navigate(user ? "/create/clip" : "/auth")}
+              >
+                <Video className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                Créer mon premier clip
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Button>
+              <Button variant="glass" size="lg" onClick={() => navigate("/pricing")}>
+                Voir les plans
+              </Button>
+            </div>
+
+            <p className="text-sm text-muted-foreground mt-8">
+              Crédits gratuits inclus • Sans engagement • Export 4K
+            </p>
           </div>
-          
-          <h2 className="text-4xl md:text-6xl font-bold mb-6">
-            Prêt à révolutionner
-            <br />
-            <span className="text-primary">vos créations vidéo ?</span>
-          </h2>
-          
-          <p className="text-xl text-muted-foreground mb-12">
-            Soyez parmi les premiers à accéder à la plateforme et créez des clips épiques dès aujourd'hui.
-          </p>
-          
-          <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-            <Input 
-              type="email"
-              placeholder="votre@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="flex-1 bg-card/40 backdrop-blur-sm border-border/50"
-            />
-            <Button variant="hero" type="submit" size="lg">
-              Commencer
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-          </form>
-          
-          <p className="text-sm text-muted-foreground mt-6">
-            Accès anticipé gratuit • Sans engagement • Annulation possible à tout moment
-          </p>
-        </div>
+        </AnimatedSection>
       </div>
     </section>
   );

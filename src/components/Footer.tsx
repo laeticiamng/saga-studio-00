@@ -1,28 +1,93 @@
 import { Film } from "lucide-react";
+import { Link } from "react-router-dom";
+import AnimatedSection from "./AnimatedSection";
+
+const footerLinks = {
+  Produit: [
+    { label: "Fonctionnalités", href: "#features" },
+    { label: "Galerie", href: "#gallery" },
+    { label: "Tarifs", href: "/pricing" },
+    { label: "Comment ça marche", href: "#how-it-works" },
+  ],
+  Ressources: [
+    { label: "Documentation", href: "#" },
+    { label: "Blog", href: "#" },
+    { label: "Changelog", href: "#" },
+    { label: "FAQ", href: "#" },
+  ],
+  Légal: [
+    { label: "Confidentialité", href: "#" },
+    { label: "CGU", href: "#" },
+    { label: "Mentions légales", href: "#" },
+  ],
+};
 
 const Footer = () => {
   return (
-    <footer className="border-t border-border/50 py-12 px-4">
+    <footer className="border-t border-border/50 pt-16 pb-8 px-4">
       <div className="container mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center">
-              <Film className="w-6 h-6 text-primary-foreground" />
+        <AnimatedSection>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
+            {/* Brand */}
+            <div className="col-span-2 md:col-span-1">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-9 h-9 rounded-lg bg-gradient-primary flex items-center justify-center">
+                  <Film className="w-5 h-5 text-primary-foreground" />
+                </div>
+                <span className="text-lg font-bold" style={{ fontFamily: "var(--font-display)" }}>
+                  CineClip AI
+                </span>
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
+                La première plateforme de création vidéo IA avec cohérence visuelle parfaite et export 4K.
+              </p>
             </div>
-            <span className="text-xl font-bold">CinémaAI</span>
+
+            {/* Link columns */}
+            {Object.entries(footerLinks).map(([title, links]) => (
+              <div key={title}>
+                <h4 className="text-sm font-semibold text-foreground mb-4">{title}</h4>
+                <ul className="space-y-2.5">
+                  {links.map((link) => (
+                    <li key={link.label}>
+                      {link.href.startsWith("/") ? (
+                        <Link
+                          to={link.href}
+                          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {link.label}
+                        </Link>
+                      ) : (
+                        <a
+                          href={link.href}
+                          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {link.label}
+                        </a>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
-          
-          <div className="flex flex-wrap justify-center gap-8 text-sm text-muted-foreground">
-            <a href="#" className="hover:text-foreground transition-colors">À propos</a>
-            <a href="#" className="hover:text-foreground transition-colors">Fonctionnalités</a>
-            <a href="#" className="hover:text-foreground transition-colors">Tarifs</a>
-            <a href="#" className="hover:text-foreground transition-colors">Contact</a>
-            <a href="#" className="hover:text-foreground transition-colors">Confidentialité</a>
-          </div>
-          
-          <p className="text-sm text-muted-foreground">
-            © 2024 CinémaAI. Tous droits réservés.
+        </AnimatedSection>
+
+        <div className="border-t border-border/30 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+          <p className="text-xs text-muted-foreground">
+            © {new Date().getFullYear()} CineClip AI. Tous droits réservés.
           </p>
+          <div className="flex gap-6">
+            {["Twitter", "Discord", "YouTube"].map((s) => (
+              <a
+                key={s}
+                href="#"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {s}
+              </a>
+            ))}
+          </div>
         </div>
       </div>
     </footer>
