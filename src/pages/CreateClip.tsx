@@ -144,7 +144,7 @@ export default function CreateClip() {
       // Update status to analyzing to start pipeline
       await supabase.from("projects").update({ status: "analyzing" as const }).eq("id", project.id);
 
-      toast({ title: "🎬 Pipeline lancé !", description: "Votre clip est en cours de génération…" });
+      toast({ title: "🎬 C'est parti !", description: "Votre clip est en cours de création. Suivez l'avancement en temps réel." });
       navigate(`/project/${project.id}`);
 
       // Fire pipeline-worker in background
@@ -292,17 +292,25 @@ export default function CreateClip() {
                 <StylePresetPicker value={style} onChange={setStyle} />
               </div>
               <div className="space-y-2">
-                <Label className="flex items-center gap-1.5"><Cpu className="h-3.5 w-3.5 text-primary" /> Fournisseur vidéo</Label>
-                <Select value={provider} onValueChange={setProvider}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="auto">Auto (meilleur disponible)</SelectItem>
-                    <SelectItem value="openai">OpenAI</SelectItem>
-                    <SelectItem value="runway">Runway Gen-4</SelectItem>
-                    <SelectItem value="luma">Luma Dream Machine</SelectItem>
-                    <SelectItem value="google_veo">Google Veo</SelectItem>
-                  </SelectContent>
-                </Select>
+              <details className="group">
+                <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5">
+                  <Cpu className="h-3.5 w-3.5 text-primary" /> Options avancées
+                </summary>
+                <div className="mt-3 space-y-2">
+                  <Label>Moteur IA</Label>
+                  <Select value={provider} onValueChange={setProvider}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="auto">Automatique (recommandé)</SelectItem>
+                      <SelectItem value="openai">OpenAI</SelectItem>
+                      <SelectItem value="runway">Runway Gen-4</SelectItem>
+                      <SelectItem value="luma">Luma Dream Machine</SelectItem>
+                      <SelectItem value="google_veo">Google Veo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">En mode automatique, le meilleur moteur est choisi pour vous.</p>
+                </div>
+              </details>
               </div>
               <div className="space-y-2">
                 <Label>Format d'export</Label>
@@ -344,7 +352,8 @@ export default function CreateClip() {
                 <div className="flex justify-between"><span className="text-muted-foreground">Mode</span><span className="capitalize">{mode === "story" ? "Narratif" : mode === "performance" ? "Performance" : mode === "abstract" ? "Abstrait" : mode}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Style</span><span className="capitalize">{{"cinematic":"Cinématique","anime":"Anime","watercolor":"Aquarelle","3d_render":"Rendu 3D","noir":"Noir","vintage":"Vintage","neon":"Néon","realistic":"Réaliste","hyperpop":"Hyperpop","afrofuturism":"Afrofuturisme","synthwave":"Synthwave","documentary":"Documentaire","fantasy":"Fantaisie"}[style] || style}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Format</span><span>{aspectRatio}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Plans estimés</span><span>~{estimatedShots}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Scènes estimées</span><span>~{estimatedShots}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Temps estimé</span><span>~5-15 min</span></div>
                 <div className="flex justify-between border-t border-border pt-2 font-medium">
                   <span className="flex items-center gap-1"><Coins className="h-4 w-4 text-primary" /> Coût estimé</span>
                   <span className="text-primary flex items-center gap-1">
@@ -357,7 +366,7 @@ export default function CreateClip() {
                 <Button variant="ghost" onClick={() => setStep(1)}><ArrowLeft className="h-4 w-4 mr-2" /> Retour</Button>
                 <Button variant="hero" className="flex-1" onClick={handleOneClickGenerate} disabled={loading}>
                   {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                  {loading ? "Lancement du pipeline…" : "Générer mon clip"}
+                  {loading ? "Création en cours…" : "Générer mon clip"}
                 </Button>
               </div>
             </CardContent>

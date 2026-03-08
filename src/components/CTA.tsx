@@ -33,9 +33,9 @@ const CTA = () => {
             </div>
 
             <h2 className="text-4xl md:text-6xl font-bold mb-6">
-              Prêt à révolutionner
+              Prêt à créer
               <br />
-              <span className="text-primary">vos créations vidéo ?</span>
+              <span className="text-primary">votre première vidéo ?</span>
             </h2>
 
             <p className="text-xl text-muted-foreground mb-12">

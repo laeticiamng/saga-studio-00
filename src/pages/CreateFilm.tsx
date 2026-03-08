@@ -90,7 +90,7 @@ export default function CreateFilm() {
         provider_default: provider === "auto" ? null : provider,
       }).eq("id", project.id);
 
-      toast({ title: "🎬 Pipeline lancé !", description: "Votre film est en cours de génération…" });
+      toast({ title: "🎬 C'est parti !", description: "Votre film est en cours de création. Suivez l'avancement en temps réel." });
       navigate(`/project/${project.id}`);
 
       supabase.functions.invoke("pipeline-worker", {
@@ -142,19 +142,25 @@ export default function CreateFilm() {
               <Label>Style</Label>
               <StylePresetPicker value={style} onChange={setStyle} />
             </div>
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1.5"><Cpu className="h-3.5 w-3.5 text-primary" /> Fournisseur vidéo</Label>
-              <Select value={provider} onValueChange={setProvider}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="auto">Auto (meilleur disponible)</SelectItem>
-                  <SelectItem value="openai">OpenAI</SelectItem>
-                  <SelectItem value="runway">Runway Gen-4</SelectItem>
-                  <SelectItem value="luma">Luma Dream Machine</SelectItem>
-                  <SelectItem value="google_veo">Google Veo</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <details className="group">
+              <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5">
+                <Cpu className="h-3.5 w-3.5 text-primary" /> Options avancées
+              </summary>
+              <div className="mt-3 space-y-2">
+                <Label>Moteur IA</Label>
+                <Select value={provider} onValueChange={setProvider}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto">Automatique (recommandé)</SelectItem>
+                    <SelectItem value="openai">OpenAI</SelectItem>
+                    <SelectItem value="runway">Runway Gen-4</SelectItem>
+                    <SelectItem value="luma">Luma Dream Machine</SelectItem>
+                    <SelectItem value="google_veo">Google Veo</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">En mode automatique, le meilleur moteur est choisi pour vous.</p>
+              </div>
+            </details>
             <div className="space-y-2">
               <Label>Format d'export</Label>
               <RadioGroup value={aspectRatio} onValueChange={setAspectRatio} className="flex gap-4">
@@ -175,12 +181,16 @@ export default function CreateFilm() {
 
             <div className="rounded-xl bg-secondary/50 p-4 space-y-2">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Fournisseur</span>
+                <span className="text-muted-foreground">Moteur IA</span>
                 <span>{PROVIDER_LABELS[provider]}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Plans estimés</span>
+                <span className="text-muted-foreground">Scènes estimées</span>
                 <span>~{estimatedShots}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Temps estimé</span>
+                <span>~5-15 min</span>
               </div>
               <div className="flex justify-between font-medium">
                 <span className="flex items-center gap-1"><Coins className="h-4 w-4 text-primary" /> Coût estimé</span>
@@ -193,7 +203,7 @@ export default function CreateFilm() {
 
             <Button variant="hero" className="w-full" onClick={handleOneClickGenerate} disabled={loading || !title || synopsis.length < 50}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
-              {loading ? "Lancement du pipeline…" : "Générer mon film"}
+              {loading ? "Création en cours…" : "Générer mon film"}
             </Button>
             {synopsis.length > 0 && synopsis.length < 50 && (
               <p className="text-xs text-destructive text-center">Le synopsis doit contenir au moins 50 caractères ({synopsis.length}/50)</p>
