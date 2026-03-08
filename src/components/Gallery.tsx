@@ -6,9 +6,9 @@ import { motion } from "framer-motion";
 import AnimatedSection from "./AnimatedSection";
 
 const examples = [
-  { image: example1, title: "Clip musical futuriste", duration: "4:32", style: "Sci-Fi / Cyberpunk", views: "12.4k", likes: "1.2k" },
-  { image: example2, title: "Animation cohérente", duration: "5:15", style: "Animation 3D", views: "8.7k", likes: "943" },
-  { image: example3, title: "Court-métrage dramatique", duration: "4:48", style: "Cinématique réaliste", views: "15.1k", likes: "2.1k" },
+  { image: example1, title: "Clip musical futuriste", duration: "4:32", style: "Sci-Fi / Cyberpunk" },
+  { image: example2, title: "Animation cohérente", duration: "5:15", style: "Animation 3D" },
+  { image: example3, title: "Court-métrage dramatique", duration: "4:48", style: "Cinématique réaliste" },
 ];
 
 const Gallery = () => {
