@@ -190,7 +190,7 @@ export default function Pricing() {
                     <span className="font-medium">{pack.credits} crédits</span>
                   </div>
                   <Button variant="glass" size="sm" onClick={() => handleCheckout(pack.price_id, "payment")}>
-                    {pack.price}
+                    Acheter — {pack.price}
                   </Button>
                 </CardContent>
               </Card>

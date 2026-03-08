@@ -18,6 +18,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 export default function Settings() {
   const { user } = useAuth();
   const { toast } = useToast();
+  usePageTitle("Paramètres");
   const queryClient = useQueryClient();
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
