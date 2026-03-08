@@ -10,10 +10,10 @@ const footerLinks = {
     { label: "Comment ça marche", href: "#how-it-works" },
   ],
   Ressources: [
-    { label: "Documentation", href: "#" },
-    { label: "Blog", href: "#" },
-    { label: "Changelog", href: "#" },
-    { label: "FAQ", href: "#" },
+    { label: "Comment ça marche", href: "#how-it-works" },
+    { label: "Tarifs", href: "/pricing" },
+    { label: "Créer un clip", href: "/create/clip" },
+    { label: "Créer un film", href: "/create/film" },
   ],
   Légal: [
     { label: "Confidentialité", href: "/privacy" },
