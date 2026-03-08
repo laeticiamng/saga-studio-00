@@ -1,21 +1,12 @@
 import { useEffect, useContext } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { AuthContext } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { createContext } from "react";
-
-// Import the context directly to avoid the throwing hook during HMR
-import { useAuth } from "@/contexts/AuthContext";
 
 export function GlobalNotifications() {
-  let user = null;
-  try {
-    const auth = useAuth();
-    user = auth.user;
-  } catch {
-    // AuthProvider not yet mounted (HMR race) — render nothing
-    return null;
-  }
+  const auth = useContext(AuthContext);
+  const user = auth?.user ?? null;
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
