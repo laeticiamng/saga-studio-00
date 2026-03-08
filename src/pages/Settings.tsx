@@ -148,17 +148,17 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* Webhooks */}
+        {/* Webhooks — Advanced, collapsible */}
         <Card className="border-border/50 bg-card/60 mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+          <details>
+            <summary className="cursor-pointer px-6 py-4 flex items-center gap-2 font-semibold text-foreground">
               <Webhook className="h-5 w-5 text-primary" /> Notifications webhook
-            </CardTitle>
-            <CardDescription>
-              Recevez automatiquement un appel HTTP sur votre serveur quand un rendu vidéo est terminé. Utile si vous intégrez CineClip à votre propre application ou workflow.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+              <span className="text-xs font-normal text-muted-foreground ml-2">(avancé)</span>
+            </summary>
+            <CardContent className="pt-0 space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Recevez automatiquement un appel HTTP sur votre serveur quand un rendu vidéo est terminé. Utile si vous intégrez CineClip à votre propre application ou workflow.
+              </p>
             {/* Add new webhook */}
             <div className="flex gap-2">
               <Input
