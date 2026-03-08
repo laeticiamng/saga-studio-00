@@ -1,14 +1,14 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Film, LogOut, User, LayoutDashboard, CreditCard, Shield, Search, Menu, X } from "lucide-react";
+import { Film, LogOut, User, LayoutDashboard, CreditCard, Search, Menu, X } from "lucide-react";
 import { CreditDisplay } from "@/components/CreditDisplay";
 import CommandPalette from "@/components/CommandPalette";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const sectionLinks = [
+const landingLinks = [
   { label: "Fonctionnalités", href: "#features" },
   { label: "Galerie", href: "#gallery" },
   { label: "Tarifs", href: "/pricing" },
@@ -17,13 +17,16 @@ const sectionLinks = [
 export default function Navbar() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [cmdOpen, setCmdOpen] = useState(false);
+  const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Only show landing section links on homepage or public pages
+  const isLandingPage = location.pathname === "/" || location.pathname === "/pricing" || location.pathname === "/privacy" || location.pathname === "/terms" || location.pathname === "/legal";
+  const sectionLinks = isLandingPage ? landingLinks : [];
 
   const scrollTo = (href: string) => {
     setMobileOpen(false);
     if (href.startsWith("#")) {
-      // If we're not on the homepage, navigate there first then scroll
       if (window.location.pathname !== "/") {
         navigate("/");
         setTimeout(() => {
@@ -57,17 +60,19 @@ export default function Navbar() {
               </span>
             </Link>
 
-            <div className="hidden md:flex items-center gap-1">
-              {sectionLinks.map((l) => (
-                <button
-                  key={l.href}
-                  onClick={() => scrollTo(l.href)}
-                  className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted/50"
-                >
-                  {l.label}
-                </button>
-              ))}
-            </div>
+            {sectionLinks.length > 0 && (
+              <div className="hidden md:flex items-center gap-1">
+                {sectionLinks.map((l) => (
+                  <button
+                    key={l.href}
+                    onClick={() => scrollTo(l.href)}
+                    className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted/50"
+                  >
+                    {l.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -159,7 +164,7 @@ export default function Navbar() {
                   </motion.button>
                 ))}
 
-                <div className="h-px bg-border my-3" />
+                {sectionLinks.length > 0 && <div className="h-px bg-border my-3" />}
 
                 {user ? (
                   <>
