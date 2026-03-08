@@ -211,7 +211,8 @@ export default function Settings() {
                 ))}
               </div>
             )}
-          </CardContent>
+            </CardContent>
+          </details>
         </Card>
 
         {/* Credit history */}
