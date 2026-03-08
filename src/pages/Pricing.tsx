@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -161,9 +162,13 @@ export default function Pricing() {
                     >
                       {plan.cta}
                     </Button>
-                  ) : (
+                  ) : current ? (
                     <Button variant="glass" className="w-full" disabled>
-                      {current ? "Plan actuel" : plan.cta}
+                      Plan actuel
+                    </Button>
+                  ) : (
+                    <Button variant="glass" className="w-full" onClick={() => navigate("/auth")}>
+                      Commencer gratuitement
                     </Button>
                   )}
                 </CardContent>
@@ -191,6 +196,7 @@ export default function Pricing() {
           </div>
         </div>
       </main>
+      <Footer />
     </div>
   );
 }
