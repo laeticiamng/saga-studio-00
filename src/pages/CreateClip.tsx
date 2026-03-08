@@ -338,8 +338,8 @@ export default function CreateClip() {
                 <div className="flex justify-between"><span className="text-muted-foreground">Musique</span><span>{audioFile?.name}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Visages</span><span>{faceFiles.length > 0 ? `${faceFiles.length} fichier(s)` : "Aucun"}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Références</span><span>{refPhotos.length > 0 ? `${refPhotos.length} photo(s)` : "Aucune"}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Mode</span><span className="capitalize">{mode}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Style</span><span className="capitalize">{style}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Mode</span><span className="capitalize">{mode === "story" ? "Narratif" : mode === "performance" ? "Performance" : mode === "abstract" ? "Abstrait" : mode}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Style</span><span className="capitalize">{{"cinematic":"Cinématique","anime":"Anime","watercolor":"Aquarelle","3d_render":"Rendu 3D","noir":"Noir","vintage":"Vintage","neon":"Néon","realistic":"Réaliste"}[style] || style}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Format</span><span>{aspectRatio}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Plans estimés</span><span>~{estimatedShots}</span></div>
                 <div className="flex justify-between border-t border-border pt-2 font-medium">

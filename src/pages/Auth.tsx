@@ -102,8 +102,9 @@ export default function Auth() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Mot de passe</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} />
-            </div>
+            <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} />
+            <p className="text-xs text-muted-foreground">Minimum 6 caractères</p>
+          </div>
             <Button type="submit" variant="hero" className="w-full" disabled={loading}>
               {loading ? "Chargement..." : isLogin ? "Se connecter" : "Créer mon compte"}
             </Button>
