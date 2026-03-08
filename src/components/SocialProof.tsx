@@ -90,32 +90,25 @@ export default function SocialProof() {
           </AnimatedSection>
         </motion.div>
 
-        {/* Testimonials heading */}
+        {/* Highlights heading */}
         <AnimatedSection delay={0.15}>
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">
-            Ce que disent nos créateurs
+            Pourquoi CineClip AI ?
           </h2>
         </AnimatedSection>
 
         {/* Cards with parallax drift */}
         <motion.div style={{ y: cardsY }} className="grid md:grid-cols-3 gap-6">
-          {testimonials.map((t, i) => (
-            <AnimatedSection key={t.name} delay={0.1 * (i + 1)}>
+          {highlights.map((h, i) => (
+            <AnimatedSection key={h.title} delay={0.1 * (i + 1)}>
               <motion.div
                 whileHover={{ y: -6, scale: 1.02 }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 className="rounded-xl border border-border/50 bg-card/60 backdrop-blur-sm p-6 h-full flex flex-col"
               >
-                <div className="flex gap-1 mb-4">
-                  {Array.from({ length: t.rating }).map((_, j) => (
-                    <Star key={j} className="w-4 h-4 fill-primary text-primary" />
-                  ))}
-                </div>
-                <p className="text-foreground/90 mb-6 flex-1 leading-relaxed">"{t.text}"</p>
-                <div>
-                  <p className="font-semibold text-foreground">{t.name}</p>
-                  <p className="text-sm text-muted-foreground">{t.role}</p>
-                </div>
+                <span className="text-3xl mb-4">{h.icon}</span>
+                <h3 className="font-semibold text-foreground text-lg mb-2">{h.title}</h3>
+                <p className="text-muted-foreground leading-relaxed flex-1">{h.text}</p>
               </motion.div>
             </AnimatedSection>
           ))}

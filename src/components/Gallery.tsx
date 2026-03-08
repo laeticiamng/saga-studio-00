@@ -54,8 +54,6 @@ const Gallery = () => {
                 <div className="absolute bottom-0 left-0 right-0 p-6 text-white transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
                   <h3 className="text-xl font-semibold mb-1">{example.title}</h3>
                   <div className="flex items-center gap-3 text-sm text-white/80">
-                    <span>{example.duration}</span>
-                    <span>•</span>
                     <span>{example.style}</span>
                   </div>
                 </div>
