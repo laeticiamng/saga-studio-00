@@ -15,8 +15,16 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Support both query param and JSON body
+    let project_id: string | null = null;
     const url = new URL(req.url);
-    const project_id = url.searchParams.get("project_id");
+    project_id = url.searchParams.get("project_id");
+    if (!project_id) {
+      try {
+        const body = await req.json();
+        project_id = body.project_id || null;
+      } catch {}
+    }
     if (!project_id) throw new Error("project_id required");
 
     const { data: project } = await supabase.from("projects").select("*").eq("id", project_id).single();

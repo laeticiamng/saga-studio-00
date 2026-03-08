@@ -256,19 +256,18 @@ serve(async (req) => {
       }
     }
 
-    // Deduct credits
+    // Atomic credit debit
     if (creditsUsed > 0) {
-      const { data: wallet } = await supabase.from("credit_wallets").select("balance").eq("id", project.user_id).single();
-      if (wallet) {
-        await supabase.from("credit_wallets").update({ balance: Math.max(0, wallet.balance - creditsUsed) }).eq("id", project.user_id);
-      }
-      await supabase.from("credit_ledger").insert({
-        user_id: project.user_id,
-        delta: -creditsUsed,
-        reason: `Shot generation (${results.filter(r => r.status === "started").length} shots via fallback chain)`,
-        ref_type: "project",
-        ref_id: project_id,
+      const { data: debited } = await supabase.rpc("debit_credits", {
+        p_user_id: project.user_id,
+        p_amount: creditsUsed,
+        p_reason: `Shot generation (${results.filter(r => r.status === "started").length} shots via fallback chain)`,
+        p_ref_id: project_id,
+        p_ref_type: "project",
       });
+      if (!debited) {
+        console.warn(`[generate-shots] Insufficient credits for user ${project.user_id}, debit of ${creditsUsed} failed`);
+      }
     }
 
     return jsonResponse({ success: true, results, credits_used: creditsUsed });
