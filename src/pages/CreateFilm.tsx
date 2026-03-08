@@ -96,6 +96,19 @@ export default function CreateFilm() {
               <Label>Style</Label>
               <StylePresetPicker value={style} onChange={setStyle} />
             </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5"><Cpu className="h-3.5 w-3.5 text-primary" /> Video Provider</Label>
+              <Select value={provider} onValueChange={setProvider}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">Auto (best available)</SelectItem>
+                  <SelectItem value="openai">OpenAI Sora 2</SelectItem>
+                  <SelectItem value="runway">Runway Gen-4</SelectItem>
+                  <SelectItem value="luma">Luma Dream Machine</SelectItem>
+                  <SelectItem value="google_veo">Google Veo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
             <div className="rounded-xl bg-secondary/50 p-4 space-y-2">
               <div className="flex justify-between"><span className="text-muted-foreground">Est. Shots</span><span>~{estimatedShots}</span></div>

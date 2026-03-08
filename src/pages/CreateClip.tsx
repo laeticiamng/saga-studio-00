@@ -141,6 +141,19 @@ export default function CreateClip() {
                 <Label>Style Preset</Label>
                 <StylePresetPicker value={style} onChange={setStyle} />
               </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5"><Cpu className="h-3.5 w-3.5 text-primary" /> Video Provider</Label>
+                <Select value={provider} onValueChange={setProvider}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto">Auto (best available)</SelectItem>
+                    <SelectItem value="openai">OpenAI Sora 2</SelectItem>
+                    <SelectItem value="runway">Runway Gen-4</SelectItem>
+                    <SelectItem value="luma">Luma Dream Machine</SelectItem>
+                    <SelectItem value="google_veo">Google Veo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="flex gap-3">
                 <Button variant="ghost" onClick={() => setStep(0)}><ArrowLeft className="h-4 w-4 mr-2" /> Back</Button>
                 <Button variant="hero" className="flex-1" onClick={() => setStep(2)}>
