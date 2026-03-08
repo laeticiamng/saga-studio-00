@@ -71,7 +71,8 @@ export default function Navbar() {
               </kbd>
             </Button>
 
-            {user ? (
+            <ThemeToggle />
+
               <>
                 <CreditDisplay />
                 <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="gap-2">
