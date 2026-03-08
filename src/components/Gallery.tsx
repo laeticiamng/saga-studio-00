@@ -50,15 +50,6 @@ const Gallery = () => {
                     </span>
                   </div>
 
-                  {/* Stats overlay */}
-                  <div className="absolute top-4 right-4 flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <span className="inline-flex items-center gap-1 text-xs text-white/90 bg-black/40 backdrop-blur-sm rounded-full px-2 py-1">
-                      <Eye className="w-3 h-3" /> {example.views}
-                    </span>
-                    <span className="inline-flex items-center gap-1 text-xs text-white/90 bg-black/40 backdrop-blur-sm rounded-full px-2 py-1">
-                      <Heart className="w-3 h-3" /> {example.likes}
-                    </span>
-                  </div>
                 </div>
 
                 <div className="absolute bottom-0 left-0 right-0 p-6 text-white transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
