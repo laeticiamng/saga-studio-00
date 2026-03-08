@@ -21,6 +21,7 @@ export default function CreateClip() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  usePageTitle("Générer un clip");
   const [step, setStep] = useState(0);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [faceFiles, setFaceFiles] = useState<File[]>([]);
