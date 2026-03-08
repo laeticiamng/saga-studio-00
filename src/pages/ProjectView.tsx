@@ -56,9 +56,15 @@ export default function ProjectView() {
       .channel(`project-${id}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "projects", filter: `id=eq.${id}` },
-        () => {
+        { event: "UPDATE", schema: "public", table: "projects", filter: `id=eq.${id}` },
+        (payload) => {
           queryClient.invalidateQueries({ queryKey: ["project", id] });
+          const newStatus = payload.new?.status;
+          if (newStatus === "completed") {
+            toast({ title: "Complete!", description: "Your video is ready" });
+          } else if (newStatus === "failed") {
+            toast({ title: "Pipeline failed", description: "Check project for details", variant: "destructive" });
+          }
         }
       )
       .on(
