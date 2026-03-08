@@ -439,16 +439,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      debit_credits: {
-        Args: {
-          p_amount: number
-          p_reason: string
-          p_ref_id?: string
-          p_ref_type?: string
-          p_user_id: string
-        }
-        Returns: boolean
-      }
+      debit_credits:
+        | {
+            Args: {
+              p_amount: number
+              p_reason: string
+              p_ref_id?: string
+              p_ref_type?: string
+              p_user_id: string
+            }
+            Returns: boolean
+          }
+        | {
+            Args: {
+              p_amount: number
+              p_reason: string
+              p_ref_id?: string
+              p_ref_type?: string
+              p_user_id: string
+            }
+            Returns: boolean
+          }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
