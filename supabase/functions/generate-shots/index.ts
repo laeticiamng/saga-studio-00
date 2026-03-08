@@ -287,9 +287,20 @@ serve(async (req) => {
       try {
         await supabase.from("shots").update({ status: "generating" }).eq("id", shot.id);
 
+        // ── Style Consistency: enrich prompt with style/character bibles ──
+        const totalShots = totalShotsCount || shotlistJson.length || pendingShots.length;
+        const enrichedPrompt = buildStyleConsistentPrompt(
+          shot.prompt || "",
+          styleBible,
+          characterBible,
+          project.style_preset || "cinematic",
+          shot.idx,
+          totalShots
+        );
+
         const { provider: usedProvider, job_id, attempts } = await generateWithFallback(
           providerChain,
-          shot.prompt || "",
+          enrichedPrompt,
           shot.duration_sec || 7,
           project.style_preset || "cinematic",
           shot.seed || Math.floor(Math.random() * 999999)
