@@ -66,7 +66,7 @@ const Hero = () => {
         >
           <Sparkles className="w-4 h-4 text-primary" />
           <span className="text-sm text-muted-foreground">
-            Propulsé par l'IA vidéo de nouvelle génération
+            10 crédits offerts — Aucune carte bancaire requise
           </span>
         </motion.div>
 

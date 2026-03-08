@@ -22,7 +22,7 @@ export default function ClientLogos() {
     <section className="py-12 px-4 border-y border-border/30 relative overflow-hidden">
       <AnimatedSection>
         <p className="text-center text-sm text-muted-foreground mb-6 tracking-widest uppercase">
-          Formats d'export disponibles
+          Exportez vos vidéos dans le format de votre choix
         </p>
       </AnimatedSection>
 

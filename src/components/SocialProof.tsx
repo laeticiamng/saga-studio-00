@@ -28,9 +28,9 @@ function Counter({ target, suffix = "" }: { target: number; suffix?: string }) {
 }
 
 const stats = [
-  { value: 4, suffix: "", label: "Modèles IA intégrés" },
-  { value: 13, suffix: "", label: "Styles visuels disponibles" },
-  { value: 5, suffix: " min", label: "Durée max par vidéo" },
+  { value: 10, suffix: "", label: "Crédits offerts à l'inscription" },
+  { value: 13, suffix: "", label: "Styles visuels au choix" },
+  { value: 5, suffix: " min", label: "De vidéo en une seule génération" },
 ];
 
 const highlights = [

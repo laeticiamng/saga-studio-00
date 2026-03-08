@@ -144,7 +144,7 @@ export default function CreateClip() {
       // Update status to analyzing to start pipeline
       await supabase.from("projects").update({ status: "analyzing" as const }).eq("id", project.id);
 
-      toast({ title: "🎬 Pipeline lancé !", description: "Votre clip est en cours de génération…" });
+      toast({ title: "🎬 C'est parti !", description: "Votre clip est en cours de création. Suivez l'avancement en temps réel." });
       navigate(`/project/${project.id}`);
 
       // Fire pipeline-worker in background

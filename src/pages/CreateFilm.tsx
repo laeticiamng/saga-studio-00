@@ -181,12 +181,16 @@ export default function CreateFilm() {
 
             <div className="rounded-xl bg-secondary/50 p-4 space-y-2">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Fournisseur</span>
+                <span className="text-muted-foreground">Moteur IA</span>
                 <span>{PROVIDER_LABELS[provider]}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Plans estimés</span>
+                <span className="text-muted-foreground">Scènes estimées</span>
                 <span>~{estimatedShots}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Temps estimé</span>
+                <span>~5-15 min</span>
               </div>
               <div className="flex justify-between font-medium">
                 <span className="flex items-center gap-1"><Coins className="h-4 w-4 text-primary" /> Coût estimé</span>
