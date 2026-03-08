@@ -55,10 +55,16 @@ export default function Auth() {
     try {
       if (isLogin) {
         await signIn(email, password);
+        navigate("/dashboard");
       } else {
         await signUp(email, password, displayName);
+        toast({
+          title: "Compte créé !",
+          description: "Un email de vérification vous a été envoyé. Vérifiez votre boîte de réception avant de vous connecter.",
+        });
+        setIsLogin(true);
+        setPassword("");
       }
-      navigate("/dashboard");
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message, variant: "destructive" });
     } finally {
