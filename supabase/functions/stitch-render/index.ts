@@ -19,7 +19,6 @@ function computeBeatAlignedCuts(
   bpm: number
 ): { idx: number; start_sec: number; end_sec: number; transition: string }[] {
   if (!beats.length || !shots.length) {
-    // Fallback: equal distribution
     const perShot = totalDuration / shots.length;
     return shots.map((s, i) => ({
       idx: s.idx,
@@ -33,13 +32,11 @@ function computeBeatAlignedCuts(
   const beatsPerBar = 4;
   const barDuration = beatInterval * beatsPerBar;
 
-  // Build bar grid from beats
   const barStarts: number[] = [];
   for (let t = 0; t < totalDuration; t += barDuration) {
     barStarts.push(t);
   }
 
-  // Assign shots to bars, distributing evenly across available bars
   const barsPerShot = Math.max(1, Math.floor(barStarts.length / shots.length));
   const cuts: { idx: number; start_sec: number; end_sec: number; transition: string }[] = [];
 
@@ -49,17 +46,14 @@ function computeBeatAlignedCuts(
     const endBarIdx = Math.min(barIdx + barsPerShot, barStarts.length);
     const endBar = endBarIdx < barStarts.length ? barStarts[endBarIdx] : totalDuration;
 
-    // Determine transition type based on section boundaries
     let transition = "cut_on_beat";
     if (sections.length > 0) {
       const sectionAtCut = sections.find(s => Math.abs(s.start - startBar) < barDuration);
       if (sectionAtCut) {
-        // Use crossfade at section boundaries (chorus, bridge, etc.)
         transition = sectionAtCut.type === "chorus" ? "flash_cut" : "crossfade";
       }
     }
 
-    // Snap to nearest strong beat
     const nearestBeat = beats.reduce((best, b) =>
       Math.abs(b.time - startBar) < Math.abs(best.time - startBar) ? b : best,
       beats[0]
@@ -74,7 +68,6 @@ function computeBeatAlignedCuts(
     });
   }
 
-  // Fix overlaps: each cut starts where the previous ends
   for (let i = 1; i < cuts.length; i++) {
     cuts[i].start_sec = cuts[i - 1].end_sec;
   }
@@ -124,7 +117,16 @@ serve(async (req) => {
       .eq("status", "completed")
       .order("idx");
 
-    if (!shots || shots.length === 0) throw new Error("No completed shots to stitch");
+    if (!shots || shots.length === 0) {
+      // P0-3: No completed shots → mark render as failed, NOT completed with null URLs
+      await supabase.from("renders").upsert({
+        project_id,
+        status: "failed",
+        logs: JSON.stringify({ error: "No completed shots to stitch", failed_at: new Date().toISOString() }),
+      }, { onConflict: "project_id" });
+      await supabase.from("projects").update({ status: "failed" }).eq("id", project_id);
+      throw new Error("No completed shots to stitch");
+    }
 
     // Get audio analysis for beat-aligned cuts
     const { data: analysis } = await supabase
@@ -139,12 +141,10 @@ serve(async (req) => {
     const energyData = (analysis?.energy_json as any[]) || [];
     const totalDuration = project.duration_sec || 180;
 
-    // Parse beat points
     const beats: BeatPoint[] = beatsJson.map((b: any) =>
       typeof b === "number" ? { time: b } : { time: b.time || 0, strength: b.strength }
     );
 
-    // Parse sections
     const sections: Section[] = sectionsJson.map((s: any) => ({
       label: s.label || s.type || "unknown",
       start: s.start || 0,
@@ -152,20 +152,16 @@ serve(async (req) => {
       type: s.type,
     }));
 
-    // ── Beat-Sync: compute precise cut points ──
     const beatAlignedCuts = computeBeatAlignedCuts(shots, beats, sections, totalDuration, bpm);
 
-    // Determine highest energy section for teaser
     const highestEnergy = [...energyData].sort((a, b) => (b.energy || 0) - (a.energy || 0))[0];
     const teaserSection = highestEnergy?.section || "chorus1";
     const teaserStart = sections.find(s => s.label === teaserSection)?.start || totalDuration * 0.3;
 
-    // ── Multi-Format: select requested formats ──
     const requestedFormats = formats
       ? EXPORT_FORMATS.filter(f => formats.includes(f.key))
-      : EXPORT_FORMATS.filter(f => f.key !== "square"); // Default: all except square
+      : EXPORT_FORMATS.filter(f => f.key !== "square");
 
-    // Build FFmpeg-ready manifest
     const manifest = {
       project_id,
       audio_url: project.audio_url,
@@ -206,7 +202,7 @@ serve(async (req) => {
 
     // Check for external FFmpeg render service
     const renderServiceUrl = Deno.env.get("FFMPEG_RENDER_SERVICE_URL");
-    let renderResult: any;
+    let renderResult: any = null;
 
     if (renderServiceUrl) {
       try {
@@ -222,42 +218,50 @@ serve(async (req) => {
       }
     }
 
-    // Create or update render record
-    const renderData: any = {
-      project_id,
-      status: "completed",
-      thumbs_json: thumbs,
-      logs: JSON.stringify({
-        manifest_version: 2,
-        beat_sync_enabled: true,
-        cuts_count: beatAlignedCuts.length,
-        bpm,
-        formats_requested: requestedFormats.map(f => f.key),
-        transitions: beatAlignedCuts.map(c => c.transition),
-        highest_energy_section: teaserSection,
-        teaser_start_sec: teaserStart,
-        stitched_at: new Date().toISOString(),
-        used_external_service: !!renderResult,
-      }),
-    };
+    // P0-3: Only mark as completed if we have actual render URLs
+    const hasRealOutput = renderResult?.master_url_16_9;
 
-    if (renderResult?.master_url_16_9) {
-      renderData.master_url_16_9 = renderResult.master_url_16_9;
-      renderData.master_url_9_16 = renderResult.master_url_9_16;
-      renderData.teaser_url = renderResult.teaser_url;
+    if (hasRealOutput) {
+      // Real render service returned URLs → completed
+      await supabase.from("renders").upsert({
+        project_id,
+        status: "completed",
+        master_url_16_9: renderResult.master_url_16_9,
+        master_url_9_16: renderResult.master_url_9_16 || null,
+        teaser_url: renderResult.teaser_url || null,
+        thumbs_json: thumbs,
+        logs: JSON.stringify({
+          manifest_version: 2,
+          beat_sync_enabled: true,
+          cuts_count: beatAlignedCuts.length,
+          bpm,
+          formats_requested: requestedFormats.map(f => f.key),
+          stitched_at: new Date().toISOString(),
+          used_external_service: true,
+        }),
+      }, { onConflict: "project_id" });
+
+      await supabase.from("projects").update({ status: "completed" }).eq("id", project_id);
     } else {
-      renderData.master_url_16_9 = shots[0]?.output_url || null;
-      renderData.master_url_9_16 = shots[0]?.output_url || null;
-      renderData.teaser_url = shots[0]?.output_url || null;
+      // No render service or it failed → status stays "pending", store manifest for later
+      await supabase.from("renders").upsert({
+        project_id,
+        status: "pending",
+        thumbs_json: thumbs,
+        logs: JSON.stringify({
+          manifest_version: 2,
+          manifest,
+          beat_sync_enabled: true,
+          cuts_count: beatAlignedCuts.length,
+          bpm,
+          awaiting_render_service: true,
+          created_at: new Date().toISOString(),
+        }),
+      }, { onConflict: "project_id" });
+
+      // Project stays in "stitching" — will be picked up when render service is available
+      // Don't mark completed with empty URLs!
     }
-
-    const { error: renderErr } = await supabase
-      .from("renders")
-      .upsert(renderData, { onConflict: "project_id" });
-
-    if (renderErr) throw renderErr;
-
-    await supabase.from("projects").update({ status: "completed" }).eq("id", project_id);
 
     return new Response(JSON.stringify({
       success: true,
@@ -265,6 +269,7 @@ serve(async (req) => {
       beat_sync: { enabled: true, cuts: beatAlignedCuts.length, bpm },
       formats: requestedFormats.map(f => f.key),
       has_render_service: !!renderServiceUrl,
+      render_completed: !!hasRealOutput,
       manifest_ready: true,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

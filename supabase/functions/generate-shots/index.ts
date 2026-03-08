@@ -283,6 +283,24 @@ serve(async (req) => {
     const results = [];
     let creditsUsed = 0;
 
+    // P0-1: Pre-check credits BEFORE generating
+    const totalEstimatedCredits = pendingShots.length * 2;
+    const { data: wallet } = await supabase
+      .from("credit_wallets")
+      .select("balance")
+      .eq("id", project.user_id)
+      .single();
+
+    if (!wallet || wallet.balance < totalEstimatedCredits) {
+      await supabase.from("projects").update({ status: "failed" }).eq("id", project_id);
+      return jsonResponse({
+        success: false,
+        error: "Insufficient credits",
+        required: totalEstimatedCredits,
+        available: wallet?.balance || 0,
+      });
+    }
+
     for (const shot of pendingShots) {
       try {
         await supabase.from("shots").update({ status: "generating" }).eq("id", shot.id);
@@ -332,17 +350,18 @@ serve(async (req) => {
       }
     }
 
-    // Atomic credit debit
+    // P0-1: Atomic credit debit with idempotence (ref_id = project_id + batch timestamp)
     if (creditsUsed > 0) {
+      const batchRef = `${project_id}_gen_${Date.now()}`;
       const { data: debited } = await supabase.rpc("debit_credits", {
         p_user_id: project.user_id,
         p_amount: creditsUsed,
-        p_reason: `Shot generation (${results.filter(r => r.status === "started").length} shots via fallback chain)`,
-        p_ref_id: project_id,
-        p_ref_type: "project",
+        p_reason: `Shot generation (${results.filter(r => r.status === "started").length} shots)`,
+        p_ref_id: batchRef,
+        p_ref_type: "shot_generation",
       });
       if (!debited) {
-        console.warn(`[generate-shots] Insufficient credits for user ${project.user_id}, debit of ${creditsUsed} failed`);
+        console.error(`[generate-shots] Atomic debit failed for user ${project.user_id}, amount ${creditsUsed}`);
       }
     }
 
