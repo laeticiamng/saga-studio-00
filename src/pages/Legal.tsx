@@ -11,13 +11,14 @@ export default function Legal() {
         <h1 className="text-3xl font-bold mb-8">Mentions légales</h1>
         <div className="max-w-none space-y-6 text-muted-foreground">
           <h2 className="text-xl font-semibold text-foreground">Éditeur du site</h2>
-          <p>CineClip AI<br />Service de génération vidéo par intelligence artificielle<br />Contact : contact@cineclip.ai</p>
+          <p>CineClip AI<br />Service de génération vidéo par intelligence artificielle<br />Email : contact@cineclip.ai</p>
+          <p className="text-sm italic">Les informations complètes de l'entité éditrice (raison sociale, SIRET, adresse) seront publiées dès l'immatriculation de la société.</p>
 
           <h2 className="text-xl font-semibold text-foreground">Hébergement</h2>
-          <p>Ce site est hébergé par Lovable Cloud.</p>
+          <p>Ce site est hébergé par Lovable Cloud (infrastructure Supabase / AWS).</p>
 
           <h2 className="text-xl font-semibold text-foreground">Directeur de la publication</h2>
-          <p>Le directeur de la publication est le représentant légal de CineClip AI.</p>
+          <p>Le directeur de la publication sera communiqué lors de l'immatriculation de la société.</p>
 
           <h2 className="text-xl font-semibold text-foreground">Propriété intellectuelle</h2>
           <p>L'ensemble du contenu du site (textes, images, logo, code) est protégé par le droit d'auteur. Toute reproduction sans autorisation est interdite.</p>

@@ -35,19 +35,19 @@ const stats = [
 
 const highlights = [
   {
-    title: "Cohérence visuelle",
-    text: "Notre pipeline garantit un style uniforme du premier au dernier plan, grâce aux style bibles générés par IA.",
-    icon: "🎨",
+    title: "Tout-en-un, sans compétence technique",
+    text: "Décrivez votre idée, uploadez votre musique, et l'IA s'occupe de tout : plans, transitions et montage final.",
+    icon: "🎬",
   },
   {
-    title: "Pipeline automatisé",
-    text: "De l'analyse audio à l'export final, tout est orchestré automatiquement. Vous décrivez, l'IA produit.",
+    title: "Résultat en quelques minutes",
+    text: "Pas besoin d'attendre des heures. Notre système génère votre vidéo complète rapidement, prête à télécharger.",
     icon: "⚡",
   },
   {
-    title: "Multi-fournisseurs",
-    text: "Choisissez parmi OpenAI, Runway, Luma ou Google Veo — ou laissez le mode Auto sélectionner le meilleur.",
-    icon: "🔄",
+    title: "Plusieurs styles au choix",
+    text: "Cinématique, anime, aquarelle, néon… Choisissez le style visuel qui correspond à votre univers.",
+    icon: "🎨",
   },
 ];
 

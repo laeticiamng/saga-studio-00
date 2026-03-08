@@ -10,8 +10,9 @@ const footerLinks = {
     { label: "Tarifs", href: "/pricing" },
   ],
   Ressources: [
+    { label: "FAQ", href: "#faq" },
     { label: "Tableau de bord", href: "/dashboard" },
-    { label: "Aide & Contact", href: "mailto:contact@cineclip.ai" },
+    { label: "Contact", href: "mailto:contact@cineclip.ai" },
   ],
   Légal: [
     { label: "Confidentialité", href: "/privacy" },

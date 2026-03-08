@@ -9,22 +9,22 @@ const STEPS = [
   {
     icon: <Film className="h-8 w-8 text-primary" />,
     title: "Bienvenue sur CineClip AI !",
-    description: "Générez des clips vidéo et courts-métrages professionnels propulsés par l'IA. Faisons un tour rapide.",
+    description: "Créez des clips vidéo et courts-métrages grâce à l'intelligence artificielle. Voici comment ça marche.",
   },
   {
     icon: <Upload className="h-8 w-8 text-primary" />,
-    title: "Créez un projet",
-    description: "Commencez par un Clip (importez votre audio) ou un Film (écrivez un synopsis). Choisissez votre style, fournisseur et format.",
+    title: "1. Décrivez votre projet",
+    description: "Choisissez entre un Clip (avec votre musique) ou un Film (avec votre scénario). Sélectionnez un style visuel et lancez la création.",
   },
   {
     icon: <Palette className="h-8 w-8 text-primary" />,
-    title: "Pipeline IA",
-    description: "Notre IA analyse votre contenu, planifie les plans, génère les vidéos et les assemble en un rendu final. Suivez la progression en temps réel.",
+    title: "2. L'IA crée votre vidéo",
+    description: "L'IA génère automatiquement chaque scène, assure un style cohérent du début à la fin, et assemble le tout en une vidéo complète.",
   },
   {
     icon: <Zap className="h-8 w-8 text-primary" />,
-    title: "Crédits & Téléchargements",
-    description: "Chaque génération coûte des crédits. Achetez des packs ou abonnez-vous pour des crédits mensuels. Téléchargez vos rendus en 16:9, 9:16 ou les deux !",
+    title: "3. Téléchargez le résultat",
+    description: "Votre vidéo est prête ! Téléchargez-la en format paysage ou portrait. 10 crédits offerts pour démarrer, rechargeables à tout moment.",
   },
 ];
 
