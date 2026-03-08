@@ -28,6 +28,7 @@ export default function CreateFilm() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  usePageTitle("Générer un film");
   const [title, setTitle] = useState("");
   const [synopsis, setSynopsis] = useState("");
   const [duration, setDuration] = useState("120");
