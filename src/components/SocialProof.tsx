@@ -1,4 +1,4 @@
-import { motion, useMotionValue, useTransform, animate } from "framer-motion";
+import { motion, useMotionValue, useTransform, animate, useScroll } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { Star } from "lucide-react";
 import AnimatedSection from "./AnimatedSection";
@@ -56,34 +56,52 @@ const testimonials = [
 ];
 
 export default function SocialProof() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start end", "end start"],
+  });
+
+  // Parallax: glow rises faster, cards drift subtly
+  const glowY = useTransform(scrollYProgress, [0, 1], ["40px", "-60px"]);
+  const glowScale = useTransform(scrollYProgress, [0, 0.5, 1], [0.8, 1.2, 0.9]);
+  const countersY = useTransform(scrollYProgress, [0, 1], ["30px", "-20px"]);
+  const cardsY = useTransform(scrollYProgress, [0, 1], ["50px", "-30px"]);
+
   return (
-    <section id="proof" className="py-24 px-4 relative overflow-hidden">
-      {/* Subtle glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/10 rounded-full blur-3xl" />
+    <section ref={sectionRef} id="proof" className="py-24 px-4 relative overflow-hidden">
+      {/* Parallax glow */}
+      <motion.div
+        style={{ y: glowY, scale: glowScale }}
+        className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/10 rounded-full blur-3xl"
+      />
 
       <div className="container mx-auto relative z-10">
-        {/* Counters */}
-        <AnimatedSection>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
-            {stats.map((stat) => (
-              <div key={stat.label} className="text-center space-y-2">
-                <div className="text-primary">
-                  <Counter target={stat.value} suffix={stat.suffix} />
+        {/* Counters with parallax */}
+        <motion.div style={{ y: countersY }}>
+          <AnimatedSection>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
+              {stats.map((stat) => (
+                <div key={stat.label} className="text-center space-y-2">
+                  <div className="text-primary">
+                    <Counter target={stat.value} suffix={stat.suffix} />
+                  </div>
+                  <p className="text-muted-foreground text-lg">{stat.label}</p>
                 </div>
-                <p className="text-muted-foreground text-lg">{stat.label}</p>
-              </div>
-            ))}
-          </div>
-        </AnimatedSection>
+              ))}
+            </div>
+          </AnimatedSection>
+        </motion.div>
 
-        {/* Testimonials */}
+        {/* Testimonials heading */}
         <AnimatedSection delay={0.15}>
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">
             Ce que disent nos créateurs
           </h2>
         </AnimatedSection>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        {/* Cards with parallax drift */}
+        <motion.div style={{ y: cardsY }} className="grid md:grid-cols-3 gap-6">
           {testimonials.map((t, i) => (
             <AnimatedSection key={t.name} delay={0.1 * (i + 1)}>
               <motion.div
@@ -104,7 +122,7 @@ export default function SocialProof() {
               </motion.div>
             </AnimatedSection>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   );

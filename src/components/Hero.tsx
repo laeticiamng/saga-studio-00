@@ -2,37 +2,62 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Video, Zap } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { useRef } from "react";
 import heroImage from "@/assets/hero-cinema.jpg";
 
 const Hero = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const ref = useRef<HTMLElement>(null);
+
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start start", "end start"],
+  });
+
+  // Parallax layers: background moves slower, text moves slightly faster
+  const bgY = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
+  const glowY = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
+  const contentY = useTransform(scrollYProgress, [0, 1], ["0%", "15%"]);
+  const contentOpacity = useTransform(scrollYProgress, [0, 0.6], [1, 0]);
 
   const handleGetStarted = () => {
     navigate(user ? "/dashboard" : "/auth");
   };
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+    <section ref={ref} className="relative min-h-screen flex items-center justify-center overflow-hidden">
       <div className="absolute inset-0 bg-gradient-hero" />
-      <div
-        className="absolute inset-0 opacity-20"
-        style={{
-          backgroundImage: `url(${heroImage})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
-      />
 
-      {/* Animated glow */}
+      {/* Parallax background image */}
       <motion.div
+        style={{ y: bgY }}
+        className="absolute inset-0 opacity-20"
+      >
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `url(${heroImage})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+        />
+      </motion.div>
+
+      {/* Parallax glow */}
+      <motion.div
+        style={{ y: glowY }}
         animate={{ scale: [1, 1.15, 1], opacity: [0.2, 0.35, 0.2] }}
         transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
         className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-primary/20 rounded-full blur-3xl"
       />
 
-      <div className="relative z-10 container mx-auto px-4 text-center">
+      {/* Content with parallax fade */}
+      <motion.div
+        style={{ y: contentY, opacity: contentOpacity }}
+        className="relative z-10 container mx-auto px-4 text-center"
+      >
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -95,7 +120,7 @@ const Hero = () => {
             </div>
           ))}
         </motion.div>
-      </div>
+      </motion.div>
     </section>
   );
 };
