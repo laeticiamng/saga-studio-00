@@ -18,7 +18,7 @@ const Footer = () => {
       { label: "FAQ", href: "#faq" },
       { label: "À propos", href: "/about" },
       ...(user ? [{ label: "Mes projets", href: "/dashboard" }] : []),
-      { label: "Contact", href: "mailto:contact@cineclip.ai" },
+      { label: "Contact", href: "/about" },
     ],
     Légal: [
       { label: "Confidentialité", href: "/privacy" },
