@@ -16,8 +16,7 @@ interface VideoProvider {
 
 class MockProvider implements VideoProvider {
   name = "mock";
-  async generateVideo(prompt: string, duration: number) {
-    // Simulate 1-2s generation
+  async generateVideo() {
     return { job_id: `mock-${crypto.randomUUID()}` };
   }
   async checkStatus(job_id: string) {
@@ -32,27 +31,18 @@ class SoraProvider implements VideoProvider {
   name = "sora";
   private apiKey: string;
   constructor(apiKey: string) { this.apiKey = apiKey; }
-
-  async generateVideo(prompt: string, duration: number, style: string, seed: number) {
+  async generateVideo(prompt: string, duration: number, style: string) {
     const res = await fetch("https://api.openai.com/v1/videos/generations", {
       method: "POST",
       headers: { "Authorization": `Bearer ${this.apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "sora",
-        prompt: `${style} style. ${prompt}`,
-        duration: Math.min(duration, 20),
-        size: "1920x1080",
-      }),
+      body: JSON.stringify({ model: "sora", prompt: `${style} style. ${prompt}`, duration: Math.min(duration, 20), size: "1920x1080" }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || "Sora API error");
     return { job_id: data.id };
   }
-
   async checkStatus(job_id: string) {
-    const res = await fetch(`https://api.openai.com/v1/videos/generations/${job_id}`, {
-      headers: { "Authorization": `Bearer ${this.apiKey}` },
-    });
+    const res = await fetch(`https://api.openai.com/v1/videos/generations/${job_id}`, { headers: { "Authorization": `Bearer ${this.apiKey}` } });
     const data = await res.json();
     const status = data.status === "succeeded" ? "completed" : data.status === "failed" ? "failed" : "pending";
     return { status: status as any, url: data.output?.url, error: data.error?.message };
@@ -63,30 +53,19 @@ class RunwayProvider implements VideoProvider {
   name = "runway";
   private apiKey: string;
   constructor(apiKey: string) { this.apiKey = apiKey; }
-
   async generateVideo(prompt: string, duration: number) {
     const res = await fetch("https://api.dev.runwayml.com/v1/text_to_video", {
       method: "POST",
-      headers: {
-        "Authorization": `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json",
-        "X-Runway-Version": "2024-11-06",
-      },
-      body: JSON.stringify({
-        model: "gen4_turbo",
-        promptText: prompt,
-        duration: Math.min(duration, 10),
-        ratio: "16:9",
-      }),
+      headers: { "Authorization": `Bearer ${this.apiKey}`, "Content-Type": "application/json", "X-Runway-Version": "2024-11-06" },
+      body: JSON.stringify({ model: "gen4_turbo", promptText: prompt, duration: Math.min(duration, 10), ratio: "16:9" }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Runway API error");
     return { job_id: data.id };
   }
-
   async checkStatus(job_id: string) {
     const res = await fetch(`https://api.dev.runwayml.com/v1/tasks/${job_id}`, {
-      headers: { "Authorization": `Bearer ${this.apiKey}`, "X-Runway-Version": "2024-11-06" },
+      headers: { "Authorization": `Bearer ${Deno.env.get("RUNWAY_API_KEY")}`, "X-Runway-Version": "2024-11-06" },
     });
     const data = await res.json();
     const status = data.status === "SUCCEEDED" ? "completed" : data.status === "FAILED" ? "failed" : "pending";
@@ -98,26 +77,19 @@ class LumaProvider implements VideoProvider {
   name = "luma";
   private apiKey: string;
   constructor(apiKey: string) { this.apiKey = apiKey; }
-
   async generateVideo(prompt: string, duration: number) {
     const res = await fetch("https://api.lumalabs.ai/dream-machine/v1/generations", {
       method: "POST",
       headers: { "Authorization": `Bearer ${this.apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        prompt,
-        model: "ray-2",
-        resolution: "1080p",
-        duration: `${Math.min(duration, 9)}s`,
-      }),
+      body: JSON.stringify({ prompt, model: "ray-2", resolution: "1080p", duration: `${Math.min(duration, 9)}s` }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || "Luma API error");
     return { job_id: data.id };
   }
-
   async checkStatus(job_id: string) {
     const res = await fetch(`https://api.lumalabs.ai/dream-machine/v1/generations/${job_id}`, {
-      headers: { "Authorization": `Bearer ${this.apiKey}` },
+      headers: { "Authorization": `Bearer ${Deno.env.get("LUMA_API_KEY")}` },
     });
     const data = await res.json();
     const status = data.state === "completed" ? "completed" : data.state === "failed" ? "failed" : "pending";
@@ -129,41 +101,78 @@ class VeoProvider implements VideoProvider {
   name = "veo";
   private apiKey: string;
   constructor(apiKey: string) { this.apiKey = apiKey; }
-
-  async generateVideo(prompt: string, duration: number) {
-    return { job_id: `veo-${crypto.randomUUID()}` };
-  }
-  async checkStatus(job_id: string) {
-    return { status: "completed" as const, url: undefined };
-  }
+  async generateVideo() { return { job_id: `veo-${crypto.randomUUID()}` }; }
+  async checkStatus() { return { status: "completed" as const, url: undefined }; }
 }
 
-function getProvider(providerName?: string): VideoProvider {
+// ─── Provider Fallback Chain ────────────────────────────────────────────────
+
+const PROVIDER_PRIORITY = ["sora", "runway", "luma", "veo"] as const;
+
+function buildProviderChain(preferredProvider?: string): VideoProvider[] {
   const keys: Record<string, string | undefined> = {
     sora: Deno.env.get("OPENAI_API_KEY"),
     runway: Deno.env.get("RUNWAY_API_KEY"),
     luma: Deno.env.get("LUMA_API_KEY"),
     veo: Deno.env.get("GOOGLE_VEO_API_KEY"),
   };
-
-  const providers: Record<string, (key: string) => VideoProvider> = {
+  const factories: Record<string, (k: string) => VideoProvider> = {
     sora: (k) => new SoraProvider(k),
     runway: (k) => new RunwayProvider(k),
     luma: (k) => new LumaProvider(k),
     veo: (k) => new VeoProvider(k),
   };
 
-  // Try requested provider first
-  if (providerName && keys[providerName]) {
-    return providers[providerName](keys[providerName]!);
+  const chain: VideoProvider[] = [];
+
+  // Put preferred provider first
+  if (preferredProvider && keys[preferredProvider]) {
+    chain.push(factories[preferredProvider](keys[preferredProvider]!));
   }
 
-  // Auto-select first available
-  for (const [name, key] of Object.entries(keys)) {
-    if (key) return providers[name](key);
+  // Add remaining providers in priority order
+  for (const name of PROVIDER_PRIORITY) {
+    if (name !== preferredProvider && keys[name]) {
+      chain.push(factories[name](keys[name]!));
+    }
   }
 
-  return new MockProvider();
+  // Always have mock as last resort
+  chain.push(new MockProvider());
+  return chain;
+}
+
+async function generateWithFallback(
+  chain: VideoProvider[],
+  prompt: string,
+  duration: number,
+  style: string,
+  seed: number,
+  maxRetries = 2
+): Promise<{ provider: VideoProvider; job_id: string; attempts: { provider: string; error?: string }[] }> {
+  const attempts: { provider: string; error?: string }[] = [];
+
+  for (const provider of chain) {
+    for (let retry = 0; retry <= maxRetries; retry++) {
+      try {
+        // Exponential backoff on retry
+        if (retry > 0) {
+          await new Promise(r => setTimeout(r, Math.min(1000 * Math.pow(2, retry), 8000)));
+        }
+        const { job_id } = await provider.generateVideo(prompt, duration, style, seed);
+        attempts.push({ provider: provider.name });
+        return { provider, job_id, attempts };
+      } catch (err: any) {
+        attempts.push({ provider: provider.name, error: err.message });
+        console.warn(`[generate-shots] ${provider.name} attempt ${retry + 1} failed: ${err.message}`);
+        // Only retry on same provider for transient errors (rate limit, timeout)
+        const isTransient = /rate|timeout|503|429|500/i.test(err.message);
+        if (!isTransient) break; // Skip to next provider
+      }
+    }
+  }
+
+  throw new Error(`All providers failed: ${attempts.map(a => `${a.provider}:${a.error}`).join(", ")}`);
 }
 
 // ─── Main Handler ───────────────────────────────────────────────────────────
@@ -183,7 +192,7 @@ serve(async (req) => {
     const { data: project } = await supabase.from("projects").select("*").eq("id", project_id).single();
     if (!project) throw new Error("Project not found");
 
-    const provider = getProvider(project.provider_default || undefined);
+    const providerChain = buildProviderChain(project.provider_default || undefined);
 
     // Get pending shots
     const { data: pendingShots } = await supabase
@@ -195,12 +204,7 @@ serve(async (req) => {
       .limit(batch_size);
 
     if (!pendingShots || pendingShots.length === 0) {
-      // Check if all shots are completed
-      const { data: allShots } = await supabase
-        .from("shots")
-        .select("status")
-        .eq("project_id", project_id);
-
+      const { data: allShots } = await supabase.from("shots").select("status").eq("project_id", project_id);
       const completed = allShots?.filter(s => s.status === "completed").length || 0;
       const allDone = allShots?.every(s => s.status === "completed" || s.status === "failed");
 
@@ -208,8 +212,7 @@ serve(async (req) => {
         await supabase.from("projects").update({ status: "stitching" }).eq("id", project_id);
         return jsonResponse({ success: true, message: "All shots done, moving to stitch", completed });
       }
-
-      return jsonResponse({ success: true, message: "No pending shots", provider: provider.name });
+      return jsonResponse({ success: true, message: "No pending shots", provider: providerChain[0]?.name });
     }
 
     const results = [];
@@ -217,22 +220,22 @@ serve(async (req) => {
 
     for (const shot of pendingShots) {
       try {
-        // Mark as generating
-        await supabase.from("shots").update({
-          status: "generating",
-          provider: provider.name,
-        }).eq("id", shot.id);
+        await supabase.from("shots").update({ status: "generating" }).eq("id", shot.id);
 
-        const { job_id } = await provider.generateVideo(
+        const { provider: usedProvider, job_id, attempts } = await generateWithFallback(
+          providerChain,
           shot.prompt || "",
           shot.duration_sec || 7,
           project.style_preset || "cinematic",
           shot.seed || Math.floor(Math.random() * 999999)
         );
 
+        // Update shot with actual provider used
+        await supabase.from("shots").update({ provider: usedProvider.name }).eq("id", shot.id);
+
         // For mock provider, immediately complete
-        if (provider.name === "mock") {
-          const result = await provider.checkStatus(job_id);
+        if (usedProvider.name === "mock") {
+          const result = await usedProvider.checkStatus(job_id);
           if (result.status === "completed" && result.url) {
             await supabase.from("shots").update({
               status: "completed",
@@ -242,10 +245,8 @@ serve(async (req) => {
             creditsUsed += 2;
           }
         }
-        // For real providers, the shot stays in "generating" status
-        // and check-shot-status will poll for completion
 
-        results.push({ shot_id: shot.id, job_id, status: "started" });
+        results.push({ shot_id: shot.id, job_id, provider: usedProvider.name, attempts, status: "started" });
       } catch (err: any) {
         await supabase.from("shots").update({
           status: "failed",
@@ -257,30 +258,20 @@ serve(async (req) => {
 
     // Deduct credits
     if (creditsUsed > 0) {
-      // Get current balance and deduct
-      const { data: wallet } = await supabase
-        .from("credit_wallets")
-        .select("balance")
-        .eq("id", project.user_id)
-        .single();
-
+      const { data: wallet } = await supabase.from("credit_wallets").select("balance").eq("id", project.user_id).single();
       if (wallet) {
-        await supabase
-          .from("credit_wallets")
-          .update({ balance: Math.max(0, wallet.balance - creditsUsed) })
-          .eq("id", project.user_id);
+        await supabase.from("credit_wallets").update({ balance: Math.max(0, wallet.balance - creditsUsed) }).eq("id", project.user_id);
       }
-
       await supabase.from("credit_ledger").insert({
         user_id: project.user_id,
         delta: -creditsUsed,
-        reason: `Shot generation (${results.filter(r => r.status === "started").length} shots via ${provider.name})`,
+        reason: `Shot generation (${results.filter(r => r.status === "started").length} shots via fallback chain)`,
         ref_type: "project",
         ref_id: project_id,
       });
     }
 
-    return jsonResponse({ success: true, results, provider: provider.name, credits_used: creditsUsed });
+    return jsonResponse({ success: true, results, credits_used: creditsUsed });
   } catch (err: any) {
     return new Response(JSON.stringify({ error: err.message }), {
       status: 400,

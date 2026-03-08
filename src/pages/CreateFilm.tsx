@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Film, Coins, Loader2, Cpu } from "lucide-react";
+import { Film, Coins, Loader2, Cpu, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const PROVIDER_LABELS: Record<string, string> = {
@@ -59,10 +59,11 @@ export default function CreateFilm() {
   const estimatedShots = estimate?.estimated_shots ?? Math.ceil(durationSec / 7);
   const estimatedCredits = estimate?.estimated_credits ?? (10 + estimatedShots * 2);
 
-  const handleCreate = async () => {
+  const handleOneClickGenerate = async () => {
     if (!user) return;
     setLoading(true);
     try {
+      // Create project with status "planning" (no audio to analyze for films)
       const { data: project, error } = await supabase
         .from("projects")
         .insert({
@@ -72,15 +73,22 @@ export default function CreateFilm() {
           synopsis,
           style_preset: style,
           duration_sec: durationSec,
-          mode: aspectRatio === "both" ? "story" : "story",
+          mode: "story",
           provider_default: provider === "auto" ? null : provider,
-          status: "draft" as const,
+          status: "planning" as const,
         })
         .select()
         .single();
 
       if (error) throw error;
+
+      toast({ title: "🎬 Pipeline launched!", description: "Your film is being generated automatically..." });
       navigate(`/project/${project.id}`);
+
+      // Fire pipeline-worker in background
+      supabase.functions.invoke("pipeline-worker", {
+        body: { project_id: project.id },
+      }).catch(console.error);
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
@@ -176,9 +184,9 @@ export default function CreateFilm() {
               </div>
             </div>
 
-            <Button variant="hero" className="w-full" onClick={handleCreate} disabled={loading || !title || !synopsis}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Generate Film
+            <Button variant="hero" className="w-full" onClick={handleOneClickGenerate} disabled={loading || !title || !synopsis}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
+              {loading ? "Launching pipeline..." : "Generate My Film"}
             </Button>
           </CardContent>
         </Card>

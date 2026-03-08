@@ -67,7 +67,7 @@ export default function ProjectView() {
     enabled: !!id,
   });
 
-  // Realtime
+  // Realtime subscriptions for all pipeline-related tables
   useEffect(() => {
     if (!id) return;
     const channel = supabase
@@ -75,14 +75,23 @@ export default function ProjectView() {
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "projects", filter: `id=eq.${id}` }, (payload) => {
         queryClient.invalidateQueries({ queryKey: ["project", id] });
         const newStatus = payload.new?.status;
-        if (newStatus === "completed") toast({ title: "Complete!", description: "Your video is ready" });
+        if (newStatus === "completed") toast({ title: "🎉 Complete!", description: "Your video is ready to download!" });
         else if (newStatus === "failed") toast({ title: "Pipeline failed", description: "Check project for details", variant: "destructive" });
+        // Also refresh plan and audio analysis when status changes
+        queryClient.invalidateQueries({ queryKey: ["plan", id] });
+        queryClient.invalidateQueries({ queryKey: ["audio-analysis", id] });
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "shots", filter: `project_id=eq.${id}` }, () => {
         queryClient.invalidateQueries({ queryKey: ["shots", id] });
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "renders", filter: `project_id=eq.${id}` }, () => {
         queryClient.invalidateQueries({ queryKey: ["render", id] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "plans", filter: `project_id=eq.${id}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ["plan", id] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "audio_analysis", filter: `project_id=eq.${id}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ["audio-analysis", id] });
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
