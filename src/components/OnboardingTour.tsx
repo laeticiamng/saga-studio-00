@@ -8,23 +8,23 @@ import { Film, Upload, Palette, Zap, X } from "lucide-react";
 const STEPS = [
   {
     icon: <Film className="h-8 w-8 text-primary" />,
-    title: "Welcome to CineClip AI!",
-    description: "Generate professional music videos and short films powered by AI. Let's take a quick tour.",
+    title: "Bienvenue sur CineClip AI !",
+    description: "Générez des clips vidéo et courts-métrages professionnels propulsés par l'IA. Faisons un tour rapide.",
   },
   {
     icon: <Upload className="h-8 w-8 text-primary" />,
-    title: "Create a Project",
-    description: "Start with a Clip (upload audio) or a Film (write a synopsis). Choose your style, provider, and format.",
+    title: "Créez un projet",
+    description: "Commencez par un Clip (importez votre audio) ou un Film (écrivez un synopsis). Choisissez votre style, fournisseur et format.",
   },
   {
     icon: <Palette className="h-8 w-8 text-primary" />,
-    title: "AI Pipeline",
-    description: "Our AI analyzes your input, plans shots, generates video clips, and stitches them into a final render. Track progress in real-time.",
+    title: "Pipeline IA",
+    description: "Notre IA analyse votre contenu, planifie les plans, génère les vidéos et les assemble en un rendu final. Suivez la progression en temps réel.",
   },
   {
     icon: <Zap className="h-8 w-8 text-primary" />,
-    title: "Credits & Downloads",
-    description: "Each generation costs credits. Buy packs or subscribe for monthly credits. Download your renders in 16:9, 9:16, or both!",
+    title: "Crédits & Téléchargements",
+    description: "Chaque génération coûte des crédits. Achetez des packs ou abonnez-vous pour des crédits mensuels. Téléchargez vos rendus en 16:9, 9:16 ou les deux !",
   },
 ];
 
@@ -81,10 +81,10 @@ export function OnboardingTour() {
 
           <div className="flex gap-3 justify-center">
             {step > 0 && (
-              <Button variant="ghost" onClick={() => setStep(step - 1)}>Back</Button>
+              <Button variant="ghost" onClick={() => setStep(step - 1)}>Retour</Button>
             )}
             <Button variant="hero" onClick={next}>
-              {step < STEPS.length - 1 ? "Next" : "Get Started"}
+              {step < STEPS.length - 1 ? "Suivant" : "C'est parti !"}
             </Button>
           </div>
         </CardContent>

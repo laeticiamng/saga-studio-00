@@ -39,10 +39,10 @@ export default function ShareView() {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center text-muted-foreground">
         <Film className="h-16 w-16 mb-4" />
-        <p className="text-xl font-medium mb-2">Video not available</p>
-        <p className="text-sm mb-6">This video doesn't exist or hasn't finished rendering yet.</p>
+        <p className="text-xl font-medium mb-2">Vidéo non disponible</p>
+        <p className="text-sm mb-6">Cette vidéo n'existe pas ou n'a pas encore fini le rendu.</p>
         <Button variant="hero" asChild>
-          <Link to="/">Go to CineClip AI</Link>
+          <Link to="/">Aller sur CineClip AI</Link>
         </Button>
       </div>
     );
@@ -71,27 +71,27 @@ export default function ShareView() {
 
         <Card className="border-border/50 bg-card/60">
           <CardHeader>
-            <CardTitle className="text-lg">Download</CardTitle>
+            <CardTitle className="text-lg">Télécharger</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {render.master_url_16_9 && (
               <a href={render.master_url_16_9} target="_blank" rel="noopener noreferrer">
                 <Button variant="glass" className="w-full justify-start gap-2">
-                  <Download className="h-4 w-4" /> 16:9 Master
+                  <Download className="h-4 w-4" /> Master 16:9
                 </Button>
               </a>
             )}
             {render.master_url_9_16 && (
               <a href={render.master_url_9_16} target="_blank" rel="noopener noreferrer">
                 <Button variant="glass" className="w-full justify-start gap-2 mt-2">
-                  <Download className="h-4 w-4" /> 9:16 Vertical
+                  <Download className="h-4 w-4" /> Vertical 9:16
                 </Button>
               </a>
             )}
             {render.teaser_url && (
               <a href={render.teaser_url} target="_blank" rel="noopener noreferrer">
                 <Button variant="glass" className="w-full justify-start gap-2 mt-2">
-                  <Download className="h-4 w-4" /> 15s Teaser
+                  <Download className="h-4 w-4" /> Teaser 15s
                 </Button>
               </a>
             )}
@@ -99,7 +99,7 @@ export default function ShareView() {
         </Card>
 
         <p className="text-center text-xs text-muted-foreground mt-8">
-          Made with <Link to="/" className="text-primary hover:underline">CineClip AI</Link>
+          Créé avec <Link to="/" className="text-primary hover:underline">CineClip AI</Link>
         </p>
       </div>
     </div>

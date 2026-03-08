@@ -17,12 +17,12 @@ interface Shot {
   project_id: string;
 }
 
-const statusConfig: Record<string, { icon: React.ReactNode; color: string }> = {
-  pending: { icon: <Clock className="h-3 w-3" />, color: "text-muted-foreground" },
-  generating: { icon: <Loader2 className="h-3 w-3 animate-spin" />, color: "text-primary" },
-  completed: { icon: <CheckCircle className="h-3 w-3" />, color: "text-green-500" },
-  failed: { icon: <AlertCircle className="h-3 w-3" />, color: "text-destructive" },
-  regenerating: { icon: <Loader2 className="h-3 w-3 animate-spin" />, color: "text-amber-500" },
+const statusConfig: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
+  pending: { icon: <Clock className="h-3 w-3" />, color: "text-muted-foreground", label: "En attente" },
+  generating: { icon: <Loader2 className="h-3 w-3 animate-spin" />, color: "text-primary", label: "Génération" },
+  completed: { icon: <CheckCircle className="h-3 w-3" />, color: "text-green-500", label: "Terminé" },
+  failed: { icon: <AlertCircle className="h-3 w-3" />, color: "text-destructive", label: "Échoué" },
+  regenerating: { icon: <Loader2 className="h-3 w-3 animate-spin" />, color: "text-amber-500", label: "Régénération" },
 };
 
 export function ShotGrid({ shots }: { shots: Shot[] }) {
@@ -32,15 +32,13 @@ export function ShotGrid({ shots }: { shots: Shot[] }) {
   const handleRetry = async (shot: Shot) => {
     setRetrying(shot.id);
     try {
-      // Mark as regenerating
       await supabase.from("shots").update({ status: "regenerating" as any, error_message: null }).eq("id", shot.id);
-      // Call generate-shots for this single shot
       await supabase.functions.invoke("generate-shots", {
         body: { project_id: shot.project_id, shot_ids: [shot.id] },
       });
-      toast({ title: "Retrying", description: `Shot ${shot.idx + 1} is being regenerated` });
+      toast({ title: "Nouvelle tentative", description: `Le plan ${shot.idx + 1} est en cours de régénération` });
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Erreur", description: err.message, variant: "destructive" });
     } finally {
       setRetrying(null);
     }
@@ -61,9 +59,9 @@ export function ShotGrid({ shots }: { shots: Shot[] }) {
             </div>
             <div className="p-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium">Shot {shot.idx + 1}</span>
+                <span className="text-xs font-medium">Plan {shot.idx + 1}</span>
                 <Badge variant="outline" className={`text-xs gap-1 ${config.color}`}>
-                  {config.icon} {shot.status}
+                  {config.icon} {config.label}
                 </Badge>
               </div>
               {shot.prompt && (
@@ -82,7 +80,7 @@ export function ShotGrid({ shots }: { shots: Shot[] }) {
                   ) : (
                     <RotateCcw className="h-3 w-3" />
                   )}
-                  Retry
+                  Réessayer
                 </Button>
               )}
             </div>

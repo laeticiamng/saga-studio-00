@@ -9,6 +9,17 @@ import { Badge } from "@/components/ui/badge";
 import { Film, Music, Plus, Clock, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { OnboardingTour } from "@/components/OnboardingTour";
 
+const statusLabels: Record<string, string> = {
+  draft: "Brouillon",
+  analyzing: "Analyse…",
+  planning: "Planification…",
+  generating: "Génération…",
+  stitching: "Assemblage…",
+  completed: "Terminé",
+  failed: "Échoué",
+  cancelled: "Annulé",
+};
+
 const statusIcons: Record<string, React.ReactNode> = {
   draft: <Clock className="h-4 w-4" />,
   completed: <CheckCircle className="h-4 w-4 text-green-500" />,
@@ -41,16 +52,16 @@ export default function Dashboard() {
       <Navbar />
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-3xl font-bold">My Projects</h1>
+          <h1 className="text-3xl font-bold">Mes projets</h1>
           <div className="flex gap-3">
             <Button variant="hero" asChild>
               <Link to="/create/clip" className="gap-2">
-                <Music className="h-4 w-4" /> New Clip
+                <Music className="h-4 w-4" /> Nouveau clip
               </Link>
             </Button>
             <Button variant="glass" asChild>
               <Link to="/create/film" className="gap-2">
-                <Film className="h-4 w-4" /> New Film
+                <Film className="h-4 w-4" /> Nouveau film
               </Link>
             </Button>
           </div>
@@ -64,14 +75,14 @@ export default function Dashboard() {
           <Card className="border-dashed border-border/50 bg-card/40">
             <CardContent className="flex flex-col items-center justify-center py-20">
               <Film className="h-16 w-16 text-muted-foreground/50 mb-4" />
-              <h3 className="text-lg font-medium mb-2">No projects yet</h3>
-              <p className="text-muted-foreground mb-6">Create your first AI-powered video</p>
+              <h3 className="text-lg font-medium mb-2">Aucun projet pour le moment</h3>
+              <p className="text-muted-foreground mb-6">Créez votre première vidéo propulsée par l'IA</p>
               <div className="flex gap-3">
                 <Button variant="hero" asChild>
-                  <Link to="/create/clip"><Music className="h-4 w-4 mr-2" /> Generate a Clip</Link>
+                  <Link to="/create/clip"><Music className="h-4 w-4 mr-2" /> Générer un clip</Link>
                 </Button>
                 <Button variant="glass" asChild>
-                  <Link to="/create/film"><Film className="h-4 w-4 mr-2" /> Generate a Film</Link>
+                  <Link to="/create/film"><Film className="h-4 w-4 mr-2" /> Générer un film</Link>
                 </Button>
               </div>
             </CardContent>
@@ -89,7 +100,7 @@ export default function Dashboard() {
                       </Badge>
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         {statusIcons[project.status] || <Clock className="h-4 w-4" />}
-                        {project.status}
+                        {statusLabels[project.status] || project.status}
                       </div>
                     </div>
                     <CardTitle className="text-lg group-hover:text-primary transition-colors">
@@ -98,8 +109,8 @@ export default function Dashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <span>{project.style_preset || "No style"}</span>
-                      <span>{project.duration_sec ? `${Math.round(project.duration_sec / 60)}min` : "—"}</span>
+                      <span>{project.style_preset || "Pas de style"}</span>
+                      <span>{project.duration_sec ? `${Math.round(project.duration_sec / 60)} min` : "—"}</span>
                     </div>
                   </CardContent>
                 </Card>

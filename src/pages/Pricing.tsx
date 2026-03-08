@@ -9,7 +9,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-// Stripe IDs
 const STRIPE_CONFIG = {
   plans: {
     pro: { price_id: "price_1T8iuNDFa5Y9NR1IBeXG2743", product_id: "prod_U6wn2kBSJMfs2u" },
@@ -24,34 +23,34 @@ const STRIPE_CONFIG = {
 
 const PLANS = [
   {
-    name: "Free",
-    price: "$0",
-    period: "/month",
+    name: "Gratuit",
+    price: "0 €",
+    period: "/mois",
     credits: 10,
-    features: ["10 credits/month", "720p exports", "Standard queue", "Community support"],
-    cta: "Current Plan",
+    features: ["10 crédits/mois", "Exports 720p", "File d'attente standard", "Support communautaire"],
+    cta: "Plan actuel",
     highlight: false,
     stripe_key: null as string | null,
     product_id: null as string | null,
   },
   {
     name: "Pro",
-    price: "$19",
-    period: "/month",
+    price: "19 €",
+    period: "/mois",
     credits: 100,
-    features: ["100 credits/month", "1080p exports", "Priority queue", "All style presets", "Email support"],
-    cta: "Upgrade to Pro",
+    features: ["100 crédits/mois", "Exports 1080p", "File prioritaire", "Tous les styles", "Support email"],
+    cta: "Passer en Pro",
     highlight: true,
     stripe_key: "pro" as const,
     product_id: STRIPE_CONFIG.plans.pro.product_id,
   },
   {
     name: "Studio",
-    price: "$49",
-    period: "/month",
+    price: "49 €",
+    period: "/mois",
     credits: 500,
-    features: ["500 credits/month", "4K exports", "Instant queue", "Custom style bible", "Character lock", "Dedicated support"],
-    cta: "Go Studio",
+    features: ["500 crédits/mois", "Exports 4K", "File instantanée", "Style bible personnalisé", "Verrouillage personnages", "Support dédié"],
+    cta: "Passer en Studio",
     highlight: false,
     stripe_key: "studio" as const,
     product_id: STRIPE_CONFIG.plans.studio.product_id,
@@ -59,9 +58,9 @@ const PLANS = [
 ];
 
 const PACKS = [
-  { credits: 50, price: "$5", price_id: STRIPE_CONFIG.packs[50].price_id },
-  { credits: 200, price: "$15", price_id: STRIPE_CONFIG.packs[200].price_id },
-  { credits: 500, price: "$30", price_id: STRIPE_CONFIG.packs[500].price_id },
+  { credits: 50, price: "5 €", price_id: STRIPE_CONFIG.packs[50].price_id },
+  { credits: 200, price: "15 €", price_id: STRIPE_CONFIG.packs[200].price_id },
+  { credits: 500, price: "30 €", price_id: STRIPE_CONFIG.packs[500].price_id },
 ];
 
 export default function Pricing() {
@@ -72,19 +71,16 @@ export default function Pricing() {
 
   useEffect(() => {
     if (searchParams.get("success") === "true") {
-      toast({ title: "Payment successful!", description: "Your credits have been updated." });
+      toast({ title: "Paiement réussi !", description: "Vos crédits ont été mis à jour." });
       checkSubscription();
     }
     if (searchParams.get("canceled") === "true") {
-      toast({ title: "Payment canceled", variant: "destructive" });
+      toast({ title: "Paiement annulé", variant: "destructive" });
     }
   }, [searchParams, toast, checkSubscription]);
 
   const handleCheckout = async (priceId: string, mode: "subscription" | "payment") => {
-    if (!user) {
-      navigate("/auth");
-      return;
-    }
+    if (!user) { navigate("/auth"); return; }
     try {
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: { price_id: priceId, mode },
@@ -92,7 +88,7 @@ export default function Pricing() {
       if (error) throw error;
       if (data?.url) window.open(data.url, "_blank");
     } catch (err: any) {
-      toast({ title: "Checkout error", description: err.message, variant: "destructive" });
+      toast({ title: "Erreur de paiement", description: err.message, variant: "destructive" });
     }
   };
 
@@ -102,7 +98,7 @@ export default function Pricing() {
       if (error) throw error;
       if (data?.url) window.open(data.url, "_blank");
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Erreur", description: err.message, variant: "destructive" });
     }
   };
 
@@ -116,8 +112,8 @@ export default function Pricing() {
       <Navbar />
       <main className="container mx-auto px-4 py-12">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-3">Simple Pricing</h1>
-          <p className="text-lg text-muted-foreground">Choose a plan or buy credit packs</p>
+          <h1 className="text-4xl font-bold mb-3">Tarifs simples</h1>
+          <p className="text-lg text-muted-foreground">Choisissez un abonnement ou achetez des packs de crédits</p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-3 max-w-4xl mx-auto mb-16">
@@ -127,12 +123,12 @@ export default function Pricing() {
               <Card key={plan.name} className={`border-border/50 bg-card/60 relative ${plan.highlight ? "border-primary ring-2 ring-primary/20" : ""} ${current ? "ring-2 ring-green-500/40" : ""}`}>
                 {plan.highlight && !current && (
                   <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground">
-                    Most Popular
+                    Le plus populaire
                   </Badge>
                 )}
                 {current && (
                   <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-600 text-white">
-                    Your Plan
+                    Votre plan
                   </Badge>
                 )}
                 <CardHeader className="text-center">
@@ -142,7 +138,7 @@ export default function Pricing() {
                     <span className="text-muted-foreground">{plan.period}</span>
                   </div>
                   <CardDescription className="flex items-center justify-center gap-1 mt-1">
-                    <Coins className="h-4 w-4 text-primary" /> {plan.credits} credits
+                    <Coins className="h-4 w-4 text-primary" /> {plan.credits} crédits
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -155,7 +151,7 @@ export default function Pricing() {
                   </ul>
                   {current && subscription.subscribed ? (
                     <Button variant="glass" className="w-full" onClick={handleManageSubscription}>
-                      Manage Subscription <ExternalLink className="ml-2 h-4 w-4" />
+                      Gérer l'abonnement <ExternalLink className="ml-2 h-4 w-4" />
                     </Button>
                   ) : plan.stripe_key ? (
                     <Button
@@ -167,7 +163,7 @@ export default function Pricing() {
                     </Button>
                   ) : (
                     <Button variant="glass" className="w-full" disabled>
-                      {current ? "Current Plan" : plan.cta}
+                      {current ? "Plan actuel" : plan.cta}
                     </Button>
                   )}
                 </CardContent>
@@ -177,20 +173,16 @@ export default function Pricing() {
         </div>
 
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-2xl font-bold text-center mb-6">Credit Packs</h2>
+          <h2 className="text-2xl font-bold text-center mb-6">Packs de crédits</h2>
           <div className="grid gap-4 md:grid-cols-3">
             {PACKS.map((pack) => (
               <Card key={pack.credits} className="border-border/50 bg-card/40">
                 <CardContent className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-2">
                     <Coins className="h-5 w-5 text-primary" />
-                    <span className="font-medium">{pack.credits} credits</span>
+                    <span className="font-medium">{pack.credits} crédits</span>
                   </div>
-                  <Button
-                    variant="glass"
-                    size="sm"
-                    onClick={() => handleCheckout(pack.price_id, "payment")}
-                  >
+                  <Button variant="glass" size="sm" onClick={() => handleCheckout(pack.price_id, "payment")}>
                     {pack.price}
                   </Button>
                 </CardContent>

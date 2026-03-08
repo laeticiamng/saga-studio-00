@@ -10,10 +10,10 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Upload, Music, ArrowRight, ArrowLeft, Coins, Loader2, Cpu, Sparkles } from "lucide-react";
+import { Upload, Music, ArrowRight, ArrowLeft, Coins, Loader2, Cpu, Sparkles, ImagePlus, Video, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const STEPS = ["Upload Audio", "Mode & Style", "Confirm"];
+const STEPS = ["Médias", "Mode & Style", "Confirmer"];
 
 export default function CreateClip() {
   const { user } = useAuth();
@@ -21,6 +21,8 @@ export default function CreateClip() {
   const { toast } = useToast();
   const [step, setStep] = useState(0);
   const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [faceFiles, setFaceFiles] = useState<File[]>([]);
+  const [refPhotos, setRefPhotos] = useState<File[]>([]);
   const [title, setTitle] = useState("");
   const [mode, setMode] = useState("story");
   const [style, setStyle] = useState("cinematic");
@@ -54,6 +56,26 @@ export default function CreateClip() {
   const estimatedShots = estimate?.estimated_shots ?? (audioFile ? Math.ceil((audioFile.size / 100000) * 5) : 30);
   const estimatedCredits = estimate?.estimated_credits ?? (5 + estimatedShots * 2);
 
+  const addFaceFiles = (files: FileList | null) => {
+    if (!files) return;
+    const newFiles = Array.from(files).slice(0, 5 - faceFiles.length);
+    setFaceFiles(prev => [...prev, ...newFiles]);
+  };
+
+  const removeFaceFile = (idx: number) => {
+    setFaceFiles(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const addRefPhotos = (files: FileList | null) => {
+    if (!files) return;
+    const newFiles = Array.from(files).slice(0, 10 - refPhotos.length);
+    setRefPhotos(prev => [...prev, ...newFiles]);
+  };
+
+  const removeRefPhoto = (idx: number) => {
+    setRefPhotos(prev => prev.filter((_, i) => i !== idx));
+  };
+
   const handleOneClickGenerate = async () => {
     if (!user || !audioFile) return;
     setLoading(true);
@@ -65,7 +87,27 @@ export default function CreateClip() {
         .upload(filePath, audioFile);
       if (uploadError) throw uploadError;
 
-      // 2. Create project with status "analyzing" to auto-start pipeline
+      // 2. Upload face references
+      const faceUrls: string[] = [];
+      for (const file of faceFiles) {
+        const facePath = `${user.id}/${Date.now()}-${file.name}`;
+        const { error: faceErr } = await supabase.storage
+          .from("face-references")
+          .upload(facePath, file);
+        if (!faceErr) faceUrls.push(facePath);
+      }
+
+      // 3. Upload reference photos to shot-outputs (public)
+      const refUrls: string[] = [];
+      for (const file of refPhotos) {
+        const refPath = `${user.id}/refs/${Date.now()}-${file.name}`;
+        const { error: refErr } = await supabase.storage
+          .from("shot-outputs")
+          .upload(refPath, file);
+        if (!refErr) refUrls.push(refPath);
+      }
+
+      // 4. Create project
       const { data: project, error } = await supabase
         .from("projects")
         .insert({
@@ -83,17 +125,15 @@ export default function CreateClip() {
 
       if (error) throw error;
 
-      toast({ title: "🎬 Pipeline launched!", description: "Your clip is being generated automatically..." });
-
-      // 3. Navigate immediately — user sees realtime progress
+      toast({ title: "🎬 Pipeline lancé !", description: "Votre clip est en cours de génération…" });
       navigate(`/project/${project.id}`);
 
-      // 4. Fire pipeline-worker in background (fire-and-forget)
+      // Fire pipeline-worker in background
       supabase.functions.invoke("pipeline-worker", {
         body: { project_id: project.id },
       }).catch(console.error);
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Erreur", description: err.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -103,8 +143,8 @@ export default function CreateClip() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="container mx-auto max-w-2xl px-4 py-8">
-        <h1 className="text-3xl font-bold mb-2">Generate a Clip</h1>
-        <p className="text-muted-foreground mb-8">Upload your audio and let AI create a full music video</p>
+        <h1 className="text-3xl font-bold mb-2">Générer un clip</h1>
+        <p className="text-muted-foreground mb-8">Importez votre musique, vos visages et laissez l'IA créer votre clip vidéo</p>
 
         <div className="flex items-center gap-2 mb-8">
           {STEPS.map((label, i) => (
@@ -121,30 +161,94 @@ export default function CreateClip() {
         {step === 0 && (
           <Card className="border-border/50 bg-card/60">
             <CardHeader>
-              <CardTitle>Upload Audio</CardTitle>
-              <CardDescription>MP3 or WAV file, max 4:30</CardDescription>
+              <CardTitle>Importer vos médias</CardTitle>
+              <CardDescription>Musique, photos/vidéos de visages et références visuelles</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
+              {/* Title */}
               <div className="space-y-2">
-                <Label htmlFor="title">Project Title</Label>
-                <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="My awesome clip" />
+                <Label htmlFor="title">Titre du projet</Label>
+                <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Mon super clip" />
               </div>
-              <label className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/50 bg-card/20 p-10 cursor-pointer hover:border-primary/50 transition-colors">
-                {audioFile ? (
-                  <div className="flex items-center gap-2 text-primary">
-                    <Music className="h-6 w-6" />
-                    <span className="font-medium">{audioFile.name}</span>
-                  </div>
-                ) : (
-                  <>
-                    <Upload className="h-10 w-10 text-muted-foreground mb-3" />
-                    <span className="text-muted-foreground">Drop audio file or click to browse</span>
-                  </>
-                )}
-                <input type="file" accept="audio/*" className="hidden" onChange={(e) => setAudioFile(e.target.files?.[0] || null)} />
-              </label>
+
+              {/* Audio upload */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2"><Music className="h-4 w-4 text-primary" /> Musique *</Label>
+                <label className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/50 bg-card/20 p-8 cursor-pointer hover:border-primary/50 transition-colors">
+                  {audioFile ? (
+                    <div className="flex items-center gap-2 text-primary">
+                      <Music className="h-6 w-6" />
+                      <span className="font-medium">{audioFile.name}</span>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="h-10 w-10 text-muted-foreground mb-3" />
+                      <span className="text-muted-foreground">Déposez votre fichier audio ou cliquez pour parcourir</span>
+                      <span className="text-xs text-muted-foreground mt-1">MP3 ou WAV, max 4:30</span>
+                    </>
+                  )}
+                  <input type="file" accept="audio/*" className="hidden" onChange={(e) => setAudioFile(e.target.files?.[0] || null)} />
+                </label>
+              </div>
+
+              {/* Face references */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2"><Video className="h-4 w-4 text-primary" /> Visages (photos/vidéos)</Label>
+                <p className="text-xs text-muted-foreground">Importez jusqu'à 5 photos ou vidéos de visages à intégrer dans votre clip</p>
+                <div className="flex flex-wrap gap-3">
+                  {faceFiles.map((file, i) => (
+                    <div key={i} className="relative group rounded-lg border border-border/50 bg-card/40 p-2 flex items-center gap-2">
+                      {file.type.startsWith("image/") ? (
+                        <img src={URL.createObjectURL(file)} alt="" className="h-12 w-12 rounded object-cover" />
+                      ) : (
+                        <Video className="h-12 w-12 text-muted-foreground p-2" />
+                      )}
+                      <span className="text-xs max-w-[100px] truncate">{file.name}</span>
+                      <button
+                        onClick={() => removeFaceFile(i)}
+                        className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                  {faceFiles.length < 5 && (
+                    <label className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border/50 bg-card/20 p-4 cursor-pointer hover:border-primary/50 transition-colors min-w-[100px]">
+                      <ImagePlus className="h-6 w-6 text-muted-foreground mb-1" />
+                      <span className="text-xs text-muted-foreground">Ajouter</span>
+                      <input type="file" accept="image/*,video/*" multiple className="hidden" onChange={(e) => addFaceFiles(e.target.files)} />
+                    </label>
+                  )}
+                </div>
+              </div>
+
+              {/* Reference photos */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2"><ImagePlus className="h-4 w-4 text-primary" /> Photos de référence (optionnel)</Label>
+                <p className="text-xs text-muted-foreground">Ajoutez des images d'inspiration pour guider le style visuel</p>
+                <div className="flex flex-wrap gap-3">
+                  {refPhotos.map((file, i) => (
+                    <div key={i} className="relative group rounded-lg border border-border/50 bg-card/40 overflow-hidden">
+                      <img src={URL.createObjectURL(file)} alt="" className="h-16 w-16 object-cover" />
+                      <button
+                        onClick={() => removeRefPhoto(i)}
+                        className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                  {refPhotos.length < 10 && (
+                    <label className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border/50 bg-card/20 h-16 w-16 cursor-pointer hover:border-primary/50 transition-colors">
+                      <ImagePlus className="h-5 w-5 text-muted-foreground" />
+                      <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => addRefPhotos(e.target.files)} />
+                    </label>
+                  )}
+                </div>
+              </div>
+
               <Button variant="hero" className="w-full" onClick={() => setStep(1)} disabled={!audioFile}>
-                Next <ArrowRight className="h-4 w-4 ml-2" />
+                Suivant <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </CardContent>
           </Card>
@@ -154,7 +258,7 @@ export default function CreateClip() {
           <Card className="border-border/50 bg-card/60">
             <CardHeader>
               <CardTitle>Mode & Style</CardTitle>
-              <CardDescription>Choose how your video will look</CardDescription>
+              <CardDescription>Choisissez le rendu visuel de votre clip</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
@@ -162,22 +266,22 @@ export default function CreateClip() {
                 <Select value={mode} onValueChange={setMode}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="story">Story — Narrative arc with characters</SelectItem>
-                    <SelectItem value="performance">Performance — Live performance style</SelectItem>
-                    <SelectItem value="abstract">Abstract — Visual art, no narrative</SelectItem>
+                    <SelectItem value="story">Story — Arc narratif avec personnages</SelectItem>
+                    <SelectItem value="performance">Performance — Style live / concert</SelectItem>
+                    <SelectItem value="abstract">Abstrait — Art visuel, sans narration</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Style Preset</Label>
+                <Label>Style visuel</Label>
                 <StylePresetPicker value={style} onChange={setStyle} />
               </div>
               <div className="space-y-2">
-                <Label className="flex items-center gap-1.5"><Cpu className="h-3.5 w-3.5 text-primary" /> Video Provider</Label>
+                <Label className="flex items-center gap-1.5"><Cpu className="h-3.5 w-3.5 text-primary" /> Fournisseur vidéo</Label>
                 <Select value={provider} onValueChange={setProvider}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="auto">Auto (best available)</SelectItem>
+                    <SelectItem value="auto">Auto (meilleur disponible)</SelectItem>
                     <SelectItem value="openai">OpenAI Sora 2</SelectItem>
                     <SelectItem value="runway">Runway Gen-4</SelectItem>
                     <SelectItem value="luma">Luma Dream Machine</SelectItem>
@@ -186,7 +290,7 @@ export default function CreateClip() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Export Format</Label>
+                <Label>Format d'export</Label>
                 <RadioGroup value={aspectRatio} onValueChange={setAspectRatio} className="flex gap-4">
                   <div className="flex items-center gap-2">
                     <RadioGroupItem value="16:9" id="clip-landscape" />
@@ -198,14 +302,14 @@ export default function CreateClip() {
                   </div>
                   <div className="flex items-center gap-2">
                     <RadioGroupItem value="both" id="clip-both" />
-                    <Label htmlFor="clip-both" className="cursor-pointer">Both</Label>
+                    <Label htmlFor="clip-both" className="cursor-pointer">Les deux</Label>
                   </div>
                 </RadioGroup>
               </div>
               <div className="flex gap-3">
-                <Button variant="ghost" onClick={() => setStep(0)}><ArrowLeft className="h-4 w-4 mr-2" /> Back</Button>
+                <Button variant="ghost" onClick={() => setStep(0)}><ArrowLeft className="h-4 w-4 mr-2" /> Retour</Button>
                 <Button variant="hero" className="flex-1" onClick={() => setStep(2)}>
-                  Next <ArrowRight className="h-4 w-4 ml-2" />
+                  Suivant <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>
             </CardContent>
@@ -215,28 +319,30 @@ export default function CreateClip() {
         {step === 2 && (
           <Card className="border-border/50 bg-card/60">
             <CardHeader>
-              <CardTitle>Confirm & Generate</CardTitle>
+              <CardTitle>Confirmer & Générer</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="rounded-xl bg-secondary/50 p-4 space-y-2">
-                <div className="flex justify-between"><span className="text-muted-foreground">Audio</span><span>{audioFile?.name}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Musique</span><span>{audioFile?.name}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Visages</span><span>{faceFiles.length > 0 ? `${faceFiles.length} fichier(s)` : "Aucun"}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Références</span><span>{refPhotos.length > 0 ? `${refPhotos.length} photo(s)` : "Aucune"}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Mode</span><span className="capitalize">{mode}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Style</span><span className="capitalize">{style}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Format</span><span>{aspectRatio}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Est. Shots</span><span>~{estimatedShots}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Plans estimés</span><span>~{estimatedShots}</span></div>
                 <div className="flex justify-between border-t border-border pt-2 font-medium">
-                  <span className="flex items-center gap-1"><Coins className="h-4 w-4 text-primary" /> Estimated Cost</span>
+                  <span className="flex items-center gap-1"><Coins className="h-4 w-4 text-primary" /> Coût estimé</span>
                   <span className="text-primary flex items-center gap-1">
                     {estimating && <Loader2 className="h-3 w-3 animate-spin" />}
-                    {estimatedCredits} credits
+                    {estimatedCredits} crédits
                   </span>
                 </div>
               </div>
               <div className="flex gap-3">
-                <Button variant="ghost" onClick={() => setStep(1)}><ArrowLeft className="h-4 w-4 mr-2" /> Back</Button>
+                <Button variant="ghost" onClick={() => setStep(1)}><ArrowLeft className="h-4 w-4 mr-2" /> Retour</Button>
                 <Button variant="hero" className="flex-1" onClick={handleOneClickGenerate} disabled={loading}>
                   {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                  {loading ? "Launching pipeline..." : "Generate My Clip"}
+                  {loading ? "Lancement du pipeline…" : "Générer mon clip"}
                 </Button>
               </div>
             </CardContent>

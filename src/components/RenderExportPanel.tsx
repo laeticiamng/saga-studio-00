@@ -14,10 +14,10 @@ interface RenderExportPanelProps {
 }
 
 const FORMAT_OPTIONS = [
-  { key: "master_16_9", label: "16:9 Landscape", icon: Monitor, description: "Standard HD (1920×1080)" },
+  { key: "master_16_9", label: "16:9 Paysage", icon: Monitor, description: "HD standard (1920×1080)" },
   { key: "master_9_16", label: "9:16 Vertical", icon: Smartphone, description: "TikTok / Reels (1080×1920)" },
-  { key: "teaser", label: "15s Teaser", icon: Film, description: "Best section highlight" },
-  { key: "square", label: "1:1 Square", icon: Square, description: "Instagram feed (1080×1080)" },
+  { key: "teaser", label: "Teaser 15s", icon: Film, description: "Extrait des meilleurs moments" },
+  { key: "square", label: "1:1 Carré", icon: Square, description: "Feed Instagram (1080×1080)" },
 ];
 
 export function RenderExportPanel({ projectId, render, projectStatus }: RenderExportPanelProps) {
@@ -33,7 +33,7 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
 
   const handleReRender = async () => {
     if (selectedFormats.length === 0) {
-      toast({ title: "Select formats", description: "Choose at least one export format", variant: "destructive" });
+      toast({ title: "Sélectionnez des formats", description: "Choisissez au moins un format d'export", variant: "destructive" });
       return;
     }
     setReRendering(true);
@@ -41,9 +41,9 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
       await supabase.functions.invoke("stitch-render", {
         body: { project_id: projectId, formats: selectedFormats },
       });
-      toast({ title: "Re-rendering", description: `Exporting ${selectedFormats.length} format(s)...` });
+      toast({ title: "Rendu en cours", description: `Export de ${selectedFormats.length} format(s)…` });
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Erreur", description: err.message, variant: "destructive" });
     } finally {
       setReRendering(false);
     }
@@ -55,7 +55,7 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
     <Card className="border-primary/30 bg-card/60">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Download className="h-5 w-5 text-primary" /> Export & Downloads
+          <Download className="h-5 w-5 text-primary" /> Export & Téléchargements
           {render && (
             <Badge variant={render.status === "completed" ? "secondary" : "outline"} className="ml-2 capitalize">
               {render.status}
@@ -64,7 +64,6 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Format selector */}
         <div className="grid grid-cols-2 gap-2">
           {FORMAT_OPTIONS.map(fmt => (
             <label
@@ -88,7 +87,6 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
           ))}
         </div>
 
-        {/* Re-render button */}
         {projectStatus === "completed" && (
           <Button
             variant="hero"
@@ -97,50 +95,47 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
             disabled={reRendering || selectedFormats.length === 0}
           >
             {reRendering ? <Loader2 className="h-4 w-4 animate-spin" /> : <Film className="h-4 w-4" />}
-            {reRendering ? "Rendering..." : `Export ${selectedFormats.length} format(s)`}
+            {reRendering ? "Rendu en cours…" : `Exporter ${selectedFormats.length} format(s)`}
           </Button>
         )}
 
-        {/* Download links */}
         {render?.status === "completed" && (
           <div className="space-y-2">
             {render.master_url_16_9 && (
               <a href={render.master_url_16_9} target="_blank" rel="noopener noreferrer">
                 <Button variant="glass" className="w-full justify-start gap-2">
-                  <Download className="h-4 w-4" /> Download 16:9 Master
+                  <Download className="h-4 w-4" /> Télécharger Master 16:9
                 </Button>
               </a>
             )}
             {render.master_url_9_16 && (
               <a href={render.master_url_9_16} target="_blank" rel="noopener noreferrer">
                 <Button variant="glass" className="w-full justify-start gap-2">
-                  <Download className="h-4 w-4" /> Download 9:16 Vertical
+                  <Download className="h-4 w-4" /> Télécharger Vertical 9:16
                 </Button>
               </a>
             )}
             {render.teaser_url && (
               <a href={render.teaser_url} target="_blank" rel="noopener noreferrer">
                 <Button variant="glass" className="w-full justify-start gap-2">
-                  <Download className="h-4 w-4" /> Download 15s Teaser
+                  <Download className="h-4 w-4" /> Télécharger Teaser 15s
                 </Button>
               </a>
             )}
           </div>
         )}
 
-        {/* Beat-sync info from logs */}
         {renderLogs?.beat_sync_enabled && (
           <div className="rounded-lg bg-secondary/30 p-3 text-xs text-muted-foreground space-y-1">
-            <p className="font-medium text-foreground">🎵 Beat-Synced Export</p>
-            <p>BPM: {renderLogs.bpm} · {renderLogs.cuts_count} cuts aligned to beats</p>
-            <p>Transitions: {renderLogs.transitions?.join(", ")}</p>
+            <p className="font-medium text-foreground">🎵 Export synchronisé au rythme</p>
+            <p>BPM : {renderLogs.bpm} · {renderLogs.cuts_count} coupes alignées sur les beats</p>
+            <p>Transitions : {renderLogs.transitions?.join(", ")}</p>
           </div>
         )}
 
-        {/* Raw logs */}
         {render?.logs && (
           <details className="mt-2">
-            <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">View Logs</summary>
+            <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">Voir les logs</summary>
             <pre className="text-xs text-muted-foreground whitespace-pre-wrap bg-secondary/30 rounded-lg p-3 mt-2 max-h-48 overflow-auto">
               {typeof render.logs === "string" ? render.logs : JSON.stringify(render.logs, null, 2)}
             </pre>

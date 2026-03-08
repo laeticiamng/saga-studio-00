@@ -63,7 +63,6 @@ export default function CreateFilm() {
     if (!user) return;
     setLoading(true);
     try {
-      // Create project with status "planning" (no audio to analyze for films)
       const { data: project, error } = await supabase
         .from("projects")
         .insert({
@@ -82,15 +81,14 @@ export default function CreateFilm() {
 
       if (error) throw error;
 
-      toast({ title: "🎬 Pipeline launched!", description: "Your film is being generated automatically..." });
+      toast({ title: "🎬 Pipeline lancé !", description: "Votre film est en cours de génération…" });
       navigate(`/project/${project.id}`);
 
-      // Fire pipeline-worker in background
       supabase.functions.invoke("pipeline-worker", {
         body: { project_id: project.id },
       }).catch(console.error);
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Erreur", description: err.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -100,25 +98,25 @@ export default function CreateFilm() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="container mx-auto max-w-2xl px-4 py-8">
-        <h1 className="text-3xl font-bold mb-2">Generate a Film</h1>
-        <p className="text-muted-foreground mb-8">Describe your story and AI will bring it to life</p>
+        <h1 className="text-3xl font-bold mb-2">Générer un film</h1>
+        <p className="text-muted-foreground mb-8">Décrivez votre histoire et l'IA lui donnera vie</p>
 
         <Card className="border-border/50 bg-card/60">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Film className="h-5 w-5 text-primary" /> Film Details</CardTitle>
-            <CardDescription>Tell us about your short film</CardDescription>
+            <CardTitle className="flex items-center gap-2"><Film className="h-5 w-5 text-primary" /> Détails du film</CardTitle>
+            <CardDescription>Parlez-nous de votre court-métrage</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Title</Label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="The Last Signal" required />
+              <Label>Titre</Label>
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Le Dernier Signal" required />
             </div>
             <div className="space-y-2">
-              <Label>Synopsis (5-8 lines)</Label>
-              <Textarea value={synopsis} onChange={(e) => setSynopsis(e.target.value)} placeholder="In a world where..." rows={6} required />
+              <Label>Synopsis (5-8 lignes)</Label>
+              <Textarea value={synopsis} onChange={(e) => setSynopsis(e.target.value)} placeholder="Dans un monde où…" rows={6} required />
             </div>
             <div className="space-y-2">
-              <Label>Duration</Label>
+              <Label>Durée</Label>
               <Select value={duration} onValueChange={setDuration}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -136,11 +134,11 @@ export default function CreateFilm() {
               <StylePresetPicker value={style} onChange={setStyle} />
             </div>
             <div className="space-y-2">
-              <Label className="flex items-center gap-1.5"><Cpu className="h-3.5 w-3.5 text-primary" /> Video Provider</Label>
+              <Label className="flex items-center gap-1.5"><Cpu className="h-3.5 w-3.5 text-primary" /> Fournisseur vidéo</Label>
               <Select value={provider} onValueChange={setProvider}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="auto">Auto (best available)</SelectItem>
+                  <SelectItem value="auto">Auto (meilleur disponible)</SelectItem>
                   <SelectItem value="openai">OpenAI Sora 2</SelectItem>
                   <SelectItem value="runway">Runway Gen-4</SelectItem>
                   <SelectItem value="luma">Luma Dream Machine</SelectItem>
@@ -149,11 +147,11 @@ export default function CreateFilm() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Export Format</Label>
+              <Label>Format d'export</Label>
               <RadioGroup value={aspectRatio} onValueChange={setAspectRatio} className="flex gap-4">
                 <div className="flex items-center gap-2">
                   <RadioGroupItem value="16:9" id="r-landscape" />
-                  <Label htmlFor="r-landscape" className="cursor-pointer">16:9 Landscape</Label>
+                  <Label htmlFor="r-landscape" className="cursor-pointer">16:9 Paysage</Label>
                 </div>
                 <div className="flex items-center gap-2">
                   <RadioGroupItem value="9:16" id="r-portrait" />
@@ -161,32 +159,32 @@ export default function CreateFilm() {
                 </div>
                 <div className="flex items-center gap-2">
                   <RadioGroupItem value="both" id="r-both" />
-                  <Label htmlFor="r-both" className="cursor-pointer">Both</Label>
+                  <Label htmlFor="r-both" className="cursor-pointer">Les deux</Label>
                 </div>
               </RadioGroup>
             </div>
 
             <div className="rounded-xl bg-secondary/50 p-4 space-y-2">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Provider</span>
+                <span className="text-muted-foreground">Fournisseur</span>
                 <span>{PROVIDER_LABELS[provider]}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Est. Shots</span>
+                <span className="text-muted-foreground">Plans estimés</span>
                 <span>~{estimatedShots}</span>
               </div>
               <div className="flex justify-between font-medium">
-                <span className="flex items-center gap-1"><Coins className="h-4 w-4 text-primary" /> Estimated Cost</span>
+                <span className="flex items-center gap-1"><Coins className="h-4 w-4 text-primary" /> Coût estimé</span>
                 <span className="text-primary flex items-center gap-1">
                   {estimating && <Loader2 className="h-3 w-3 animate-spin" />}
-                  {estimatedCredits} credits
+                  {estimatedCredits} crédits
                 </span>
               </div>
             </div>
 
             <Button variant="hero" className="w-full" onClick={handleOneClickGenerate} disabled={loading || !title || !synopsis}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
-              {loading ? "Launching pipeline..." : "Generate My Film"}
+              {loading ? "Lancement du pipeline…" : "Générer mon film"}
             </Button>
           </CardContent>
         </Card>
