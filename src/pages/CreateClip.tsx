@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Upload, Music, ArrowRight, ArrowLeft, Coins, Loader2, Cpu, Sparkles, ImagePlus, Video, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 const STEPS = ["Médias", "Mode & Style", "Confirmer"];
 
