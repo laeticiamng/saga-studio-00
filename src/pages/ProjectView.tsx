@@ -175,6 +175,12 @@ export default function ProjectView() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="container mx-auto px-4 py-8">
+        <button
+          onClick={() => navigate("/dashboard")}
+          className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" /> Retour au tableau de bord
+        </button>
         <div className="mb-6 flex items-start justify-between">
           <div>
             <h1 className="text-3xl font-bold">{project.title}</h1>
