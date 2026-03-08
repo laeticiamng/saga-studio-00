@@ -82,17 +82,12 @@ export default function About() {
         </AnimatedSection>
 
         <AnimatedSection delay={0.3}>
-          <div className="rounded-xl border border-border/50 bg-card/60 p-8 text-center">
-            <h2 className="text-2xl font-bold mb-3">Une question ?</h2>
-            <p className="text-muted-foreground mb-4">
-              N'hésitez pas à nous contacter. Nous répondons généralement sous 24 heures.
+          <div className="rounded-xl border border-border/50 bg-card/60 p-8">
+            <h2 className="text-2xl font-bold mb-2 text-center">Une question ?</h2>
+            <p className="text-muted-foreground mb-6 text-center">
+              Remplissez le formulaire ci-dessous. Nous répondons généralement sous 24 heures.
             </p>
-            <a
-              href="mailto:contact@cineclip.ai"
-              className="inline-flex items-center gap-2 text-primary hover:underline font-medium"
-            >
-              contact@cineclip.ai
-            </a>
+            <ContactForm />
           </div>
         </AnimatedSection>
       </main>
