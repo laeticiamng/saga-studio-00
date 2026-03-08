@@ -1,7 +1,6 @@
 import { motion, useMotionValue, useTransform, animate, useScroll } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import AnimatedSection from "./AnimatedSection";
-import AnimatedSection from "./AnimatedSection";
 
 function Counter({ target, suffix = "" }: { target: number; suffix?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
