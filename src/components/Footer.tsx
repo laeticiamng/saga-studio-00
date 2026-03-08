@@ -10,8 +10,8 @@ const footerLinks = {
     { label: "Tarifs", href: "/pricing" },
   ],
   Ressources: [
-    { label: "Tarifs", href: "/pricing" },
     { label: "Tableau de bord", href: "/dashboard" },
+    { label: "Aide & Contact", href: "mailto:contact@cineclip.ai" },
   ],
   Légal: [
     { label: "Confidentialité", href: "/privacy" },
@@ -68,6 +68,13 @@ const Footer = () => {
                         >
                           {link.label}
                         </button>
+                      ) : link.href.startsWith("mailto:") ? (
+                        <a
+                          href={link.href}
+                          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {link.label}
+                        </a>
                       ) : (
                         <Link
                           to={link.href}

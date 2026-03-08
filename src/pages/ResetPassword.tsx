@@ -7,8 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Film, Loader2, CheckCircle, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { usePageTitle } from "@/hooks/usePageTitle";
+import Navbar from "@/components/Navbar";
 
 export default function ResetPassword() {
+  usePageTitle("Réinitialiser le mot de passe");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -58,29 +61,34 @@ export default function ResetPassword() {
 
   if (!isRecovery && !success) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4">
-        <Card className="w-full max-w-md border-border/50 bg-card/80 backdrop-blur">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-              <Film className="h-6 w-6 text-primary" />
-            </div>
-            <CardTitle className="text-2xl">Lien invalide</CardTitle>
-            <CardDescription>
-              Ce lien de réinitialisation est invalide ou a expiré. Veuillez en demander un nouveau.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="hero" className="w-full" onClick={() => navigate("/auth")}>
-              Retour à la connexion
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center px-4 py-20">
+          <Card className="w-full max-w-md border-border/50 bg-card/80 backdrop-blur">
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                <Film className="h-6 w-6 text-primary" />
+              </div>
+              <CardTitle className="text-2xl">Lien invalide</CardTitle>
+              <CardDescription>
+                Ce lien de réinitialisation est invalide ou a expiré. Veuillez en demander un nouveau.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="hero" className="w-full" onClick={() => navigate("/auth")}>
+                Retour à la connexion
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      <div className="flex-1 flex flex-col items-center justify-center px-4 py-20">
       <button
         onClick={() => navigate("/")}
         className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -136,6 +144,7 @@ export default function ResetPassword() {
           </CardContent>
         )}
       </Card>
+      </div>
     </div>
   );
 }

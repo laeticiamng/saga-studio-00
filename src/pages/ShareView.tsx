@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Film, Download, Loader2 } from "lucide-react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 const typeLabels: Record<string, string> = { clip: "Clip", film: "Film" };
 const styleLabels: Record<string, string> = {
@@ -16,6 +17,7 @@ const styleLabels: Record<string, string> = {
 
 export default function ShareView() {
   const { id } = useParams<{ id: string }>();
+  usePageTitle("Partage vidéo");
 
   const { data: render, isLoading } = useQuery({
     queryKey: ["share-render", id],
