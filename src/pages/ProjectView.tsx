@@ -46,7 +46,6 @@ export default function ProjectView() {
       return data;
     },
     enabled: !!id,
-    refetchInterval: project?.status === "stitching" ? 3000 : false,
   });
 
   // ─── Supabase Realtime ────────────────────────────────────────────────────
