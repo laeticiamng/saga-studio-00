@@ -73,17 +73,17 @@ export default function Dashboard() {
       <OnboardingTour />
       <Navbar />
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <h1 className="text-3xl font-bold">Mes projets</h1>
           <div className="flex gap-3">
-            <Button variant="hero" asChild>
+            <Button variant="hero" size="sm" asChild>
               <Link to="/create/clip" className="gap-2">
-                <Music className="h-4 w-4" /> Nouveau clip
+                <Music className="h-4 w-4" /> <span className="hidden xs:inline">Nouveau</span> clip
               </Link>
             </Button>
-            <Button variant="glass" asChild>
+            <Button variant="glass" size="sm" asChild>
               <Link to="/create/film" className="gap-2">
-                <Film className="h-4 w-4" /> Nouveau film
+                <Film className="h-4 w-4" /> <span className="hidden xs:inline">Nouveau</span> film
               </Link>
             </Button>
           </div>
