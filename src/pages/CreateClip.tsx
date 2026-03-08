@@ -52,6 +52,7 @@ export default function CreateClip() {
           mode,
           style_preset: style,
           audio_url: audioUrl,
+          provider_default: provider === "auto" ? null : provider,
           status: "draft" as const,
         })
         .select()
