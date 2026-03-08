@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -28,6 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [subscription, setSubscription] = useState<SubscriptionInfo>({
     subscribed: false, product_id: null, subscription_end: null,
   });
+  const subscriptionChecked = useRef(false);
 
   const checkSubscription = useCallback(async () => {
     try {
@@ -45,20 +46,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-      if (session?.user) {
-        setTimeout(() => checkSubscription(), 0);
-      }
-    });
-
+    // Get initial session first
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-      if (session?.user) checkSubscription();
+      if (session?.user && !subscriptionChecked.current) {
+        subscriptionChecked.current = true;
+        checkSubscription();
+      }
+    });
+
+    // Then listen for changes
+    const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+      if (session?.user && !subscriptionChecked.current) {
+        subscriptionChecked.current = true;
+        checkSubscription();
+      }
+      if (!session?.user) {
+        subscriptionChecked.current = false;
+      }
     });
 
     return () => authSub.unsubscribe();
@@ -80,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
+    subscriptionChecked.current = false;
     setSubscription({ subscribed: false, product_id: null, subscription_end: null });
   };
 

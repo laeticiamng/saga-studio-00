@@ -6,6 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Film, Download, Loader2 } from "lucide-react";
 
+const typeLabels: Record<string, string> = { clip: "Clip", film: "Film" };
+const styleLabels: Record<string, string> = {
+  cinematic: "Cinématique", anime: "Anime", watercolor: "Aquarelle",
+  "3d_render": "Rendu 3D", noir: "Noir", vintage: "Vintage", neon: "Néon", realistic: "Réaliste",
+};
+
 export default function ShareView() {
   const { id } = useParams<{ id: string }>();
 
@@ -58,8 +64,8 @@ export default function ShareView() {
           </Link>
           <h1 className="text-3xl font-bold mt-4">{project.title}</h1>
           <div className="flex items-center justify-center gap-2 mt-2">
-            <Badge variant="outline">{project.type}</Badge>
-            <Badge variant="secondary" className="capitalize">{project.style_preset}</Badge>
+            <Badge variant="outline">{typeLabels[project.type] || project.type}</Badge>
+            <Badge variant="secondary">{styleLabels[project.style_preset || ""] || project.style_preset}</Badge>
           </div>
         </div>
 

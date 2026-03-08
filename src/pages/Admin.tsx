@@ -15,12 +15,26 @@ import {
 import {
   ChartContainer, ChartTooltip, ChartTooltipContent,
 } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from "recharts";
 import {
   Loader2, Shield, Activity, CreditCard, Film, Clapperboard, AlertTriangle,
   CheckCircle, Clock, XCircle, Ban, RotateCcw, CheckCheck, Eye, TrendingUp,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+const statusLabels: Record<string, string> = {
+  completed: "Terminé", processing: "En cours", pending: "En attente",
+  failed: "Échoué", cancelled: "Annulé", generating: "Génération",
+  analyzing: "Analyse", planning: "Planification", stitching: "Assemblage",
+  draft: "Brouillon", resolved: "Résolu", dismissed: "Rejeté", reviewed: "Examiné",
+};
+
+const typeLabels: Record<string, string> = { clip: "Clip", film: "Film" };
+
+const styleLabels: Record<string, string> = {
+  cinematic: "Cinématique", anime: "Anime", watercolor: "Aquarelle",
+  "3d_render": "Rendu 3D", noir: "Noir", vintage: "Vintage", neon: "Néon", realistic: "Réaliste",
+};
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ReactNode }> = {
@@ -41,12 +55,11 @@ function StatusBadge({ status }: { status: string }) {
   const s = map[status] || { variant: "outline" as const, icon: null };
   return (
     <Badge variant={s.variant} className="gap-1 text-xs">
-      {s.icon} {status}
+      {s.icon} {statusLabels[status] || status}
     </Badge>
   );
 }
 
-// Helper: group items by day (fr-FR)
 function groupByDay(items: { created_at: string; delta?: number }[], mode: "count" | "sum") {
   const map = new Map<string, number>();
   for (const item of items) {
@@ -57,7 +70,6 @@ function groupByDay(items: { created_at: string; delta?: number }[], mode: "coun
   return Array.from(map.entries()).map(([day, value]) => ({ day, value })).reverse();
 }
 
-// Helper: group by week
 function groupByWeek(items: { created_at: string }[]) {
   const map = new Map<string, number>();
   for (const item of items) {
@@ -168,7 +180,6 @@ export default function Admin() {
     enabled: !!isAdmin,
   });
 
-  // Chart data
   const creditsPerDay = useMemo(() => {
     if (!ledger) return [];
     const debits = ledger.filter(l => l.delta < 0);
@@ -391,9 +402,9 @@ export default function Admin() {
                         return (
                           <TableRow key={p.id}>
                             <TableCell className="font-medium">{p.title}</TableCell>
-                            <TableCell><Badge variant="outline">{p.type}</Badge></TableCell>
+                            <TableCell><Badge variant="outline">{typeLabels[p.type] || p.type}</Badge></TableCell>
                             <TableCell><StatusBadge status={p.status} /></TableCell>
-                            <TableCell className="capitalize text-xs">{p.style_preset || "—"}</TableCell>
+                            <TableCell className="text-xs">{styleLabels[p.style_preset || ""] || p.style_preset || "—"}</TableCell>
                             <TableCell className="text-xs font-mono">{p.provider_default || "—"}</TableCell>
                             <TableCell className="text-xs text-muted-foreground">{new Date(p.created_at).toLocaleDateString("fr-FR")}</TableCell>
                             <TableCell className="text-right space-x-1">
