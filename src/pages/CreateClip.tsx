@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, Music, ArrowRight, ArrowLeft, Coins, Loader2 } from "lucide-react";
+import { Upload, Music, ArrowRight, ArrowLeft, Coins, Loader2, Cpu } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const STEPS = ["Upload Audio", "Mode & Style", "Confirm"];
@@ -23,6 +23,7 @@ export default function CreateClip() {
   const [title, setTitle] = useState("");
   const [mode, setMode] = useState("story");
   const [style, setStyle] = useState("cinematic");
+  const [provider, setProvider] = useState("auto");
   const [loading, setLoading] = useState(false);
 
   const estimatedShots = audioFile ? Math.ceil((audioFile.size / 100000) * 5) : 30;
@@ -51,6 +52,7 @@ export default function CreateClip() {
           mode,
           style_preset: style,
           audio_url: audioUrl,
+          provider_default: provider === "auto" ? null : provider,
           status: "draft" as const,
         })
         .select()
@@ -138,6 +140,19 @@ export default function CreateClip() {
               <div className="space-y-2">
                 <Label>Style Preset</Label>
                 <StylePresetPicker value={style} onChange={setStyle} />
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5"><Cpu className="h-3.5 w-3.5 text-primary" /> Video Provider</Label>
+                <Select value={provider} onValueChange={setProvider}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto">Auto (best available)</SelectItem>
+                    <SelectItem value="openai">OpenAI Sora 2</SelectItem>
+                    <SelectItem value="runway">Runway Gen-4</SelectItem>
+                    <SelectItem value="luma">Luma Dream Machine</SelectItem>
+                    <SelectItem value="google_veo">Google Veo</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex gap-3">
                 <Button variant="ghost" onClick={() => setStep(0)}><ArrowLeft className="h-4 w-4 mr-2" /> Back</Button>

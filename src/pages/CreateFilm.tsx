@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Film, Coins, Loader2 } from "lucide-react";
+import { Film, Coins, Loader2, Cpu } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function CreateFilm() {
@@ -21,6 +21,7 @@ export default function CreateFilm() {
   const [synopsis, setSynopsis] = useState("");
   const [duration, setDuration] = useState("120");
   const [style, setStyle] = useState("cinematic");
+  const [provider, setProvider] = useState("auto");
   const [loading, setLoading] = useState(false);
 
   const durationSec = parseInt(duration);
@@ -41,6 +42,7 @@ export default function CreateFilm() {
           style_preset: style,
           duration_sec: durationSec,
           mode: "story",
+          provider_default: provider === "auto" ? null : provider,
           status: "draft" as const,
         })
         .select()
@@ -93,6 +95,19 @@ export default function CreateFilm() {
             <div className="space-y-2">
               <Label>Style</Label>
               <StylePresetPicker value={style} onChange={setStyle} />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5"><Cpu className="h-3.5 w-3.5 text-primary" /> Video Provider</Label>
+              <Select value={provider} onValueChange={setProvider}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">Auto (best available)</SelectItem>
+                  <SelectItem value="openai">OpenAI Sora 2</SelectItem>
+                  <SelectItem value="runway">Runway Gen-4</SelectItem>
+                  <SelectItem value="luma">Luma Dream Machine</SelectItem>
+                  <SelectItem value="google_veo">Google Veo</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="rounded-xl bg-secondary/50 p-4 space-y-2">
