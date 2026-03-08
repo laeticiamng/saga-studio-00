@@ -5,9 +5,9 @@ import { motion } from "framer-motion";
 import AnimatedSection from "./AnimatedSection";
 
 const examples = [
-  { image: example1, title: "Clip musical futuriste", style: "Sci-Fi / Cyberpunk" },
-  { image: example2, title: "Animation cohérente", style: "Animation 3D" },
-  { image: example3, title: "Court-métrage dramatique", style: "Cinématique réaliste" },
+  { image: example1, title: "Clip musical futuriste", style: "Sci-Fi / Cyberpunk", alt: "Exemple de clip musical futuriste généré par CineClip AI dans un style cyberpunk" },
+  { image: example2, title: "Animation cohérente", style: "Animation 3D", alt: "Exemple d'animation 3D avec personnages cohérents générée par CineClip AI" },
+  { image: example3, title: "Court-métrage dramatique", style: "Cinématique réaliste", alt: "Exemple de court-métrage dramatique au style cinématique réaliste par CineClip AI" },
 ];
 
 const Gallery = () => {
