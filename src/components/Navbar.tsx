@@ -21,7 +21,6 @@ export default function Navbar() {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Only show landing section links on homepage or public pages
   const isLandingPage = location.pathname === "/" || location.pathname === "/pricing" || location.pathname === "/privacy" || location.pathname === "/terms" || location.pathname === "/legal";
   const sectionLinks = isLandingPage
     ? landingLinks.filter((l) => !(user && l.href === "/pricing"))
@@ -79,19 +78,22 @@ export default function Navbar() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="hidden sm:inline-flex gap-2 text-muted-foreground"
-              onClick={() => {
-                document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }));
-              }}
-            >
-              <Search className="h-4 w-4" />
-              <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-border/60 bg-muted/50 px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                ⌘K
-              </kbd>
-            </Button>
+            {/* Search shortcut — only show for logged-in users */}
+            {user && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="hidden sm:inline-flex gap-2 text-muted-foreground"
+                onClick={() => {
+                  document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }));
+                }}
+              >
+                <Search className="h-4 w-4" />
+                <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-border/60 bg-muted/50 px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                  ⌘K
+                </kbd>
+              </Button>
+            )}
 
             <ThemeToggle />
 
@@ -101,7 +103,7 @@ export default function Navbar() {
                   <CreditDisplay />
                   <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="gap-2">
                     <LayoutDashboard className="h-4 w-4" />
-                    <span className="hidden lg:inline">Tableau de bord</span>
+                    <span className="hidden lg:inline">Mes projets</span>
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => navigate("/pricing")} className="gap-2">
                     <CreditCard className="h-4 w-4" />
@@ -109,7 +111,7 @@ export default function Navbar() {
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => navigate("/settings")} className="gap-2">
                     <User className="h-4 w-4" />
-                    <span className="hidden lg:inline">Paramètres</span>
+                    <span className="hidden lg:inline">Mon compte</span>
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => signOut()} className="gap-2 text-muted-foreground">
                     <LogOut className="h-4 w-4" />
@@ -120,8 +122,11 @@ export default function Navbar() {
                   <Button variant="ghost" size="sm" onClick={() => navigate("/pricing")}>
                     Tarifs
                   </Button>
+                  <Button variant="ghost" size="sm" onClick={() => navigate("/auth")}>
+                    Se connecter
+                  </Button>
                   <Button variant="hero" size="sm" onClick={() => navigate("/auth")}>
-                    Commencer
+                    Essai gratuit
                   </Button>
                 </div>
               )}
@@ -180,13 +185,13 @@ export default function Navbar() {
                       <CreditDisplay />
                     </motion.div>
                     <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} onClick={() => mobileNav("/dashboard")} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted/50 transition-colors">
-                      <LayoutDashboard className="h-4 w-4 text-primary" /> Tableau de bord
+                      <LayoutDashboard className="h-4 w-4 text-primary" /> Mes projets
                     </motion.button>
                     <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.25 }} onClick={() => mobileNav("/pricing")} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted/50 transition-colors">
                       <CreditCard className="h-4 w-4 text-primary" /> Tarifs
                     </motion.button>
                     <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} onClick={() => mobileNav("/settings")} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted/50 transition-colors">
-                      <User className="h-4 w-4 text-primary" /> Paramètres
+                      <User className="h-4 w-4 text-primary" /> Mon compte
                     </motion.button>
                     <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.35 }} onClick={() => { setMobileOpen(false); signOut(); }} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground">
                       <LogOut className="h-4 w-4" /> Déconnexion
@@ -197,9 +202,12 @@ export default function Navbar() {
                     <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }} onClick={() => mobileNav("/pricing")} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted/50 transition-colors font-medium">
                       <CreditCard className="h-4 w-4 text-primary" /> Tarifs
                     </motion.button>
-                    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
+                    <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.18 }} onClick={() => mobileNav("/auth")} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted/50 transition-colors">
+                      Se connecter
+                    </motion.button>
+                    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.22 }}>
                       <Button variant="hero" className="w-full" onClick={() => mobileNav("/auth")}>
-                        Commencer
+                        Essai gratuit
                       </Button>
                     </motion.div>
                   </>

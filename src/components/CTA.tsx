@@ -11,7 +11,6 @@ const CTA = () => {
 
   return (
     <section className="py-24 px-4 relative overflow-hidden">
-      {/* Animated background */}
       <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10" />
       <motion.div
         animate={{ scale: [1, 1.2, 1], opacity: [0.15, 0.3, 0.15] }}
@@ -29,17 +28,19 @@ const CTA = () => {
           <div className="max-w-3xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card/40 backdrop-blur-sm border border-border/50 mb-8">
               <Sparkles className="w-4 h-4 text-primary" />
-              <span className="text-sm text-muted-foreground">Commencez dès maintenant</span>
+              <span className="text-sm text-muted-foreground">10 crédits offerts, sans engagement</span>
             </div>
 
             <h2 className="text-4xl md:text-6xl font-bold mb-6">
-              Prêt à créer
+              Créez votre première vidéo
               <br />
-              <span className="text-primary">votre première vidéo ?</span>
+              <span className="text-primary">en quelques minutes</span>
             </h2>
 
             <p className="text-xl text-muted-foreground mb-12">
-              Créez votre premier clip en quelques minutes. Aucune compétence technique requise.
+              Décrivez votre idée, uploadez votre musique, et laissez l'IA faire le reste.
+              <br className="hidden md:block" />
+              Aucune compétence technique, aucun logiciel à installer.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -50,16 +51,16 @@ const CTA = () => {
                 onClick={() => navigate(user ? "/create/clip" : "/auth")}
               >
                 <Video className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                Créer mon premier clip
+                Essai gratuit — Créer ma vidéo
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Button>
               <Button variant="glass" size="lg" onClick={() => navigate("/pricing")}>
-                Voir les plans
+                Voir les tarifs
               </Button>
             </div>
 
             <p className="text-sm text-muted-foreground mt-8">
-              Crédits gratuits inclus • Sans engagement • Jusqu'à 4K selon votre plan
+              Aucune carte bancaire requise • Sans engagement • Résultat en ~10 minutes
             </p>
           </div>
         </AnimatedSection>

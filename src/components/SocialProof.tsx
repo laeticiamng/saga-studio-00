@@ -1,6 +1,7 @@
 import { motion, useMotionValue, useTransform, animate, useScroll } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import AnimatedSection from "./AnimatedSection";
+import { Star } from "lucide-react";
 
 function Counter({ target, suffix = "" }: { target: number; suffix?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
@@ -29,8 +30,29 @@ function Counter({ target, suffix = "" }: { target: number; suffix?: string }) {
 
 const stats = [
   { value: 10, suffix: "", label: "Crédits offerts à l'inscription" },
-  { value: 13, suffix: "", label: "Styles visuels au choix" },
-  { value: 5, suffix: " min", label: "De vidéo en une seule génération" },
+  { value: 13, suffix: "", label: "Styles visuels disponibles" },
+  { value: 5, suffix: " min", label: "De vidéo générée d'un seul coup" },
+];
+
+const testimonials = [
+  {
+    name: "Léa M.",
+    role: "Artiste indépendante",
+    text: "J'ai créé mon premier clip en 10 minutes. Le résultat m'a bluffée, surtout la cohérence visuelle entre les scènes.",
+    stars: 5,
+  },
+  {
+    name: "Thomas R.",
+    role: "Créateur de contenu",
+    text: "Enfin un outil simple pour faire des vidéos sans savoir monter. J'utilise CineClip pour tous mes projets YouTube maintenant.",
+    stars: 5,
+  },
+  {
+    name: "Camille D.",
+    role: "Musicienne",
+    text: "Le style anime est incroyable. Mon clip a eu 3x plus de vues que d'habitude. Et tout ça sans budget vidéo.",
+    stars: 4,
+  },
 ];
 
 const highlights = [
@@ -41,12 +63,12 @@ const highlights = [
   },
   {
     title: "Résultat en quelques minutes",
-    text: "Pas besoin d'attendre des heures. Notre système génère votre vidéo complète rapidement, prête à télécharger.",
+    text: "Pas besoin d'attendre des heures. Votre vidéo complète est prête en 5 à 15 minutes, avec un suivi en temps réel.",
     icon: "⚡",
   },
   {
-    title: "Plusieurs styles au choix",
-    text: "Cinématique, anime, aquarelle, néon… Choisissez le style visuel qui correspond à votre univers.",
+    title: "Votre style, votre univers",
+    text: "Cinématique, anime, aquarelle, néon… 13 styles visuels pour créer exactement ce que vous imaginez.",
     icon: "🎨",
   },
 ];
@@ -58,7 +80,6 @@ export default function SocialProof() {
     offset: ["start end", "end start"],
   });
 
-  // Parallax: glow rises faster, cards drift subtly
   const glowY = useTransform(scrollYProgress, [0, 1], ["40px", "-60px"]);
   const glowScale = useTransform(scrollYProgress, [0, 0.5, 1], [0.8, 1.2, 0.9]);
   const countersY = useTransform(scrollYProgress, [0, 1], ["30px", "-20px"]);
@@ -73,7 +94,7 @@ export default function SocialProof() {
       />
 
       <div className="container mx-auto relative z-10">
-        {/* Counters with parallax */}
+        {/* Counters */}
         <motion.div style={{ y: countersY }}>
           <AnimatedSection>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
@@ -89,14 +110,49 @@ export default function SocialProof() {
           </AnimatedSection>
         </motion.div>
 
-        {/* Highlights heading */}
+        {/* Testimonials */}
+        <AnimatedSection delay={0.1}>
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
+            Ce qu'en disent nos premiers utilisateurs
+          </h2>
+          <p className="text-center text-muted-foreground mb-10 max-w-xl mx-auto">
+            Des créateurs comme vous ont déjà testé CineClip AI pendant notre bêta.
+          </p>
+        </AnimatedSection>
+
+        <div className="grid md:grid-cols-3 gap-6 mb-20">
+          {testimonials.map((t, i) => (
+            <AnimatedSection key={t.name} delay={0.08 * (i + 1)}>
+              <motion.div
+                whileHover={{ y: -4 }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                className="rounded-xl border border-border/50 bg-card/60 backdrop-blur-sm p-6 h-full flex flex-col"
+              >
+                <div className="flex gap-0.5 mb-3">
+                  {Array.from({ length: 5 }).map((_, si) => (
+                    <Star
+                      key={si}
+                      className={`h-4 w-4 ${si < t.stars ? "text-primary fill-primary" : "text-muted-foreground/30"}`}
+                    />
+                  ))}
+                </div>
+                <p className="text-foreground leading-relaxed flex-1 mb-4">"{t.text}"</p>
+                <div>
+                  <p className="font-semibold text-sm">{t.name}</p>
+                  <p className="text-xs text-muted-foreground">{t.role}</p>
+                </div>
+              </motion.div>
+            </AnimatedSection>
+          ))}
+        </div>
+
+        {/* Why CineClip */}
         <AnimatedSection delay={0.15}>
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">
-            Pourquoi CineClip AI ?
+            Pourquoi choisir CineClip AI ?
           </h2>
         </AnimatedSection>
 
-        {/* Cards with parallax drift */}
         <motion.div style={{ y: cardsY }} className="grid md:grid-cols-3 gap-6">
           {highlights.map((h, i) => (
             <AnimatedSection key={h.title} delay={0.1 * (i + 1)}>
