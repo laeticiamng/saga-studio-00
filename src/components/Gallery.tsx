@@ -17,10 +17,10 @@ const Gallery = () => {
         <AnimatedSection>
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold mb-4">
-              Exemples de créations
+              Voyez ce que l'IA peut créer
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Découvrez ce que vous pourrez créer avec notre plateforme
+              Ces images illustrent les styles visuels disponibles. Chaque style peut être appliqué à votre propre projet.
             </p>
           </div>
         </AnimatedSection>
