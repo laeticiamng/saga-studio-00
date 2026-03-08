@@ -90,7 +90,7 @@ export default function CreateFilm() {
         provider_default: provider === "auto" ? null : provider,
       }).eq("id", project.id);
 
-      toast({ title: "🎬 Pipeline lancé !", description: "Votre film est en cours de génération…" });
+      toast({ title: "🎬 C'est parti !", description: "Votre film est en cours de création. Suivez l'avancement en temps réel." });
       navigate(`/project/${project.id}`);
 
       supabase.functions.invoke("pipeline-worker", {
