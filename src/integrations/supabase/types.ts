@@ -50,6 +50,13 @@ export type Database = {
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "audio_analysis_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       credit_ledger: {
@@ -154,6 +161,13 @@ export type Database = {
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "job_queue_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       moderation_flags: {
@@ -195,6 +209,13 @@ export type Database = {
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "moderation_flags_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       plans: {
@@ -231,6 +252,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plans_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects_public"
             referencedColumns: ["id"]
           },
         ]
@@ -361,6 +389,13 @@ export type Database = {
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "renders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       shots: {
@@ -418,6 +453,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shots_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects_public"
             referencedColumns: ["id"]
           },
         ]
@@ -516,7 +558,30 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      projects_public: {
+        Row: {
+          id: string | null
+          status: Database["public"]["Enums"]["project_status"] | null
+          style_preset: string | null
+          title: string | null
+          type: Database["public"]["Enums"]["project_type"] | null
+        }
+        Insert: {
+          id?: string | null
+          status?: Database["public"]["Enums"]["project_status"] | null
+          style_preset?: string | null
+          title?: string | null
+          type?: Database["public"]["Enums"]["project_type"] | null
+        }
+        Update: {
+          id?: string | null
+          status?: Database["public"]["Enums"]["project_status"] | null
+          style_preset?: string | null
+          title?: string | null
+          type?: Database["public"]["Enums"]["project_type"] | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       debit_credits: {
