@@ -175,6 +175,52 @@ async function generateWithFallback(
   throw new Error(`All providers failed: ${attempts.map(a => `${a.provider}:${a.error}`).join(", ")}`);
 }
 
+// ─── Style Consistency Engine ───────────────────────────────────────────────
+
+function buildStyleConsistentPrompt(
+  basePrompt: string,
+  styleBible: Record<string, any> | null,
+  characterBible: Record<string, any> | null,
+  stylePreset: string,
+  shotIdx: number,
+  totalShots: number
+): string {
+  const parts: string[] = [];
+
+  // Global style enforcement
+  if (styleBible) {
+    if (styleBible.color_palette) parts.push(`Color palette: ${styleBible.color_palette}`);
+    if (styleBible.lighting) parts.push(`Lighting: ${styleBible.lighting}`);
+    if (styleBible.camera_style) parts.push(`Camera: ${styleBible.camera_style}`);
+    if (styleBible.mood) parts.push(`Mood: ${styleBible.mood}`);
+    if (styleBible.texture) parts.push(`Texture: ${styleBible.texture}`);
+    if (styleBible.aspect_ratio) parts.push(`Aspect ratio: ${styleBible.aspect_ratio}`);
+  }
+
+  // Character consistency
+  if (characterBible && Object.keys(characterBible).length > 0) {
+    const charDescs = Object.entries(characterBible)
+      .map(([name, desc]) => `${name}: ${typeof desc === 'string' ? desc : JSON.stringify(desc)}`)
+      .join("; ");
+    parts.push(`Recurring characters: ${charDescs}`);
+  }
+
+  // Style preset enforcement
+  parts.push(`Visual style: ${stylePreset}`);
+
+  // Shot position context for narrative flow
+  const position = shotIdx / totalShots;
+  if (position < 0.15) parts.push("Opening shot - establish setting and tone");
+  else if (position > 0.85) parts.push("Closing shot - climactic or resolving energy");
+  else if (position > 0.4 && position < 0.6) parts.push("Midpoint - peak intensity");
+
+  // Seed phrase for cross-shot consistency
+  parts.push("Maintain strict visual consistency with all other shots in this project");
+
+  const stylePrefix = parts.join(". ") + ". ";
+  return stylePrefix + basePrompt;
+}
+
 // ─── Main Handler ───────────────────────────────────────────────────────────
 
 serve(async (req) => {
@@ -192,6 +238,19 @@ serve(async (req) => {
     const { data: project } = await supabase.from("projects").select("*").eq("id", project_id).single();
     if (!project) throw new Error("Project not found");
 
+    // Fetch style/character bibles for consistency
+    const { data: plan } = await supabase
+      .from("plans")
+      .select("style_bible_json, character_bible_json, shotlist_json")
+      .eq("project_id", project_id)
+      .order("version", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const styleBible = (plan?.style_bible_json as Record<string, any>) || null;
+    const characterBible = (plan?.character_bible_json as Record<string, any>) || null;
+    const shotlistJson = (plan?.shotlist_json as any[]) || [];
+
     const providerChain = buildProviderChain(project.provider_default || undefined);
 
     // Get pending shots
@@ -202,6 +261,12 @@ serve(async (req) => {
       .in("status", ["pending"])
       .order("idx")
       .limit(batch_size);
+
+    // Get total shots count for position-aware prompting
+    const { count: totalShotsCount } = await supabase
+      .from("shots")
+      .select("*", { count: "exact", head: true })
+      .eq("project_id", project_id);
 
     if (!pendingShots || pendingShots.length === 0) {
       const { data: allShots } = await supabase.from("shots").select("status").eq("project_id", project_id);

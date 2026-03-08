@@ -6,6 +6,101 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// ─── Beat-Sync Engine ───────────────────────────────────────────────────────
+
+interface BeatPoint { time: number; strength?: number }
+interface Section { label: string; start: number; end: number; type?: string }
+
+function computeBeatAlignedCuts(
+  shots: any[],
+  beats: BeatPoint[],
+  sections: Section[],
+  totalDuration: number,
+  bpm: number
+): { idx: number; start_sec: number; end_sec: number; transition: string }[] {
+  if (!beats.length || !shots.length) {
+    // Fallback: equal distribution
+    const perShot = totalDuration / shots.length;
+    return shots.map((s, i) => ({
+      idx: s.idx,
+      start_sec: i * perShot,
+      end_sec: (i + 1) * perShot,
+      transition: "cut",
+    }));
+  }
+
+  const beatInterval = 60 / bpm;
+  const beatsPerBar = 4;
+  const barDuration = beatInterval * beatsPerBar;
+
+  // Build bar grid from beats
+  const barStarts: number[] = [];
+  for (let t = 0; t < totalDuration; t += barDuration) {
+    barStarts.push(t);
+  }
+
+  // Assign shots to bars, distributing evenly across available bars
+  const barsPerShot = Math.max(1, Math.floor(barStarts.length / shots.length));
+  const cuts: { idx: number; start_sec: number; end_sec: number; transition: string }[] = [];
+
+  for (let i = 0; i < shots.length; i++) {
+    const barIdx = i * barsPerShot;
+    const startBar = barStarts[Math.min(barIdx, barStarts.length - 1)];
+    const endBarIdx = Math.min(barIdx + barsPerShot, barStarts.length);
+    const endBar = endBarIdx < barStarts.length ? barStarts[endBarIdx] : totalDuration;
+
+    // Determine transition type based on section boundaries
+    let transition = "cut_on_beat";
+    if (sections.length > 0) {
+      const sectionAtCut = sections.find(s => Math.abs(s.start - startBar) < barDuration);
+      if (sectionAtCut) {
+        // Use crossfade at section boundaries (chorus, bridge, etc.)
+        transition = sectionAtCut.type === "chorus" ? "flash_cut" : "crossfade";
+      }
+    }
+
+    // Snap to nearest strong beat
+    const nearestBeat = beats.reduce((best, b) =>
+      Math.abs(b.time - startBar) < Math.abs(best.time - startBar) ? b : best,
+      beats[0]
+    );
+    const snappedStart = i === 0 ? 0 : nearestBeat.time;
+
+    cuts.push({
+      idx: shots[i].idx,
+      start_sec: snappedStart,
+      end_sec: i === shots.length - 1 ? totalDuration : endBar,
+      transition,
+    });
+  }
+
+  // Fix overlaps: each cut starts where the previous ends
+  for (let i = 1; i < cuts.length; i++) {
+    cuts[i].start_sec = cuts[i - 1].end_sec;
+  }
+
+  return cuts;
+}
+
+// ─── Multi-Format Export ────────────────────────────────────────────────────
+
+interface ExportFormat {
+  key: string;
+  width: number;
+  height: number;
+  label: string;
+  crop?: boolean;
+}
+
+const EXPORT_FORMATS: ExportFormat[] = [
+  { key: "master_16_9", width: 1920, height: 1080, label: "16:9 Landscape" },
+  { key: "master_9_16", width: 1080, height: 1920, label: "9:16 Vertical", crop: true },
+  { key: "teaser", width: 1920, height: 1080, label: "15s Teaser" },
+  { key: "square", width: 1080, height: 1080, label: "1:1 Square", crop: true },
+];
+
+// ─── Main Handler ───────────────────────────────────────────────────────────
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -15,7 +110,7 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { project_id } = await req.json();
+    const { project_id, formats } = await req.json();
     if (!project_id) throw new Error("project_id required");
 
     const { data: project } = await supabase.from("projects").select("*").eq("id", project_id).single();
@@ -38,38 +133,82 @@ serve(async (req) => {
       .eq("project_id", project_id)
       .maybeSingle();
 
+    const bpm = analysis?.bpm || 120;
+    const beatsJson = (analysis?.beats_json as any[]) || [];
+    const sectionsJson = (analysis?.sections_json as any[]) || [];
     const energyData = (analysis?.energy_json as any[]) || [];
-    const highestEnergy = [...energyData].sort((a, b) => (b.energy || 0) - (a.energy || 0))[0];
+    const totalDuration = project.duration_sec || 180;
 
-    // Build FFmpeg-ready manifest (for when a real render service is connected)
+    // Parse beat points
+    const beats: BeatPoint[] = beatsJson.map((b: any) =>
+      typeof b === "number" ? { time: b } : { time: b.time || 0, strength: b.strength }
+    );
+
+    // Parse sections
+    const sections: Section[] = sectionsJson.map((s: any) => ({
+      label: s.label || s.type || "unknown",
+      start: s.start || 0,
+      end: s.end || s.start + 30,
+      type: s.type,
+    }));
+
+    // ── Beat-Sync: compute precise cut points ──
+    const beatAlignedCuts = computeBeatAlignedCuts(shots, beats, sections, totalDuration, bpm);
+
+    // Determine highest energy section for teaser
+    const highestEnergy = [...energyData].sort((a, b) => (b.energy || 0) - (a.energy || 0))[0];
+    const teaserSection = highestEnergy?.section || "chorus1";
+    const teaserStart = sections.find(s => s.label === teaserSection)?.start || totalDuration * 0.3;
+
+    // ── Multi-Format: select requested formats ──
+    const requestedFormats = formats
+      ? EXPORT_FORMATS.filter(f => formats.includes(f.key))
+      : EXPORT_FORMATS.filter(f => f.key !== "square"); // Default: all except square
+
+    // Build FFmpeg-ready manifest
     const manifest = {
       project_id,
       audio_url: project.audio_url,
-      bpm: analysis?.bpm || 120,
-      shots: shots.map(s => ({
-        idx: s.idx,
-        url: s.output_url,
-        duration_sec: s.duration_sec,
-        start_sec: null, // Will be computed from beat grid
-      })),
-      outputs: {
-        master_16_9: { width: 1920, height: 1080, format: "mp4" },
-        master_9_16: { width: 1080, height: 1920, format: "mp4", crop: true },
-        teaser: { duration: 15, start_section: highestEnergy?.section || "chorus1" },
+      bpm,
+      total_duration: totalDuration,
+      beat_sync: {
+        enabled: true,
+        cuts: beatAlignedCuts,
+        beat_grid: beats.map(b => b.time),
+        bar_duration: 60 / bpm * 4,
       },
-      beat_grid: analysis?.beats_json || [],
-      transitions: "cut_on_beat",
+      shots: beatAlignedCuts.map(cut => {
+        const shot = shots.find(s => s.idx === cut.idx);
+        return {
+          idx: cut.idx,
+          url: shot?.output_url,
+          start_sec: cut.start_sec,
+          end_sec: cut.end_sec,
+          duration_sec: cut.end_sec - cut.start_sec,
+          transition: cut.transition,
+        };
+      }),
+      outputs: Object.fromEntries(requestedFormats.map(f => [f.key, {
+        width: f.width,
+        height: f.height,
+        format: "mp4",
+        crop: f.crop || false,
+        ...(f.key === "teaser" ? { duration: 15, start_sec: teaserStart } : {}),
+      }])),
+      transitions_config: {
+        cut_on_beat: { type: "hard_cut" },
+        crossfade: { type: "crossfade", duration_beats: 1 },
+        flash_cut: { type: "flash", duration_frames: 2 },
+      },
     };
 
     const thumbs = shots.slice(0, 6).map(s => s.output_url).filter(Boolean);
 
     // Check for external FFmpeg render service
     const renderServiceUrl = Deno.env.get("FFMPEG_RENDER_SERVICE_URL");
-
     let renderResult: any;
 
     if (renderServiceUrl) {
-      // Call external FFmpeg service
       try {
         const res = await fetch(renderServiceUrl, {
           method: "POST",
@@ -89,9 +228,14 @@ serve(async (req) => {
       status: "completed",
       thumbs_json: thumbs,
       logs: JSON.stringify({
-        manifest,
-        shots_count: shots.length,
-        highest_energy_section: highestEnergy?.section || "unknown",
+        manifest_version: 2,
+        beat_sync_enabled: true,
+        cuts_count: beatAlignedCuts.length,
+        bpm,
+        formats_requested: requestedFormats.map(f => f.key),
+        transitions: beatAlignedCuts.map(c => c.transition),
+        highest_energy_section: teaserSection,
+        teaser_start_sec: teaserStart,
         stitched_at: new Date().toISOString(),
         used_external_service: !!renderResult,
       }),
@@ -102,7 +246,6 @@ serve(async (req) => {
       renderData.master_url_9_16 = renderResult.master_url_9_16;
       renderData.teaser_url = renderResult.teaser_url;
     } else {
-      // Placeholder URLs using first shot — will be replaced by real render service
       renderData.master_url_16_9 = shots[0]?.output_url || null;
       renderData.master_url_9_16 = shots[0]?.output_url || null;
       renderData.teaser_url = shots[0]?.output_url || null;
@@ -114,12 +257,13 @@ serve(async (req) => {
 
     if (renderErr) throw renderErr;
 
-    // Mark project completed
     await supabase.from("projects").update({ status: "completed" }).eq("id", project_id);
 
     return new Response(JSON.stringify({
       success: true,
       shots_stitched: shots.length,
+      beat_sync: { enabled: true, cuts: beatAlignedCuts.length, bpm },
+      formats: requestedFormats.map(f => f.key),
       has_render_service: !!renderServiceUrl,
       manifest_ready: true,
     }), {
