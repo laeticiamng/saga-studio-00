@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import { PipelineProgress } from "@/components/PipelineProgress";
 import { ShotGrid } from "@/components/ShotGrid";
 import { ShotPreviewPlayer } from "@/components/ShotPreviewPlayer";
