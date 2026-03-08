@@ -1,11 +1,12 @@
-import { useEffect } from "react";
+import { useEffect, useContext } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { AuthContext } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
 export function GlobalNotifications() {
-  const { user } = useAuth();
+  const auth = useContext(AuthContext);
+  const user = auth?.user ?? null;
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
