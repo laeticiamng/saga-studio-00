@@ -33,6 +33,7 @@ const NotFound = () => {
           </Button>
         </div>
       </div>
+      <Footer />
     </div>
   );
 };

@@ -7,7 +7,7 @@ export default function Legal() {
       <Navbar />
       <main className="container mx-auto max-w-3xl px-4 py-16">
         <h1 className="text-3xl font-bold mb-8">Mentions légales</h1>
-        <div className="prose prose-invert max-w-none space-y-6 text-muted-foreground">
+        <div className="max-w-none space-y-6 text-muted-foreground">
           <h2 className="text-xl font-semibold text-foreground">Éditeur du site</h2>
           <p>CineClip AI<br />Service de génération vidéo par intelligence artificielle<br />Contact : contact@cineclip.ai</p>
 

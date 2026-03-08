@@ -315,6 +315,7 @@ export default function ProjectView() {
           )}
         </Tabs>
       </main>
+      <Footer />
     </div>
   );
 }
