@@ -86,14 +86,7 @@ export default function ProjectView() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [id, queryClient]);
-
-  // Refetch render when project completes
-  useEffect(() => {
-    if (project?.status === "completed") {
-      queryClient.invalidateQueries({ queryKey: ["render", id] });
-    }
-  }, [project?.status, id, queryClient]);
+  }, [id, queryClient, toast]);
 
   const callEdgeFunction = useCallback(async (name: string, body: any) => {
     const res = await supabase.functions.invoke(name, { body });
