@@ -36,7 +36,7 @@ const Gallery = () => {
                 <div className="aspect-[4/5] relative">
                   <img
                     src={example.image}
-                    alt={example.title}
+                    alt={example.alt}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                     loading="lazy"
                   />
