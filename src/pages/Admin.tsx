@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,8 +13,12 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
 import {
+  ChartContainer, ChartTooltip, ChartTooltipContent,
+} from "@/components/ui/chart";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, ResponsiveContainer } from "recharts";
+import {
   Loader2, Shield, Activity, CreditCard, Film, Clapperboard, AlertTriangle,
-  CheckCircle, Clock, XCircle, Ban, RotateCcw, CheckCheck, Eye,
+  CheckCircle, Clock, XCircle, Ban, RotateCcw, CheckCheck, Eye, TrendingUp,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -42,13 +46,44 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+// Helper: group items by day (fr-FR)
+function groupByDay(items: { created_at: string; delta?: number }[], mode: "count" | "sum") {
+  const map = new Map<string, number>();
+  for (const item of items) {
+    const day = new Date(item.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
+    const prev = map.get(day) || 0;
+    map.set(day, mode === "count" ? prev + 1 : prev + Math.abs(item.delta ?? 0));
+  }
+  return Array.from(map.entries()).map(([day, value]) => ({ day, value })).reverse();
+}
+
+// Helper: group by week
+function groupByWeek(items: { created_at: string }[]) {
+  const map = new Map<string, number>();
+  for (const item of items) {
+    const d = new Date(item.created_at);
+    const weekStart = new Date(d);
+    weekStart.setDate(d.getDate() - d.getDay() + 1);
+    const label = `Sem. ${weekStart.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}`;
+    map.set(label, (map.get(label) || 0) + 1);
+  }
+  return Array.from(map.entries()).map(([week, value]) => ({ week, value })).reverse();
+}
+
+const creditsChartConfig = {
+  value: { label: "Crédits utilisés", color: "hsl(var(--primary))" },
+};
+
+const projectsChartConfig = {
+  value: { label: "Projets créés", color: "hsl(var(--accent))" },
+};
+
 export default function Admin() {
   const { user } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  // Refund dialog state
   const [refundDialog, setRefundDialog] = useState<{ open: boolean; userId: string; reason: string }>({
     open: false, userId: "", reason: "",
   });
@@ -62,8 +97,7 @@ export default function Admin() {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast({ title: "Success", description: `${action.replace(/_/g, " ")} completed` });
-      // Invalidate all admin queries
+      toast({ title: "Succès", description: `${action.replace(/_/g, " ")} terminé` });
       qc.invalidateQueries({ queryKey: ["admin-projects"] });
       qc.invalidateQueries({ queryKey: ["admin-jobs"] });
       qc.invalidateQueries({ queryKey: ["admin-flags"] });
@@ -71,7 +105,7 @@ export default function Admin() {
       qc.invalidateQueries({ queryKey: ["admin-renders"] });
       return data;
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Erreur", description: err.message, variant: "destructive" });
     } finally {
       setActionLoading(null);
     }
@@ -128,11 +162,23 @@ export default function Admin() {
   const { data: ledger } = useQuery({
     queryKey: ["admin-ledger"],
     queryFn: async () => {
-      const { data } = await supabase.from("credit_ledger").select("*").order("created_at", { ascending: false }).limit(50);
+      const { data } = await supabase.from("credit_ledger").select("*").order("created_at", { ascending: false }).limit(200);
       return data || [];
     },
     enabled: !!isAdmin,
   });
+
+  // Chart data
+  const creditsPerDay = useMemo(() => {
+    if (!ledger) return [];
+    const debits = ledger.filter(l => l.delta < 0);
+    return groupByDay(debits, "sum").slice(-14);
+  }, [ledger]);
+
+  const projectsPerWeek = useMemo(() => {
+    if (!projects) return [];
+    return groupByWeek(projects).slice(-8);
+  }, [projects]);
 
   if (checkingRole) {
     return (
@@ -149,8 +195,8 @@ export default function Admin() {
         <Navbar />
         <div className="flex flex-col items-center py-20 text-muted-foreground">
           <Shield className="h-16 w-16 mb-4" />
-          <p className="text-xl font-medium">Access Denied</p>
-          <p>Admin privileges required</p>
+          <p className="text-xl font-medium">Accès refusé</p>
+          <p>Privilèges administrateur requis</p>
         </div>
       </div>
     );
@@ -169,7 +215,7 @@ export default function Admin() {
       <Navbar />
       <main className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8 flex items-center gap-2">
-          <Shield className="h-8 w-8 text-primary" /> Admin Monitoring
+          <Shield className="h-8 w-8 text-primary" /> Supervision admin
         </h1>
 
         {/* KPI Cards */}
@@ -177,37 +223,88 @@ export default function Admin() {
           <Card className="border-border/50 bg-card/60">
             <CardContent className="pt-6 text-center">
               <div className="text-2xl font-bold text-primary">{projects?.length || 0}</div>
-              <p className="text-xs text-muted-foreground">Total Projects</p>
+              <p className="text-xs text-muted-foreground">Total projets</p>
             </CardContent>
           </Card>
           <Card className="border-border/50 bg-card/60">
             <CardContent className="pt-6 text-center">
               <div className="text-2xl font-bold text-chart-2">{activeProjects.length}</div>
-              <p className="text-xs text-muted-foreground">Active Pipelines</p>
+              <p className="text-xs text-muted-foreground">Pipelines actifs</p>
             </CardContent>
           </Card>
           <Card className="border-border/50 bg-card/60">
             <CardContent className="pt-6 text-center">
               <div className="text-2xl font-bold text-chart-4">{activeJobs.length}</div>
-              <p className="text-xs text-muted-foreground">Processing Jobs</p>
+              <p className="text-xs text-muted-foreground">Jobs en cours</p>
             </CardContent>
           </Card>
           <Card className="border-border/50 bg-card/60">
             <CardContent className="pt-6 text-center">
               <div className="text-2xl font-bold text-destructive">{failedJobs.length}</div>
-              <p className="text-xs text-muted-foreground">Failed Jobs</p>
+              <p className="text-xs text-muted-foreground">Jobs échoués</p>
             </CardContent>
           </Card>
           <Card className="border-border/50 bg-card/60">
             <CardContent className="pt-6 text-center">
               <div className="text-2xl font-bold text-chart-1">{totalDebits}</div>
-              <p className="text-xs text-muted-foreground">Credits Used</p>
+              <p className="text-xs text-muted-foreground">Crédits utilisés</p>
             </CardContent>
           </Card>
           <Card className="border-border/50 bg-card/60">
             <CardContent className="pt-6 text-center">
               <div className="text-2xl font-bold text-chart-3">{pendingRenders.length}</div>
-              <p className="text-xs text-muted-foreground">Pending Renders</p>
+              <p className="text-xs text-muted-foreground">Rendus en attente</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Trend Charts */}
+        <div className="grid gap-4 md:grid-cols-2 mb-8">
+          <Card className="border-border/50 bg-card/60">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-primary" />
+                Crédits utilisés par jour
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {creditsPerDay.length > 0 ? (
+                <ChartContainer config={creditsChartConfig} className="h-[200px] w-full">
+                  <BarChart data={creditsPerDay}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
+                    <XAxis dataKey="day" className="text-xs" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                    <YAxis className="text-xs" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ChartContainer>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">Aucune donnée</p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/50 bg-card/60">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-accent" />
+                Projets créés par semaine
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {projectsPerWeek.length > 0 ? (
+                <ChartContainer config={projectsChartConfig} className="h-[200px] w-full">
+                  <LineChart data={projectsPerWeek}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
+                    <XAxis dataKey="week" className="text-xs" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                    <YAxis className="text-xs" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Line type="monotone" dataKey="value" stroke="hsl(var(--accent))" strokeWidth={2} dot={{ fill: "hsl(var(--accent))" }} />
+                  </LineChart>
+                </ChartContainer>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">Aucune donnée</p>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -216,10 +313,10 @@ export default function Admin() {
         <Tabs defaultValue="jobs" className="space-y-4">
           <TabsList className="bg-muted/50">
             <TabsTrigger value="jobs" className="gap-1"><Activity className="h-4 w-4" /> Jobs</TabsTrigger>
-            <TabsTrigger value="projects" className="gap-1"><Clapperboard className="h-4 w-4" /> Projects</TabsTrigger>
-            <TabsTrigger value="credits" className="gap-1"><CreditCard className="h-4 w-4" /> Credits</TabsTrigger>
-            <TabsTrigger value="renders" className="gap-1"><Film className="h-4 w-4" /> Renders</TabsTrigger>
-            <TabsTrigger value="flags" className="gap-1"><AlertTriangle className="h-4 w-4" /> Flags ({flags?.filter(f => f.status === "pending").length || 0})</TabsTrigger>
+            <TabsTrigger value="projects" className="gap-1"><Clapperboard className="h-4 w-4" /> Projets</TabsTrigger>
+            <TabsTrigger value="credits" className="gap-1"><CreditCard className="h-4 w-4" /> Crédits</TabsTrigger>
+            <TabsTrigger value="renders" className="gap-1"><Film className="h-4 w-4" /> Rendus</TabsTrigger>
+            <TabsTrigger value="flags" className="gap-1"><AlertTriangle className="h-4 w-4" /> Signalements ({flags?.filter(f => f.status === "pending").length || 0})</TabsTrigger>
           </TabsList>
 
           {/* JOBS TAB */}
@@ -228,33 +325,33 @@ export default function Admin() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Activity className="h-5 w-5 text-primary" />
-                  Job Queue ({jobs?.length || 0} total)
+                  File de jobs ({jobs?.length || 0} au total)
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Step</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Retries</TableHead>
-                      <TableHead>Started</TableHead>
-                      <TableHead>Duration</TableHead>
-                      <TableHead>Error</TableHead>
+                      <TableHead>Étape</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead>Tentatives</TableHead>
+                      <TableHead>Démarré</TableHead>
+                      <TableHead>Durée</TableHead>
+                      <TableHead>Erreur</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {jobs?.map((j) => {
                       const dur = j.started_at && j.completed_at
                         ? `${((new Date(j.completed_at).getTime() - new Date(j.started_at).getTime()) / 1000).toFixed(1)}s`
-                        : j.started_at ? "running…" : "—";
+                        : j.started_at ? "en cours…" : "—";
                       return (
                         <TableRow key={j.id}>
                           <TableCell className="font-mono text-xs">{j.step}</TableCell>
                           <TableCell><StatusBadge status={j.status} /></TableCell>
                           <TableCell className="text-xs">{j.retry_count || 0}/{j.max_retries || 3}</TableCell>
                           <TableCell className="text-xs text-muted-foreground">
-                            {j.started_at ? new Date(j.started_at).toLocaleTimeString() : "—"}
+                            {j.started_at ? new Date(j.started_at).toLocaleTimeString("fr-FR") : "—"}
                           </TableCell>
                           <TableCell className="text-xs font-mono">{dur}</TableCell>
                           <TableCell className="text-xs text-destructive max-w-[200px] truncate">{j.error_message || "—"}</TableCell>
@@ -270,7 +367,7 @@ export default function Admin() {
           {/* PROJECTS TAB */}
           <TabsContent value="projects">
             <Card className="border-border/50 bg-card/60">
-              <CardHeader><CardTitle>All Projects</CardTitle></CardHeader>
+              <CardHeader><CardTitle>Tous les projets</CardTitle></CardHeader>
               <CardContent>
                 {isLoading ? (
                   <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
@@ -278,12 +375,12 @@ export default function Admin() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Title</TableHead>
+                        <TableHead>Titre</TableHead>
                         <TableHead>Type</TableHead>
-                        <TableHead>Status</TableHead>
+                        <TableHead>Statut</TableHead>
                         <TableHead>Style</TableHead>
-                        <TableHead>Provider</TableHead>
-                        <TableHead>Created</TableHead>
+                        <TableHead>Fournisseur</TableHead>
+                        <TableHead>Créé le</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -291,7 +388,6 @@ export default function Admin() {
                       {projects?.map((p) => {
                         const canCancel = !["completed", "failed", "cancelled", "draft"].includes(p.status);
                         const cancelKey = `cancel_project-${p.id}`;
-                        const refundKey = `refund-${p.user_id}`;
                         return (
                           <TableRow key={p.id}>
                             <TableCell className="font-medium">{p.title}</TableCell>
@@ -299,7 +395,7 @@ export default function Admin() {
                             <TableCell><StatusBadge status={p.status} /></TableCell>
                             <TableCell className="capitalize text-xs">{p.style_preset || "—"}</TableCell>
                             <TableCell className="text-xs font-mono">{p.provider_default || "—"}</TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{new Date(p.created_at).toLocaleDateString()}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{new Date(p.created_at).toLocaleDateString("fr-FR")}</TableCell>
                             <TableCell className="text-right space-x-1">
                               {canCancel && (
                                 <Button
@@ -310,16 +406,16 @@ export default function Admin() {
                                   onClick={() => adminAction("cancel_project", { project_id: p.id })}
                                 >
                                   {isActionLoading(cancelKey) ? <Loader2 className="h-3 w-3 animate-spin" /> : <Ban className="h-3 w-3" />}
-                                  Cancel
+                                  Annuler
                                 </Button>
                               )}
                               <Button
                                 variant="outline"
                                 size="sm"
                                 className="h-7 text-xs gap-1"
-                                onClick={() => setRefundDialog({ open: true, userId: p.user_id, reason: `Refund for project: ${p.title}` })}
+                                onClick={() => setRefundDialog({ open: true, userId: p.user_id, reason: `Remboursement projet : ${p.title}` })}
                               >
-                                <RotateCcw className="h-3 w-3" /> Refund
+                                <RotateCcw className="h-3 w-3" /> Rembourser
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -338,7 +434,7 @@ export default function Admin() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <CreditCard className="h-5 w-5 text-primary" />
-                  Recent Credit Activity ({ledger?.length || 0} entries)
+                  Activité récente ({ledger?.length || 0} entrées)
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -346,9 +442,9 @@ export default function Admin() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Delta</TableHead>
-                      <TableHead>Reason</TableHead>
+                      <TableHead>Raison</TableHead>
                       <TableHead>Type</TableHead>
-                      <TableHead>Time</TableHead>
+                      <TableHead>Date</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -359,7 +455,7 @@ export default function Admin() {
                         </TableCell>
                         <TableCell className="text-sm">{l.reason}</TableCell>
                         <TableCell><Badge variant="outline" className="text-xs">{l.ref_type || "—"}</Badge></TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{new Date(l.created_at).toLocaleString()}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{new Date(l.created_at).toLocaleString("fr-FR")}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -374,18 +470,18 @@ export default function Admin() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Film className="h-5 w-5 text-primary" />
-                  Renders ({renders?.length || 0})
+                  Rendus ({renders?.length || 0})
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Project ID</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>16:9 URL</TableHead>
-                      <TableHead>9:16 URL</TableHead>
-                      <TableHead>Created</TableHead>
+                      <TableHead>ID Projet</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead>URL 16:9</TableHead>
+                      <TableHead>URL 9:16</TableHead>
+                      <TableHead>Créé le</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -394,12 +490,12 @@ export default function Admin() {
                         <TableCell className="font-mono text-xs">{r.project_id.slice(0, 8)}…</TableCell>
                         <TableCell><StatusBadge status={r.status} /></TableCell>
                         <TableCell className="text-xs">
-                          {r.master_url_16_9 ? <a href={r.master_url_16_9} target="_blank" rel="noreferrer" className="text-primary underline">View</a> : "—"}
+                          {r.master_url_16_9 ? <a href={r.master_url_16_9} target="_blank" rel="noreferrer" className="text-primary underline">Voir</a> : "—"}
                         </TableCell>
                         <TableCell className="text-xs">
-                          {r.master_url_9_16 ? <a href={r.master_url_9_16} target="_blank" rel="noreferrer" className="text-primary underline">View</a> : "—"}
+                          {r.master_url_9_16 ? <a href={r.master_url_9_16} target="_blank" rel="noreferrer" className="text-primary underline">Voir</a> : "—"}
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString()}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString("fr-FR")}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -414,7 +510,7 @@ export default function Admin() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5 text-destructive" />
-                  Moderation Flags ({flags?.length || 0})
+                  Signalements de modération ({flags?.length || 0})
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -422,10 +518,10 @@ export default function Admin() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Project</TableHead>
-                        <TableHead>Reason</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Created</TableHead>
+                        <TableHead>Projet</TableHead>
+                        <TableHead>Raison</TableHead>
+                        <TableHead>Statut</TableHead>
+                        <TableHead>Créé le</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -439,7 +535,7 @@ export default function Admin() {
                             <TableCell className="font-mono text-xs">{f.project_id.slice(0, 8)}…</TableCell>
                             <TableCell className="text-sm">{f.reason}</TableCell>
                             <TableCell><StatusBadge status={f.status} /></TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{new Date(f.created_at).toLocaleString()}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{new Date(f.created_at).toLocaleString("fr-FR")}</TableCell>
                             <TableCell className="text-right space-x-1">
                               {isPending && (
                                 <>
@@ -451,7 +547,7 @@ export default function Admin() {
                                     onClick={() => adminAction("resolve_flag", { flag_id: f.id, resolution: "resolved" })}
                                   >
                                     {isActionLoading(resolveKey) ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCheck className="h-3 w-3" />}
-                                    Resolve
+                                    Résoudre
                                   </Button>
                                   <Button
                                     variant="outline"
@@ -461,7 +557,7 @@ export default function Admin() {
                                     onClick={() => adminAction("resolve_flag", { flag_id: f.id, resolution: "dismissed" })}
                                   >
                                     {isActionLoading(dismissKey) ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
-                                    Dismiss
+                                    Rejeter
                                   </Button>
                                 </>
                               )}
@@ -472,7 +568,7 @@ export default function Admin() {
                     </TableBody>
                   </Table>
                 ) : (
-                  <p className="text-muted-foreground text-center py-8">No flags</p>
+                  <p className="text-muted-foreground text-center py-8">Aucun signalement</p>
                 )}
               </CardContent>
             </Card>
@@ -484,18 +580,18 @@ export default function Admin() {
       <Dialog open={refundDialog.open} onOpenChange={(open) => setRefundDialog(prev => ({ ...prev, open }))}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Refund Credits</DialogTitle>
+            <DialogTitle>Rembourser des crédits</DialogTitle>
             <DialogDescription>
-              Enter the amount of credits to refund to this user.
+              Entrez le montant de crédits à rembourser à cet utilisateur.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div>
-              <label className="text-sm text-muted-foreground">User ID</label>
+              <label className="text-sm text-muted-foreground">ID utilisateur</label>
               <Input value={refundDialog.userId} disabled className="font-mono text-xs" />
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Amount</label>
+              <label className="text-sm text-muted-foreground">Montant</label>
               <Input
                 type="number"
                 min="1"
@@ -505,7 +601,7 @@ export default function Admin() {
               />
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Reason</label>
+              <label className="text-sm text-muted-foreground">Raison</label>
               <Input
                 value={refundDialog.reason}
                 onChange={(e) => setRefundDialog(prev => ({ ...prev, reason: e.target.value }))}
@@ -513,7 +609,7 @@ export default function Admin() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRefundDialog(prev => ({ ...prev, open: false }))}>Cancel</Button>
+            <Button variant="outline" onClick={() => setRefundDialog(prev => ({ ...prev, open: false }))}>Annuler</Button>
             <Button
               disabled={!refundAmount || Number(refundAmount) <= 0 || actionLoading !== null}
               onClick={async () => {
@@ -527,7 +623,7 @@ export default function Admin() {
               }}
             >
               {actionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RotateCcw className="h-4 w-4 mr-1" />}
-              Refund {refundAmount || 0} credits
+              Rembourser {refundAmount || 0} crédits
             </Button>
           </DialogFooter>
         </DialogContent>

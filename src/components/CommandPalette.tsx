@@ -11,7 +11,7 @@ import {
 import { LayoutDashboard, CreditCard, Settings, Film, Sparkles, Layers } from "lucide-react";
 
 const pages = [
-  { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+  { label: "Tableau de bord", icon: LayoutDashboard, path: "/dashboard" },
   { label: "Créer un clip", icon: Film, path: "/create/clip" },
   { label: "Créer un film", icon: Layers, path: "/create/film" },
   { label: "Tarifs", icon: CreditCard, path: "/pricing" },

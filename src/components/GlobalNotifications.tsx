@@ -24,22 +24,21 @@ export function GlobalNotifications() {
         },
         (payload) => {
           const newStatus = payload.new?.status;
-          const title = payload.new?.title || "Project";
+          const title = payload.new?.title || "Projet";
 
           if (newStatus === "completed") {
             toast({
-              title: "🎬 Video Ready!",
-              description: `"${title}" has finished rendering`,
+              title: "🎬 Vidéo prête !",
+              description: `« ${title} » a terminé le rendu`,
             });
           } else if (newStatus === "failed") {
             toast({
-              title: "Pipeline Failed",
-              description: `"${title}" encountered an error`,
+              title: "Pipeline échoué",
+              description: `« ${title} » a rencontré une erreur`,
               variant: "destructive",
             });
           }
 
-          // Invalidate project queries globally
           queryClient.invalidateQueries({ queryKey: ["projects"] });
           queryClient.invalidateQueries({ queryKey: ["project", payload.new?.id] });
         }
