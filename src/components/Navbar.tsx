@@ -1,11 +1,12 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Film, LogOut, User, LayoutDashboard, CreditCard, Shield, Search } from "lucide-react";
+import { Film, LogOut, User, LayoutDashboard, CreditCard, Shield, Search, Menu, X } from "lucide-react";
 import { CreditDisplay } from "@/components/CreditDisplay";
 import CommandPalette from "@/components/CommandPalette";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const sectionLinks = [
   { label: "Fonctionnalités", href: "#features" },
@@ -17,14 +18,21 @@ export default function Navbar() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [cmdOpen, setCmdOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const scrollTo = (href: string) => {
+    setMobileOpen(false);
     if (href.startsWith("#")) {
       const el = document.querySelector(href);
       el?.scrollIntoView({ behavior: "smooth" });
     } else {
       navigate(href);
     }
+  };
+
+  const mobileNav = (path: string) => {
+    setMobileOpen(false);
+    navigate(path);
   };
 
   return (
@@ -55,13 +63,12 @@ export default function Navbar() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Search trigger */}
+            {/* Search trigger — hidden on mobile */}
             <Button
               variant="ghost"
               size="sm"
-              className="gap-2 text-muted-foreground"
+              className="hidden sm:inline-flex gap-2 text-muted-foreground"
               onClick={() => {
-                // Dispatch ⌘K
                 document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }));
               }}
             >
@@ -73,33 +80,116 @@ export default function Navbar() {
 
             <ThemeToggle />
 
-            {user ? (
-              <>
-                <CreditDisplay />
-                <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="gap-2">
-                  <LayoutDashboard className="h-4 w-4" />
-                  <span className="hidden sm:inline">Dashboard</span>
+            {/* Desktop auth buttons */}
+            <div className="hidden md:flex items-center gap-2">
+              {user ? (
+                <>
+                  <CreditDisplay />
+                  <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="gap-2">
+                    <LayoutDashboard className="h-4 w-4" />
+                    <span className="hidden lg:inline">Dashboard</span>
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => navigate("/pricing")} className="gap-2">
+                    <CreditCard className="h-4 w-4" />
+                    <span className="hidden lg:inline">Pricing</span>
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => navigate("/settings")} className="gap-2">
+                    <User className="h-4 w-4" />
+                    <span className="hidden lg:inline">Settings</span>
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => signOut()} className="gap-2 text-muted-foreground">
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </>
+              ) : (
+                <Button variant="hero" size="sm" onClick={() => navigate("/auth")}>
+                  Get Started
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => navigate("/pricing")} className="gap-2">
-                  <CreditCard className="h-4 w-4" />
-                  <span className="hidden sm:inline">Pricing</span>
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => navigate("/settings")} className="gap-2">
-                  <User className="h-4 w-4" />
-                  <span className="hidden sm:inline">Settings</span>
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => signOut()} className="gap-2 text-muted-foreground">
-                  <LogOut className="h-4 w-4" />
-                </Button>
-              </>
-            ) : (
-              <Button variant="hero" size="sm" onClick={() => navigate("/auth")}>
-                Get Started
-              </Button>
-            )}
+              )}
+            </div>
+
+            {/* Mobile hamburger */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden h-9 w-9"
+              onClick={() => setMobileOpen((o) => !o)}
+              aria-label="Menu"
+            >
+              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
           </div>
         </div>
       </nav>
+
+      {/* Mobile slide-in panel */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-40 bg-background/60 backdrop-blur-sm md:hidden"
+              onClick={() => setMobileOpen(false)}
+            />
+            {/* Panel */}
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="fixed top-16 right-0 bottom-0 z-50 w-72 bg-card border-l border-border shadow-2xl md:hidden overflow-y-auto"
+            >
+              <div className="flex flex-col p-6 gap-2">
+                {/* Section links */}
+                {sectionLinks.map((l, i) => (
+                  <motion.button
+                    key={l.href}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.05 * i }}
+                    onClick={() => scrollTo(l.href)}
+                    className="text-left px-4 py-3 rounded-lg text-foreground hover:bg-muted/50 transition-colors font-medium"
+                  >
+                    {l.label}
+                  </motion.button>
+                ))}
+
+                <div className="h-px bg-border my-3" />
+
+                {user ? (
+                  <>
+                    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }}>
+                      <CreditDisplay />
+                    </motion.div>
+                    <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} onClick={() => mobileNav("/dashboard")} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted/50 transition-colors">
+                      <LayoutDashboard className="h-4 w-4 text-primary" /> Dashboard
+                    </motion.button>
+                    <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.25 }} onClick={() => mobileNav("/pricing")} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted/50 transition-colors">
+                      <CreditCard className="h-4 w-4 text-primary" /> Pricing
+                    </motion.button>
+                    <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} onClick={() => mobileNav("/settings")} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted/50 transition-colors">
+                      <User className="h-4 w-4 text-primary" /> Settings
+                    </motion.button>
+                    <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.35 }} onClick={() => { setMobileOpen(false); signOut(); }} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground">
+                      <LogOut className="h-4 w-4" /> Sign Out
+                    </motion.button>
+                  </>
+                ) : (
+                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }}>
+                    <Button variant="hero" className="w-full" onClick={() => mobileNav("/auth")}>
+                      Get Started
+                    </Button>
+                  </motion.div>
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </>
   );
 }
