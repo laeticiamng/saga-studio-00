@@ -28,15 +28,15 @@ serve(async (req) => {
 
     if (!type || !["clip", "film"].includes(type)) throw new Error("Invalid project type");
 
-    // Check credits
-    const { data: wallet } = await supabase
-      .from("credit_wallets")
-      .select("balance")
-      .eq("id", user.id)
-      .single();
-
-    if (!wallet || wallet.balance < 5) {
-      throw new Error("Insufficient credits");
+    // Atomic credit check & debit for project creation base cost
+    const { data: debited } = await supabase.rpc("debit_credits", {
+      p_user_id: user.id,
+      p_amount: 5,
+      p_reason: "Project creation",
+      p_ref_type: "project_creation",
+    });
+    if (!debited) {
+      throw new Error("Insufficient credits (need at least 5)");
     }
 
     const { data: project, error } = await supabase
