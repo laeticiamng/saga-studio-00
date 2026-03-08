@@ -9,7 +9,7 @@ const corsHeaders = {
 const PIPELINE_STEPS = [
   { from: "analyzing", fn: "analyze-audio", next: "planning" },
   { from: "planning", fn: "plan-project", next: "generating" },
-  { from: "generating", fn: "generate-shots", next: null }, // generate-shots handles its own transition
+  { from: "generating", fn: "generate-shots", next: null },
   { from: "stitching", fn: "stitch-render", next: "completed" },
 ];
 
@@ -40,67 +40,30 @@ serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const singleProjectId = body.project_id;
-
     const results: any[] = [];
 
-    // If a specific project was requested, process only that one
     if (singleProjectId) {
-      const { data: project } = await supabase
-        .from("projects")
-        .select("id, status")
-        .eq("id", singleProjectId)
-        .single();
-
-      if (project) {
-        const result = await processProject(supabase, callFunction, project);
-        results.push(result);
-      }
+      // Auto-loop: keep processing steps until we hit a waiting/terminal state
+      const loopResults = await loopProject(supabase, callFunction, singleProjectId);
+      results.push(...loopResults);
     } else {
-      // Process all active projects via job_queue
+      // Batch mode: process all active projects (one step each)
       for (const step of PIPELINE_STEPS) {
         const { data: projects } = await supabase
-          .from("projects")
-          .select("id, status")
-          .eq("status", step.from)
-          .limit(5);
-
+          .from("projects").select("id, status").eq("status", step.from).limit(5);
         for (const project of projects || []) {
-          const result = await processProject(supabase, callFunction, project);
-          results.push(result);
+          const r = await executeStep(supabase, callFunction, project);
+          results.push(r);
         }
       }
-
-      // Also check for generating projects that need shot polling
-      const { data: genProjects } = await supabase
-        .from("projects")
-        .select("id, status")
-        .eq("status", "generating")
-        .limit(5);
-
-      for (const project of genProjects || []) {
-        // Check if all shots done
-        const { data: shots } = await supabase
-          .from("shots")
-          .select("status")
-          .eq("project_id", project.id);
-
-        const allDone = shots?.every(s => s.status === "completed" || s.status === "failed");
-        const hasCompleted = shots?.some(s => s.status === "completed");
-
-        if (allDone && hasCompleted) {
-          await supabase.from("projects").update({ status: "stitching" }).eq("id", project.id);
-          results.push({ project_id: project.id, action: "moved_to_stitching" });
-        } else if (allDone && !hasCompleted) {
-          await supabase.from("projects").update({ status: "failed" }).eq("id", project.id);
-          results.push({ project_id: project.id, action: "all_shots_failed" });
-        }
-      }
+      // Check generating projects for completion
+      await checkGeneratingProjects(supabase, results);
     }
 
     return new Response(JSON.stringify({ processed: results.length, results }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err) {
+  } catch (err: any) {
     return new Response(JSON.stringify({ error: err.message }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -108,7 +71,96 @@ serve(async (req) => {
   }
 });
 
-async function processProject(
+// Loop a single project through all pipeline steps until it reaches a waiting/terminal state
+async function loopProject(
+  supabase: any,
+  callFunction: (name: string, body: any) => Promise<any>,
+  projectId: string,
+  maxIterations = 10
+) {
+  const results: any[] = [];
+
+  for (let i = 0; i < maxIterations; i++) {
+    const { data: project } = await supabase
+      .from("projects").select("id, status").eq("id", projectId).single();
+    if (!project) break;
+
+    const { status } = project;
+
+    // Terminal states — stop
+    if (["completed", "failed", "cancelled", "draft"].includes(status)) {
+      results.push({ project_id: projectId, action: "terminal_state", status });
+      break;
+    }
+
+    // Generating — check shots, call check-shot-status, maybe transition
+    if (status === "generating") {
+      const genResult = await handleGeneratingPhase(supabase, callFunction, projectId);
+      results.push(genResult);
+      // If still generating (waiting on providers), stop looping
+      if (genResult.action !== "moved_to_stitching") break;
+      continue; // Re-loop to process stitching
+    }
+
+    // Normal step execution
+    const step = PIPELINE_STEPS.find(s => s.from === status);
+    if (!step) {
+      results.push({ project_id: projectId, action: "no_step_for_status", status });
+      break;
+    }
+
+    const result = await executeStep(supabase, callFunction, project);
+    results.push(result);
+
+    // If step failed or is retrying, stop
+    if (result.action?.includes("failed") || result.action?.includes("retry")) break;
+
+    // Small delay to avoid hammering
+    await new Promise(r => setTimeout(r, 200));
+  }
+
+  return results;
+}
+
+// Handle the "generating" phase: dispatch pending shots + check status of in-flight shots
+async function handleGeneratingPhase(
+  supabase: any,
+  callFunction: (name: string, body: any) => Promise<any>,
+  projectId: string
+) {
+  // First, dispatch any pending shots
+  const { data: pendingShots } = await supabase
+    .from("shots").select("id").eq("project_id", projectId).eq("status", "pending").limit(1);
+
+  if (pendingShots && pendingShots.length > 0) {
+    await callFunction("generate-shots", { project_id: projectId, batch_size: 10 });
+  }
+
+  // Then check status of generating shots
+  await callFunction("check-shot-status", { project_id: projectId });
+
+  // Re-check shot statuses
+  const { data: allShots } = await supabase
+    .from("shots").select("status").eq("project_id", projectId);
+
+  const allDone = allShots?.every((s: any) => s.status === "completed" || s.status === "failed");
+  const hasCompleted = allShots?.some((s: any) => s.status === "completed");
+
+  if (allDone && hasCompleted) {
+    await supabase.from("projects").update({ status: "stitching" }).eq("id", projectId);
+    return { project_id: projectId, action: "moved_to_stitching" };
+  } else if (allDone && !hasCompleted) {
+    await supabase.from("projects").update({ status: "failed" }).eq("id", projectId);
+    return { project_id: projectId, action: "all_shots_failed" };
+  }
+
+  return { project_id: projectId, action: "generating_in_progress", 
+    total: allShots?.length || 0,
+    completed: allShots?.filter((s: any) => s.status === "completed").length || 0 };
+}
+
+// Execute a single pipeline step with job_queue tracking
+async function executeStep(
   supabase: any,
   callFunction: (name: string, body: any) => Promise<any>,
   project: { id: string; status: string }
@@ -118,48 +170,30 @@ async function processProject(
 
   // Check/create job in queue
   const { data: existingJob } = await supabase
-    .from("job_queue")
-    .select("*")
-    .eq("project_id", project.id)
-    .eq("step", step.fn)
-    .in("status", ["pending", "processing"])
-    .maybeSingle();
+    .from("job_queue").select("*")
+    .eq("project_id", project.id).eq("step", step.fn)
+    .in("status", ["pending", "processing"]).maybeSingle();
 
   let jobId: string;
 
   if (!existingJob) {
-    // Create new job
     const { data: newJob, error: jobErr } = await supabase
-      .from("job_queue")
-      .insert({
-        project_id: project.id,
-        step: step.fn,
-        status: "processing",
-        started_at: new Date().toISOString(),
-        payload: { project_id: project.id },
-      })
-      .select("id")
-      .single();
-
+      .from("job_queue").insert({
+        project_id: project.id, step: step.fn, status: "processing",
+        started_at: new Date().toISOString(), payload: { project_id: project.id },
+      }).select("id").single();
     if (jobErr) return { project_id: project.id, error: jobErr.message };
     jobId = newJob.id;
   } else {
     jobId = existingJob.id;
-
-    // Check if already processing and not stale (< 5 min)
     if (existingJob.status === "processing" && existingJob.started_at) {
-      const started = new Date(existingJob.started_at).getTime();
-      const now = Date.now();
-      if (now - started < 5 * 60 * 1000) {
+      const elapsed = Date.now() - new Date(existingJob.started_at).getTime();
+      if (elapsed < 5 * 60 * 1000) {
         return { project_id: project.id, action: "already_processing", job_id: jobId };
       }
-      // Stale job — reset it
     }
-
-    await supabase
-      .from("job_queue")
-      .update({ status: "processing", started_at: new Date().toISOString() })
-      .eq("id", jobId);
+    await supabase.from("job_queue")
+      .update({ status: "processing", started_at: new Date().toISOString() }).eq("id", jobId);
   }
 
   try {
@@ -168,41 +202,49 @@ async function processProject(
 
     const result = await callFunction(step.fn, fnBody);
 
-    // Mark job completed
-    await supabase
-      .from("job_queue")
-      .update({
-        status: "completed",
-        completed_at: new Date().toISOString(),
-        result,
-      })
-      .eq("id", jobId);
+    await supabase.from("job_queue").update({
+      status: "completed", completed_at: new Date().toISOString(), result,
+    }).eq("id", jobId);
 
     return { project_id: project.id, action: `executed_${step.fn}`, result };
   } catch (err: any) {
-    // Check retry count
     const { data: job } = await supabase
-      .from("job_queue")
-      .select("retry_count, max_retries")
-      .eq("id", jobId)
-      .single();
+      .from("job_queue").select("retry_count, max_retries").eq("id", jobId).single();
 
     const retryCount = (job?.retry_count || 0) + 1;
     const maxRetries = job?.max_retries || 3;
 
     if (retryCount >= maxRetries) {
-      await supabase
-        .from("job_queue")
-        .update({ status: "failed", error_message: err.message, retry_count: retryCount })
-        .eq("id", jobId);
+      await supabase.from("job_queue")
+        .update({ status: "failed", error_message: err.message, retry_count: retryCount }).eq("id", jobId);
       await supabase.from("projects").update({ status: "failed" }).eq("id", project.id);
       return { project_id: project.id, action: "failed_max_retries", error: err.message };
     } else {
-      await supabase
-        .from("job_queue")
-        .update({ status: "pending", error_message: err.message, retry_count: retryCount })
-        .eq("id", jobId);
+      await supabase.from("job_queue")
+        .update({ status: "pending", error_message: err.message, retry_count: retryCount }).eq("id", jobId);
       return { project_id: project.id, action: "retry_scheduled", retry: retryCount, error: err.message };
+    }
+  }
+}
+
+// Check generating projects for batch mode
+async function checkGeneratingProjects(supabase: any, results: any[]) {
+  const { data: genProjects } = await supabase
+    .from("projects").select("id, status").eq("status", "generating").limit(5);
+
+  for (const project of genProjects || []) {
+    const { data: shots } = await supabase
+      .from("shots").select("status").eq("project_id", project.id);
+
+    const allDone = shots?.every((s: any) => s.status === "completed" || s.status === "failed");
+    const hasCompleted = shots?.some((s: any) => s.status === "completed");
+
+    if (allDone && hasCompleted) {
+      await supabase.from("projects").update({ status: "stitching" }).eq("id", project.id);
+      results.push({ project_id: project.id, action: "moved_to_stitching" });
+    } else if (allDone && !hasCompleted) {
+      await supabase.from("projects").update({ status: "failed" }).eq("id", project.id);
+      results.push({ project_id: project.id, action: "all_shots_failed" });
     }
   }
 }
