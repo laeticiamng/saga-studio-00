@@ -352,7 +352,8 @@ export default function CreateClip() {
                 <div className="flex justify-between"><span className="text-muted-foreground">Mode</span><span className="capitalize">{mode === "story" ? "Narratif" : mode === "performance" ? "Performance" : mode === "abstract" ? "Abstrait" : mode}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Style</span><span className="capitalize">{{"cinematic":"Cinématique","anime":"Anime","watercolor":"Aquarelle","3d_render":"Rendu 3D","noir":"Noir","vintage":"Vintage","neon":"Néon","realistic":"Réaliste","hyperpop":"Hyperpop","afrofuturism":"Afrofuturisme","synthwave":"Synthwave","documentary":"Documentaire","fantasy":"Fantaisie"}[style] || style}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Format</span><span>{aspectRatio}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Plans estimés</span><span>~{estimatedShots}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Scènes estimées</span><span>~{estimatedShots}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Temps estimé</span><span>~5-15 min</span></div>
                 <div className="flex justify-between border-t border-border pt-2 font-medium">
                   <span className="flex items-center gap-1"><Coins className="h-4 w-4 text-primary" /> Coût estimé</span>
                   <span className="text-primary flex items-center gap-1">
@@ -365,7 +366,7 @@ export default function CreateClip() {
                 <Button variant="ghost" onClick={() => setStep(1)}><ArrowLeft className="h-4 w-4 mr-2" /> Retour</Button>
                 <Button variant="hero" className="flex-1" onClick={handleOneClickGenerate} disabled={loading}>
                   {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                  {loading ? "Lancement du pipeline…" : "Générer mon clip"}
+                  {loading ? "Création en cours…" : "Générer mon clip"}
                 </Button>
               </div>
             </CardContent>
