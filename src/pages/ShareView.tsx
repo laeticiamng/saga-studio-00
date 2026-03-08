@@ -17,6 +17,7 @@ const styleLabels: Record<string, string> = {
 
 export default function ShareView() {
   const { id } = useParams<{ id: string }>();
+  usePageTitle("Partage vidéo");
 
   const { data: render, isLoading } = useQuery({
     queryKey: ["share-render", id],
