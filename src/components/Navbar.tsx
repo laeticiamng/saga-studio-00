@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 const landingLinks = [
   { label: "Fonctionnalités", href: "#features" },
   { label: "Galerie", href: "#gallery" },
+  { label: "Comment ça marche", href: "#how-it-works" },
   { label: "Tarifs", href: "/pricing" },
 ];
 
