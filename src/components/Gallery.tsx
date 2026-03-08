@@ -2,7 +2,7 @@ import example1 from "@/assets/example-1.jpg";
 import example2 from "@/assets/example-2.jpg";
 import example3 from "@/assets/example-3.jpg";
 import { motion } from "framer-motion";
-import { Play } from "lucide-react";
+import { Play, Film } from "lucide-react";
 import AnimatedSection from "./AnimatedSection";
 import { useState } from "react";
 
@@ -12,11 +12,7 @@ const examples = [
   { image: example3, title: "Court-métrage dramatique", style: "Cinématique réaliste", alt: "Exemple de court-métrage dramatique au style cinématique réaliste par CineClip AI" },
 ];
 
-const DEMO_VIDEO_URL = "https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&rel=0";
-
 const Gallery = () => {
-  const [showDemo, setShowDemo] = useState(false);
-
   return (
     <section id="gallery" className="py-24 px-4 bg-gradient-to-b from-background to-secondary/20">
       <div className="container mx-auto">
@@ -26,51 +22,23 @@ const Gallery = () => {
               Voyez ce que l'IA peut créer
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Ces images illustrent les styles visuels disponibles. Cliquez sur la démo pour voir un résultat en vidéo.
+              Ces images illustrent les styles visuels disponibles sur CineClip AI.
             </p>
           </div>
         </AnimatedSection>
 
-        {/* Demo video section */}
+        {/* Video demo placeholder — replaced with honest messaging */}
         <AnimatedSection delay={0.05}>
           <div className="mb-16 max-w-3xl mx-auto">
-            {!showDemo ? (
-              <motion.button
-                onClick={() => setShowDemo(true)}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="relative w-full aspect-video rounded-2xl overflow-hidden group cursor-pointer border border-border/30"
-              >
-                <img
-                  src={example1}
-                  alt="Aperçu de la démo vidéo CineClip AI"
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/30 transition-colors duration-300 flex items-center justify-center">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="w-16 h-16 rounded-full bg-primary/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                      <Play className="h-7 w-7 text-primary-foreground ml-1" />
-                    </div>
-                    <span className="text-white font-semibold text-lg drop-shadow-md">
-                      Voir la démo en vidéo
-                    </span>
-                    <span className="text-white/70 text-sm">
-                      Découvrez un clip généré en quelques minutes
-                    </span>
-                  </div>
-                </div>
-              </motion.button>
-            ) : (
-              <div className="relative w-full aspect-video rounded-2xl overflow-hidden border border-border/30">
-                <iframe
-                  src={DEMO_VIDEO_URL}
-                  title="Démo CineClip AI"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  className="absolute inset-0 w-full h-full"
-                />
+            <div className="relative w-full aspect-video rounded-2xl overflow-hidden border border-border/30 bg-secondary/30 flex flex-col items-center justify-center gap-4 p-8 text-center">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <Film className="h-8 w-8 text-primary" />
               </div>
-            )}
+              <h3 className="text-xl font-semibold text-foreground">Démo vidéo bientôt disponible</h3>
+              <p className="text-muted-foreground max-w-md">
+                Nous préparons une vidéo de démonstration complète pour vous montrer le résultat en conditions réelles. En attendant, explorez les styles ci-dessous.
+              </p>
+            </div>
           </div>
         </AnimatedSection>
 
