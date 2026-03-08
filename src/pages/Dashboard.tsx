@@ -35,6 +35,11 @@ const styleLabels: Record<string, string> = {
   vintage: "Vintage",
   neon: "Néon",
   realistic: "Réaliste",
+  hyperpop: "Hyperpop",
+  afrofuturism: "Afrofuturisme",
+  synthwave: "Synthwave",
+  documentary: "Documentaire",
+  fantasy: "Fantaisie",
 };
 
 const statusIcons: Record<string, React.ReactNode> = {
