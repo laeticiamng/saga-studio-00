@@ -197,7 +197,7 @@ export default function Auth() {
                 )}
               </div>
               <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} />
-              <p className="text-xs text-muted-foreground">Minimum 6 caractères</p>
+              {!isLogin && <p className="text-xs text-muted-foreground">Minimum 6 caractères</p>}
             </div>
             <Button type="submit" variant="hero" className="w-full" disabled={loading}>
               {loading ? "Chargement..." : isLogin ? "Se connecter" : "Créer mon compte"}

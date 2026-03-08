@@ -116,9 +116,14 @@ export default function Navbar() {
                   </Button>
                 </>
               ) : (
-                <Button variant="hero" size="sm" onClick={() => navigate("/auth")}>
-                  Commencer
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => navigate("/pricing")}>
+                    Tarifs
+                  </Button>
+                  <Button variant="hero" size="sm" onClick={() => navigate("/auth")}>
+                    Commencer
+                  </Button>
+                </div>
               )}
             </div>
 
