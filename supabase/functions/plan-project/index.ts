@@ -3,11 +3,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const supabase = createClient(
@@ -21,13 +21,13 @@ serve(async (req) => {
     const { data: project } = await supabase.from("projects").select("*").eq("id", project_id).single();
     if (!project) throw new Error("Project not found");
 
-    const { data: analysis } = await supabase.from("audio_analysis").select("*").eq("project_id", project_id).single();
+    const { data: analysis } = await supabase.from("audio_analysis").select("*").eq("project_id", project_id).maybeSingle();
 
-    // Use Lovable AI (Gemini) to generate the director plan
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
     const sections = analysis?.sections_json || [];
+    const energyData = analysis?.energy_json || [];
     const durationSec = project.duration_sec || 180;
     const numShots = Math.max(10, Math.ceil(durationSec / 7));
 
@@ -35,11 +35,13 @@ serve(async (req) => {
 
 Project details:
 - Title: ${project.title}
-- Mode: ${project.mode} (story = narrative arc, performance = live performance style, abstract = visual art)
-- Style: ${project.style_preset}
+- Mode: ${project.mode || "story"} (story = narrative arc, performance = live performance, abstract = visual art)
+- Style: ${project.style_preset || "cinematic"}
 - Duration: ${durationSec} seconds
 - Synopsis: ${project.synopsis || "No synopsis provided"}
+- Audio BPM: ${analysis?.bpm || 120}
 - Audio sections: ${JSON.stringify(sections)}
+- Energy curve: ${JSON.stringify(energyData)}
 - Number of shots needed: ${numShots}
 
 Generate a JSON response with this exact structure:
@@ -65,16 +67,16 @@ Generate a JSON response with this exact structure:
       "end_sec": 7,
       "duration_sec": 7,
       "shot_type": "wide/medium/close/detail",
-      "prompt": "Detailed image generation prompt for this shot",
+      "prompt": "Highly detailed image generation prompt for this shot including visual style, camera angle, lighting, action",
       "negative_prompt": "Things to avoid",
       "section": "intro"
     }
   ]
 }
 
-Make ${numShots} shots that cover the full ${durationSec} seconds. Each shot should be 5-10 seconds. The prompts should be highly detailed for video generation AI. Respond ONLY with valid JSON, no markdown.`;
+IMPORTANT: Make exactly ${numShots} shots covering the full ${durationSec} seconds. Each shot 5-10s. Match energy: high-energy sections (chorus) get dynamic/fast shots, low-energy (intro/outro) get slower/wider shots. Prompts must be very detailed for video generation AI. Respond ONLY with valid JSON.`;
 
-    let plan;
+    let plan: any;
     try {
       const aiResponse = await fetch("https://ai.lovable.dev/api/generate", {
         method: "POST",
@@ -95,40 +97,59 @@ Make ${numShots} shots that cover the full ${durationSec} seconds. Each shot sho
         const jsonMatch = content.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           plan = JSON.parse(jsonMatch[0]);
+          // Validate shotlist
+          if (!plan.shotlist?.length || plan.shotlist.length < 3) {
+            console.warn("AI plan had too few shots, falling back");
+            plan = null;
+          }
         }
       }
-    } catch (aiErr) {
+    } catch (aiErr: any) {
       console.warn("AI call failed, using fallback plan:", aiErr.message);
     }
 
-    // Fallback: generate a simple plan if AI fails
+    // Fallback plan
     if (!plan) {
       const shotDuration = durationSec / numShots;
+      const shotTypes = ["wide", "medium", "close", "detail"];
+      const sectionsList = sections as any[];
+
       plan = {
         style_bible: {
-          visual_rules: `${project.style_preset} style, cinematic quality`,
+          visual_rules: `${project.style_preset} style, cinematic quality, consistent visual language`,
           palette: ["deep blue", "warm amber", "soft white"],
-          camera_rules: "Smooth movements, varied angles",
-          lighting: "Dramatic cinematic lighting",
+          camera_rules: "Smooth dolly movements, varied angles matching music energy",
+          lighting: "Dramatic cinematic lighting with motivated sources",
           mood: project.mode === "abstract" ? "ethereal and surreal" : "compelling and emotional",
         },
         character_bible: project.mode === "abstract" ? [] : [
           {
             name: "Main Character",
-            description: `A compelling figure in ${project.style_preset} visual style`,
+            description: `A compelling figure in ${project.style_preset} visual style, consistent appearance throughout`,
             role: "protagonist",
           },
         ],
-        shotlist: Array.from({ length: numShots }, (_, i) => ({
-          idx: i,
-          start_sec: Math.round(i * shotDuration * 10) / 10,
-          end_sec: Math.round((i + 1) * shotDuration * 10) / 10,
-          duration_sec: Math.round(shotDuration * 10) / 10,
-          shot_type: ["wide", "medium", "close", "detail"][i % 4],
-          prompt: `${project.style_preset} style, shot ${i + 1} of ${numShots}, ${project.mode} mode, cinematic quality, dramatic lighting`,
-          negative_prompt: "blurry, low quality, distorted, watermark",
-          section: (sections as any[])[Math.min(Math.floor(i / (numShots / Math.max(1, (sections as any[]).length))), (sections as any[]).length - 1)]?.type || "verse",
-        })),
+        shotlist: Array.from({ length: numShots }, (_, i) => {
+          const startSec = Math.round(i * shotDuration * 10) / 10;
+          const endSec = Math.round((i + 1) * shotDuration * 10) / 10;
+          const sectionIdx = Math.min(
+            Math.floor(i / Math.max(1, numShots / Math.max(1, sectionsList.length))),
+            sectionsList.length - 1
+          );
+          const section = sectionsList[sectionIdx]?.type || "verse";
+          const isHighEnergy = section.includes("chorus");
+
+          return {
+            idx: i,
+            start_sec: startSec,
+            end_sec: endSec,
+            duration_sec: Math.round(shotDuration * 10) / 10,
+            shot_type: shotTypes[i % 4],
+            prompt: `${project.style_preset} style, ${isHighEnergy ? "dynamic fast-paced" : "smooth contemplative"} ${shotTypes[i % 4]} shot, cinematic quality, dramatic lighting, ${section} section, shot ${i + 1} of ${numShots}`,
+            negative_prompt: "blurry, low quality, distorted, watermark, text overlay",
+            section,
+          };
+        }),
       };
     }
 
@@ -153,17 +174,17 @@ Make ${numShots} shots that cover the full ${durationSec} seconds. Each shot sho
 
     await supabase.from("shots").insert(shotsToInsert);
 
-    // Update project status to generating
+    // Advance to generating
     await supabase.from("projects").update({ status: "generating" }).eq("id", project_id);
 
-    return new Response(JSON.stringify({ 
-      success: true, 
+    return new Response(JSON.stringify({
+      success: true,
       shots_created: plan.shotlist.length,
-      has_ai_plan: !!plan.style_bible?.visual_rules
+      has_ai_plan: !!plan.style_bible?.visual_rules,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error("Plan error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 400,
