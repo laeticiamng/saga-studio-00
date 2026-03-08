@@ -191,10 +191,13 @@ export default function CreateFilm() {
               </div>
             </div>
 
-            <Button variant="hero" className="w-full" onClick={handleOneClickGenerate} disabled={loading || !title || !synopsis}>
+            <Button variant="hero" className="w-full" onClick={handleOneClickGenerate} disabled={loading || !title || synopsis.length < 50}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
               {loading ? "Lancement du pipeline…" : "Générer mon film"}
             </Button>
+            {synopsis.length > 0 && synopsis.length < 50 && (
+              <p className="text-xs text-destructive text-center">Le synopsis doit contenir au moins 50 caractères ({synopsis.length}/50)</p>
+            )}
           </CardContent>
         </Card>
       </main>

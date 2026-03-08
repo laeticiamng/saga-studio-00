@@ -18,7 +18,7 @@ const NotFound = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="flex flex-col items-center justify-center px-4" style={{ minHeight: "calc(100vh - 4rem)" }}>
+      <div className="flex flex-col items-center justify-center px-4 flex-1 py-20">
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 mb-6">
           <Film className="h-10 w-10 text-primary" />
         </div>
