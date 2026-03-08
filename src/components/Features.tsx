@@ -9,7 +9,7 @@ const features = [
   { icon: Users, title: "Personnalisation avancée", description: "Intégrez votre visage, choisissez le nombre de personnages et définissez leur apparence.", gradient: "from-amber-500 to-yellow-500" },
   { icon: Music, title: "Synchronisation musicale", description: "Uploadez votre bande son et l'IA synchronise parfaitement l'action avec la musique.", gradient: "from-orange-600 to-amber-500" },
   { icon: Wand2, title: "Styles illimités", description: "Du réalisme photo au dessin animé, créez dans le style artistique de votre choix.", gradient: "from-red-500 to-orange-600" },
-  { icon: CheckCircle, title: "Qualité premium", description: "Export en 4K avec la meilleure qualité disponible grâce à nos modèles IA de pointe.", gradient: "from-yellow-600 to-orange-500", isNew: true },
+  { icon: CheckCircle, title: "Export haute qualité", description: "Exportez de 720p à 4K selon votre plan. Rendu professionnel grâce à nos modèles IA de pointe.", gradient: "from-yellow-600 to-orange-500" },
 ];
 
 const Features = () => {
