@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Play, Film, RefreshCw, Music, Palette, List, Share2, Eye } from "lucide-react";
+import { Loader2, Play, Film, RefreshCw, Music, Palette, List, Share2, Eye, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useCallback, useEffect } from "react";
 
