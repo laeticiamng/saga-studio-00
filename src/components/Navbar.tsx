@@ -23,7 +23,9 @@ export default function Navbar() {
 
   // Only show landing section links on homepage or public pages
   const isLandingPage = location.pathname === "/" || location.pathname === "/pricing" || location.pathname === "/privacy" || location.pathname === "/terms" || location.pathname === "/legal";
-  const sectionLinks = isLandingPage ? landingLinks : [];
+  const sectionLinks = isLandingPage
+    ? landingLinks.filter((l) => !(user && l.href === "/pricing"))
+    : [];
 
   const scrollTo = (href: string) => {
     setMobileOpen(false);
