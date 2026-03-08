@@ -23,6 +23,7 @@ export default function CreateClip() {
   const [title, setTitle] = useState("");
   const [mode, setMode] = useState("story");
   const [style, setStyle] = useState("cinematic");
+  const [provider, setProvider] = useState("auto");
   const [loading, setLoading] = useState(false);
 
   const estimatedShots = audioFile ? Math.ceil((audioFile.size / 100000) * 5) : 30;
