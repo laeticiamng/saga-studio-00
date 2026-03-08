@@ -5,7 +5,7 @@ import AnimatedSection from "./AnimatedSection";
 
 const features = [
   { icon: Film, title: "Vidéos longue durée", description: "Générez des clips de 4-5 minutes d'une seule traite, sans coupures ni interruptions.", gradient: "from-orange-500 to-red-500" },
-  { icon: Sparkles, title: "Cohérence visuelle", description: "Un style artistique uniforme et des transitions fluides du début à la fin de votre vidéo.", gradient: "from-yellow-500 to-orange-500", popular: true },
+  { icon: Sparkles, title: "Style uniforme garanti", description: "Un style artistique cohérent et des transitions fluides du début à la fin de votre vidéo.", gradient: "from-yellow-500 to-orange-500", popular: true },
   { icon: Users, title: "Personnalisation avancée", description: "Intégrez votre visage, choisissez le nombre de personnages et définissez leur apparence.", gradient: "from-amber-500 to-yellow-500" },
   { icon: Music, title: "Synchronisation musicale", description: "Uploadez votre bande son et l'IA synchronise parfaitement l'action avec la musique.", gradient: "from-orange-600 to-amber-500" },
   { icon: Wand2, title: "Styles illimités", description: "Du réalisme photo au dessin animé, créez dans le style artistique de votre choix.", gradient: "from-red-500 to-orange-600" },
