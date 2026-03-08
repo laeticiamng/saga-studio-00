@@ -161,9 +161,13 @@ export default function Pricing() {
                     >
                       {plan.cta}
                     </Button>
-                  ) : (
+                  ) : current ? (
                     <Button variant="glass" className="w-full" disabled>
-                      {current ? "Plan actuel" : plan.cta}
+                      Plan actuel
+                    </Button>
+                  ) : (
+                    <Button variant="glass" className="w-full" onClick={() => navigate("/auth")}>
+                      Commencer gratuitement
                     </Button>
                   )}
                 </CardContent>

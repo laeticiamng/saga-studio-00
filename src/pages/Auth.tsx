@@ -131,7 +131,13 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
+      <button
+        onClick={() => navigate("/")}
+        className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <ArrowLeft className="h-4 w-4" /> Retour à l'accueil
+      </button>
       <Card className="w-full max-w-md border-border/50 bg-card/80 backdrop-blur">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
