@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
@@ -10,12 +10,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Play, Download, Film, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 export default function ProjectView() {
   const { id } = useParams<{ id: string }>();
   const { session } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [pipelineRunning, setPipelineRunning] = useState(false);
 
   const { data: project, isLoading } = useQuery({
@@ -26,7 +27,6 @@ export default function ProjectView() {
       return data;
     },
     enabled: !!id,
-    refetchInterval: 3000,
   });
 
   const { data: shots } = useQuery({
@@ -37,7 +37,6 @@ export default function ProjectView() {
       return data;
     },
     enabled: !!id,
-    refetchInterval: 3000,
   });
 
   const { data: render } = useQuery({
@@ -47,8 +46,42 @@ export default function ProjectView() {
       return data;
     },
     enabled: !!id,
-    refetchInterval: 3000,
+    refetchInterval: project?.status === "stitching" ? 3000 : false,
   });
+
+  // ─── Supabase Realtime ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!id) return;
+
+    const channel = supabase
+      .channel(`project-${id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "projects", filter: `id=eq.${id}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["project", id] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "shots", filter: `project_id=eq.${id}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["shots", id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, queryClient]);
+
+  // Refetch render when project completes
+  useEffect(() => {
+    if (project?.status === "completed") {
+      queryClient.invalidateQueries({ queryKey: ["render", id] });
+    }
+  }, [project?.status, id, queryClient]);
 
   const callEdgeFunction = useCallback(async (name: string, body: any) => {
     const res = await supabase.functions.invoke(name, { body });
@@ -60,26 +93,46 @@ export default function ProjectView() {
     if (!project || !session) return;
     setPipelineRunning(true);
     try {
-      // Step 1: Set to analyzing
+      // Use the pipeline-worker to orchestrate
       await supabase.from("projects").update({ status: "analyzing" as const }).eq("id", project.id);
-      
-      // Step 2: Analyze audio
-      toast({ title: "Pipeline started", description: "Analyzing audio..." });
-      await callEdgeFunction("analyze-audio", { project_id: project.id });
-      
-      // Step 3: Plan project
-      toast({ title: "Planning", description: "Generating shotlist with AI..." });
-      await callEdgeFunction("plan-project", { project_id: project.id });
-      
-      // Step 4: Generate shots
-      toast({ title: "Generating", description: "Creating shots..." });
-      await callEdgeFunction("generate-shots", { project_id: project.id, batch_size: 50 });
-      
-      // Step 5: Stitch
-      toast({ title: "Stitching", description: "Assembling final video..." });
-      await callEdgeFunction("stitch-render", { project_id: project.id });
-      
-      toast({ title: "Complete!", description: "Your video is ready" });
+
+      toast({ title: "Pipeline started", description: "Processing your project..." });
+
+      // Kick off the worker — it will chain steps automatically
+      await callEdgeFunction("pipeline-worker", { project_id: project.id });
+
+      // Continue polling the worker until done
+      const pollWorker = async () => {
+        for (let i = 0; i < 60; i++) { // Max 5 minutes
+          await new Promise(r => setTimeout(r, 5000));
+
+          const { data: p } = await supabase
+            .from("projects")
+            .select("status")
+            .eq("id", project.id)
+            .single();
+
+          if (!p) break;
+
+          if (p.status === "completed") {
+            toast({ title: "Complete!", description: "Your video is ready" });
+            break;
+          }
+          if (p.status === "failed") {
+            toast({ title: "Pipeline failed", description: "Check project for details", variant: "destructive" });
+            break;
+          }
+
+          // Keep the worker running for active states
+          if (["analyzing", "planning", "generating", "stitching"].includes(p.status)) {
+            try {
+              await callEdgeFunction("pipeline-worker", { project_id: project.id });
+            } catch { /* worker will retry */ }
+          }
+        }
+      };
+
+      pollWorker();
     } catch (err: any) {
       toast({ title: "Pipeline Error", description: err.message, variant: "destructive" });
       await supabase.from("projects").update({ status: "failed" as const }).eq("id", project.id);
@@ -110,6 +163,8 @@ export default function ProjectView() {
   }
 
   const isActive = ["analyzing", "planning", "generating", "stitching"].includes(project.status);
+  const completedShots = shots?.filter(s => s.status === "completed").length || 0;
+  const totalShots = shots?.length || 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -121,7 +176,9 @@ export default function ProjectView() {
             <div className="mt-2 flex items-center gap-3">
               <Badge variant="outline">{project.type}</Badge>
               <Badge variant="secondary" className="capitalize">{project.style_preset}</Badge>
-              <Badge variant="secondary">{project.status}</Badge>
+              <Badge variant={project.status === "failed" ? "destructive" : "secondary"} className="capitalize">
+                {project.status}
+              </Badge>
               {project.mode && <Badge variant="outline" className="capitalize">{project.mode}</Badge>}
             </div>
             {project.synopsis && (
@@ -141,12 +198,12 @@ export default function ProjectView() {
           )}
         </div>
 
-        <PipelineProgress status={project.status} />
+        <PipelineProgress status={project.status} completedShots={completedShots} totalShots={totalShots} />
 
         {shots && shots.length > 0 && (
           <div className="mt-8">
             <h2 className="text-xl font-semibold mb-4">
-              Shots ({shots.filter(s => s.status === "completed").length}/{shots.length} completed)
+              Shots ({completedShots}/{totalShots} completed)
             </h2>
             <ShotGrid shots={shots} />
           </div>
