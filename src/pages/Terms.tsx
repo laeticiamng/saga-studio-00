@@ -10,7 +10,7 @@ export default function Terms() {
       <main className="container mx-auto max-w-3xl px-4 py-16">
         <h1 className="text-3xl font-bold mb-8">Conditions Générales d'Utilisation</h1>
         <div className="max-w-none space-y-6 text-muted-foreground">
-          <p>Dernière mise à jour : {new Date().toLocaleDateString("fr-FR")}</p>
+          <p>Dernière mise à jour : 8 mars 2026</p>
 
           <h2 className="text-xl font-semibold text-foreground">1. Objet</h2>
           <p>Les présentes CGU régissent l'utilisation de la plateforme CineClip AI, service de génération vidéo par intelligence artificielle.</p>

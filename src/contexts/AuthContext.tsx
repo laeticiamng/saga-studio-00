@@ -46,18 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // Get initial session first
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-      if (session?.user && !subscriptionChecked.current) {
-        subscriptionChecked.current = true;
-        checkSubscription();
-      }
-    });
-
-    // Then listen for changes
+    // Set up auth listener BEFORE getSession to avoid race conditions
     const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -70,6 +59,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         subscriptionChecked.current = false;
       }
     });
+
+    // Then get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+      if (session?.user && !subscriptionChecked.current) {
+        subscriptionChecked.current = true;
+        checkSubscription();
+      }
+    });
+
+    return () => authSub.unsubscribe();
 
     return () => authSub.unsubscribe();
   }, [checkSubscription]);

@@ -10,7 +10,7 @@ export default function Privacy() {
       <main className="container mx-auto max-w-3xl px-4 py-16">
         <h1 className="text-3xl font-bold mb-8">Politique de confidentialité</h1>
         <div className="max-w-none space-y-6 text-muted-foreground">
-          <p>Dernière mise à jour : {new Date().toLocaleDateString("fr-FR")}</p>
+          <p>Dernière mise à jour : 8 mars 2026</p>
 
           <h2 className="text-xl font-semibold text-foreground">1. Collecte des données</h2>
           <p>CineClip AI collecte les données suivantes lors de votre utilisation de la plateforme :</p>

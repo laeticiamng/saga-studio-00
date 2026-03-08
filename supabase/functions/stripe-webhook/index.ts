@@ -11,17 +11,16 @@ const log = (step: string, details?: any) => {
   console.log(`[STRIPE-WEBHOOK] ${step}${details ? ` - ${JSON.stringify(details)}` : ""}`);
 };
 
-// Credit pack tiers by amount in cents
-const CREDIT_PACKS: { maxCents: number; credits: number }[] = [
-  { maxCents: 499, credits: 25 },
-  { maxCents: 999, credits: 50 },
-  { maxCents: 2499, credits: 150 },
-  { maxCents: 4999, credits: 350 },
+// Credit pack tiers by price_id (must match STRIPE_CONFIG in Pricing.tsx)
+const CREDIT_PACKS_BY_CENTS: { maxCents: number; credits: number }[] = [
+  { maxCents: 500, credits: 50 },    // 5€ = 50 credits
+  { maxCents: 1500, credits: 200 },   // 15€ = 200 credits
+  { maxCents: 3000, credits: 500 },   // 30€ = 500 credits
   { maxCents: Infinity, credits: 500 },
 ];
 
 function creditsForAmount(cents: number): number {
-  return CREDIT_PACKS.find(p => cents <= p.maxCents)?.credits || 50;
+  return CREDIT_PACKS_BY_CENTS.find(p => cents <= p.maxCents)?.credits || 50;
 }
 
 serve(async (req) => {
@@ -97,8 +96,10 @@ serve(async (req) => {
       }
 
       if (mode === "subscription") {
-        const credits = 200; // Monthly subscription credits
-        log(`New subscription`, { userId, credits });
+        // Pro = 100 credits, Studio = 500 credits — determine from amount
+        const amount = session.amount_total || 0;
+        const credits = amount <= 2000 ? 100 : 500; // Pro ≤ 20€, Studio > 20€
+        log(`New subscription`, { userId, credits, amount });
 
         const { data: success } = await supabase.rpc("topup_credits", {
           p_user_id: userId,
@@ -149,8 +150,10 @@ serve(async (req) => {
         return ok();
       }
 
-      const credits = 200; // Monthly renewal credits
-      log(`Subscription renewal`, { userId: user.id, invoiceId: invoice.id, credits });
+      // Determine credits based on invoice amount
+      const invoiceAmount = invoice.amount_paid || 0;
+      const credits = invoiceAmount <= 2000 ? 100 : 500;
+      log(`Subscription renewal`, { userId: user.id, invoiceId: invoice.id, credits, invoiceAmount });
 
       const { data: success } = await supabase.rpc("topup_credits", {
         p_user_id: user.id,
