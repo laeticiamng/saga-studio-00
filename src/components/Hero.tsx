@@ -87,8 +87,8 @@ const Hero = () => {
           transition={{ duration: 0.7, delay: 0.3 }}
           className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-12"
         >
-          La première plateforme qui génère des vidéos complètes de 4-5 minutes avec une
-          cohérence visuelle parfaite. Votre visage, votre histoire, votre musique.
+          Décrivez votre idée, uploadez votre musique, et obtenez une vidéo complète de 4-5 minutes
+          avec un style visuel uniforme. Votre visage, votre histoire, votre musique.
         </motion.p>
 
         <motion.div
