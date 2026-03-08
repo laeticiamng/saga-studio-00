@@ -77,6 +77,53 @@ export default function Auth() {
 
   if (user) return null;
 
+  // Forgot password mode
+  if (forgotMode) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <Card className="w-full max-w-md border-border/50 bg-card/80 backdrop-blur">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+              {resetSent ? <Mail className="h-6 w-6 text-primary" /> : <Film className="h-6 w-6 text-primary" />}
+            </div>
+            <CardTitle className="text-2xl">
+              {resetSent ? "Email envoyé !" : "Mot de passe oublié"}
+            </CardTitle>
+            <CardDescription>
+              {resetSent
+                ? "Vérifiez votre boîte de réception et cliquez sur le lien pour réinitialiser votre mot de passe."
+                : "Entrez votre adresse email et nous vous enverrons un lien de réinitialisation."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {resetSent ? (
+              <Button variant="outline" className="w-full" onClick={() => { setForgotMode(false); setResetSent(false); }}>
+                <ArrowLeft className="h-4 w-4 mr-2" /> Retour à la connexion
+              </Button>
+            ) : (
+              <>
+                <form onSubmit={handleForgotPassword} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="resetEmail">Email</Label>
+                    <Input id="resetEmail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="vous@exemple.com" required />
+                  </div>
+                  <Button type="submit" variant="hero" className="w-full" disabled={loading}>
+                    {loading ? "Envoi..." : "Envoyer le lien"}
+                  </Button>
+                </form>
+                <p className="mt-4 text-center">
+                  <button onClick={() => setForgotMode(false)} className="text-sm text-primary hover:underline inline-flex items-center gap-1">
+                    <ArrowLeft className="h-3 w-3" /> Retour à la connexion
+                  </button>
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <Card className="w-full max-w-md border-border/50 bg-card/80 backdrop-blur">
@@ -123,10 +170,21 @@ export default function Auth() {
               <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="vous@exemple.com" required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Mot de passe</Label>
-            <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} />
-            <p className="text-xs text-muted-foreground">Minimum 6 caractères</p>
-          </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Mot de passe</Label>
+                {isLogin && (
+                  <button
+                    type="button"
+                    onClick={() => setForgotMode(true)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Mot de passe oublié ?
+                  </button>
+                )}
+              </div>
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} />
+              <p className="text-xs text-muted-foreground">Minimum 6 caractères</p>
+            </div>
             <Button type="submit" variant="hero" className="w-full" disabled={loading}>
               {loading ? "Chargement..." : isLogin ? "Se connecter" : "Créer mon compte"}
             </Button>
