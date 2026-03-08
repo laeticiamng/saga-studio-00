@@ -173,6 +173,32 @@ export default function Settings() {
           </CardContent>
         </Card>
 
+        {/* Change password */}
+        <Card className="border-border/50 bg-card/60 mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><KeyRound className="h-5 w-5 text-primary" /> Changer le mot de passe</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nouveau mot de passe</Label>
+              <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••••" minLength={6} />
+            </div>
+            <div className="space-y-2">
+              <Label>Confirmer le mot de passe</Label>
+              <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" />
+            </div>
+            {newPassword && newPassword.length < 6 && (
+              <p className="text-xs text-destructive">Minimum 6 caractères</p>
+            )}
+            {confirmPassword && newPassword !== confirmPassword && (
+              <p className="text-xs text-destructive">Les mots de passe ne correspondent pas</p>
+            )}
+            <Button variant="hero" onClick={handleChangePassword} disabled={changingPassword || !newPassword || newPassword !== confirmPassword || newPassword.length < 6}>
+              {changingPassword && <Loader2 className="h-4 w-4 animate-spin mr-2" />} Modifier le mot de passe
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* Webhooks — Advanced, collapsible */}
         <Card className="border-border/50 bg-card/60 mb-6">
           <details>
