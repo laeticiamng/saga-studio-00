@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { GlobalNotifications } from "@/components/GlobalNotifications";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -13,6 +14,7 @@ import CreateFilm from "./pages/CreateFilm";
 import ProjectView from "./pages/ProjectView";
 import Pricing from "./pages/Pricing";
 import Settings from "./pages/Settings";
+import ShareView from "./pages/ShareView";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
@@ -25,6 +27,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <GlobalNotifications />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
@@ -34,6 +37,7 @@ const App = () => (
             <Route path="/project/:id" element={<ProtectedRoute><ProjectView /></ProtectedRoute>} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/share/:id" element={<ShareView />} />
             <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

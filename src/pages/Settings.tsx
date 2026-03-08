@@ -6,8 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowUp, ArrowDown } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -21,6 +24,29 @@ export default function Settings() {
       .then(({ data }) => { if (data) setDisplayName(data.display_name || ""); });
   }, [user]);
 
+  const { data: ledger, isLoading: ledgerLoading } = useQuery({
+    queryKey: ["credit-ledger", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("credit_ledger")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  const { data: wallet } = useQuery({
+    queryKey: ["wallet", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from("credit_wallets").select("balance").eq("id", user!.id).single();
+      return data;
+    },
+    enabled: !!user,
+  });
+
   const handleSave = async () => {
     if (!user) return;
     setLoading(true);
@@ -33,9 +59,10 @@ export default function Settings() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container mx-auto max-w-xl px-4 py-8">
+      <main className="container mx-auto max-w-2xl px-4 py-8">
         <h1 className="text-3xl font-bold mb-8">Settings</h1>
-        <Card className="border-border/50 bg-card/60">
+
+        <Card className="border-border/50 bg-card/60 mb-6">
           <CardHeader><CardTitle>Profile</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -49,6 +76,52 @@ export default function Settings() {
             <Button variant="hero" onClick={handleSave} disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />} Save Changes
             </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/50 bg-card/60">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              Credit History
+              {wallet && (
+                <Badge variant="secondary" className="text-base">
+                  Balance: {wallet.balance} credits
+                </Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {ledgerLoading ? (
+              <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+            ) : !ledger?.length ? (
+              <p className="text-sm text-muted-foreground text-center py-8">No transactions yet</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Reason</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {ledger.map((entry) => (
+                    <TableRow key={entry.id}>
+                      <TableCell className="text-muted-foreground text-xs">
+                        {new Date(entry.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-sm capitalize">{entry.reason.replace(/_/g, " ")}</TableCell>
+                      <TableCell className="text-right">
+                        <span className={`inline-flex items-center gap-1 text-sm font-medium ${entry.delta > 0 ? "text-green-500" : "text-destructive"}`}>
+                          {entry.delta > 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                          {entry.delta > 0 ? "+" : ""}{entry.delta}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </main>
