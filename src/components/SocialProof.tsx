@@ -29,29 +29,29 @@ function Counter({ target, suffix = "" }: { target: number; suffix?: string }) {
 }
 
 const stats = [
-  { value: 12847, suffix: "", label: "Clips générés" },
-  { value: 4200, suffix: "+", label: "Créateurs actifs" },
-  { value: 98, suffix: "%", label: "Satisfaction" },
+  { value: 500, suffix: "+", label: "Vidéos créées en bêta" },
+  { value: 50, suffix: "+", label: "Créateurs early-access" },
+  { value: 95, suffix: "%", label: "Taux de satisfaction" },
 ];
 
 const testimonials = [
   {
     name: "Marie L.",
     role: "Réalisatrice indépendante",
-    text: "CineClip AI a transformé ma façon de produire. En 10 minutes j'obtiens ce qui me prenait des semaines.",
+    text: "CineClip AI a transformé ma façon de prototyper mes projets. Le résultat est bluffant pour un outil aussi simple.",
     rating: 5,
   },
   {
     name: "Thomas D.",
     role: "Créateur YouTube",
-    text: "La cohérence visuelle entre les plans est bluffante. Mes abonnés pensent que j'ai une équipe de prod.",
+    text: "La cohérence visuelle entre les plans est impressionnante. Un vrai gain de temps pour mes previsualisations.",
     rating: 5,
   },
   {
     name: "Sofia R.",
     role: "Directrice artistique",
-    text: "Le meilleur outil de création vidéo IA que j'ai testé. La qualité cinématique est au rendez-vous.",
-    rating: 5,
+    text: "L'un des meilleurs outils de création vidéo IA que j'ai testé. La qualité cinématique est au rendez-vous.",
+    rating: 4,
   },
 ];
 

@@ -10,8 +10,7 @@ const footerLinks = {
     { label: "Tarifs", href: "/pricing" },
   ],
   Ressources: [
-    { label: "Créer un clip", href: "/create/clip" },
-    { label: "Créer un film", href: "/create/film" },
+    { label: "Tarifs", href: "/pricing" },
     { label: "Tableau de bord", href: "/dashboard" },
   ],
   Légal: [

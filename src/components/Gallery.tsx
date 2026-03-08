@@ -1,14 +1,13 @@
 import example1 from "@/assets/example-1.jpg";
 import example2 from "@/assets/example-2.jpg";
 import example3 from "@/assets/example-3.jpg";
-import { Eye, Heart } from "lucide-react";
 import { motion } from "framer-motion";
 import AnimatedSection from "./AnimatedSection";
 
 const examples = [
-  { image: example1, title: "Clip musical futuriste", duration: "4:32", style: "Sci-Fi / Cyberpunk", views: "12.4k", likes: "1.2k" },
-  { image: example2, title: "Animation cohérente", duration: "5:15", style: "Animation 3D", views: "8.7k", likes: "943" },
-  { image: example3, title: "Court-métrage dramatique", duration: "4:48", style: "Cinématique réaliste", views: "15.1k", likes: "2.1k" },
+  { image: example1, title: "Clip musical futuriste", duration: "4:32", style: "Sci-Fi / Cyberpunk" },
+  { image: example2, title: "Animation cohérente", duration: "5:15", style: "Animation 3D" },
+  { image: example3, title: "Court-métrage dramatique", duration: "4:48", style: "Cinématique réaliste" },
 ];
 
 const Gallery = () => {
@@ -50,15 +49,6 @@ const Gallery = () => {
                     </span>
                   </div>
 
-                  {/* Stats overlay */}
-                  <div className="absolute top-4 right-4 flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <span className="inline-flex items-center gap-1 text-xs text-white/90 bg-black/40 backdrop-blur-sm rounded-full px-2 py-1">
-                      <Eye className="w-3 h-3" /> {example.views}
-                    </span>
-                    <span className="inline-flex items-center gap-1 text-xs text-white/90 bg-black/40 backdrop-blur-sm rounded-full px-2 py-1">
-                      <Heart className="w-3 h-3" /> {example.likes}
-                    </span>
-                  </div>
                 </div>
 
                 <div className="absolute bottom-0 left-0 right-0 p-6 text-white transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">

@@ -43,8 +43,14 @@ export default function CommandPalette() {
   const go = (path: string) => {
     setOpen(false);
     if (path.startsWith("#")) {
-      const el = document.querySelector(path);
-      el?.scrollIntoView({ behavior: "smooth" });
+      if (window.location.pathname !== "/") {
+        navigate("/");
+        setTimeout(() => {
+          document.querySelector(path)?.scrollIntoView({ behavior: "smooth" });
+        }, 400);
+      } else {
+        document.querySelector(path)?.scrollIntoView({ behavior: "smooth" });
+      }
     } else {
       navigate(path);
     }
