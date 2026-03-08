@@ -32,7 +32,7 @@ const Gallery = () => {
               <motion.div
                 whileHover={{ y: -8 }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                className="group relative rounded-xl overflow-hidden cursor-pointer"
+                className="group relative rounded-xl overflow-hidden"
               >
                 <div className="aspect-[4/5] relative">
                   <img

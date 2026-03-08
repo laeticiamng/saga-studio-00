@@ -23,8 +23,17 @@ export default function Navbar() {
   const scrollTo = (href: string) => {
     setMobileOpen(false);
     if (href.startsWith("#")) {
-      const el = document.querySelector(href);
-      el?.scrollIntoView({ behavior: "smooth" });
+      // If we're not on the homepage, navigate there first then scroll
+      if (window.location.pathname !== "/") {
+        navigate("/");
+        setTimeout(() => {
+          const el = document.querySelector(href);
+          el?.scrollIntoView({ behavior: "smooth" });
+        }, 300);
+      } else {
+        const el = document.querySelector(href);
+        el?.scrollIntoView({ behavior: "smooth" });
+      }
     } else {
       navigate(href);
     }

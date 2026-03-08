@@ -76,15 +76,9 @@ const Footer = () => {
             © {new Date().getFullYear()} CineClip AI. Tous droits réservés.
           </p>
           <div className="flex gap-6">
-            {["Twitter", "Discord", "YouTube"].map((s) => (
-              <a
-                key={s}
-                href="#"
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {s}
-              </a>
-            ))}
+            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Twitter</a>
+            <a href="https://discord.gg" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Discord</a>
+            <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-foreground transition-colors">YouTube</a>
           </div>
         </div>
       </div>
