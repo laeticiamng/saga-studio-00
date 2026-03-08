@@ -148,7 +148,7 @@ export default function CreateFilm() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="auto">Auto (meilleur disponible)</SelectItem>
-                  <SelectItem value="openai">OpenAI Sora 2</SelectItem>
+                  <SelectItem value="openai">OpenAI</SelectItem>
                   <SelectItem value="runway">Runway Gen-4</SelectItem>
                   <SelectItem value="luma">Luma Dream Machine</SelectItem>
                   <SelectItem value="google_veo">Google Veo</SelectItem>

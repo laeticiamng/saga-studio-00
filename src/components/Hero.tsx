@@ -113,7 +113,7 @@ const Hero = () => {
           transition={{ duration: 0.8, delay: 0.7 }}
           className="mt-16 flex flex-wrap justify-center gap-8 text-sm text-muted-foreground"
         >
-          {["Qualité 4K premium", "Cohérence parfaite", "Export en une seule fois"].map((t) => (
+          {["Jusqu'à 4K selon plan", "Cohérence parfaite", "Export en une seule fois"].map((t) => (
             <div key={t} className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
               <span>{t}</span>
