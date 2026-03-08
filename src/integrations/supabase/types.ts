@@ -443,6 +443,77 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_deliveries: {
+        Row: {
+          created_at: string
+          endpoint_id: string
+          event: string
+          id: string
+          payload: Json
+          response_body: string | null
+          status_code: number | null
+        }
+        Insert: {
+          created_at?: string
+          endpoint_id: string
+          event: string
+          id?: string
+          payload?: Json
+          response_body?: string | null
+          status_code?: number | null
+        }
+        Update: {
+          created_at?: string
+          endpoint_id?: string
+          event?: string
+          id?: string
+          payload?: Json
+          response_body?: string | null
+          status_code?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_deliveries_endpoint_id_fkey"
+            columns: ["endpoint_id"]
+            isOneToOne: false
+            referencedRelation: "webhook_endpoints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhook_endpoints: {
+        Row: {
+          active: boolean
+          created_at: string
+          events: string[]
+          id: string
+          secret: string
+          updated_at: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          events?: string[]
+          id?: string
+          secret?: string
+          updated_at?: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          events?: string[]
+          id?: string
+          secret?: string
+          updated_at?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -5,18 +5,25 @@ import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowUp, ArrowDown } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Loader2, ArrowUp, ArrowDown, Webhook, Plus, Trash2, Eye, EyeOff, Copy } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export default function Settings() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Webhook state
+  const [newWebhookUrl, setNewWebhookUrl] = useState("");
+  const [addingWebhook, setAddingWebhook] = useState(false);
+  const [revealedSecrets, setRevealedSecrets] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!user) return;
@@ -47,6 +54,19 @@ export default function Settings() {
     enabled: !!user,
   });
 
+  const { data: webhooks, isLoading: webhooksLoading } = useQuery({
+    queryKey: ["webhooks", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("webhook_endpoints")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
   const handleSave = async () => {
     if (!user) return;
     setLoading(true);
@@ -56,12 +76,60 @@ export default function Settings() {
     else toast({ title: "Enregistré", description: "Profil mis à jour" });
   };
 
+  const handleAddWebhook = async () => {
+    if (!user || !newWebhookUrl.trim()) return;
+    try {
+      new URL(newWebhookUrl); // validate URL
+    } catch {
+      toast({ title: "URL invalide", description: "Entrez une URL valide (https://...)", variant: "destructive" });
+      return;
+    }
+    setAddingWebhook(true);
+    const { error } = await supabase.from("webhook_endpoints").insert({
+      user_id: user.id,
+      url: newWebhookUrl.trim(),
+    });
+    setAddingWebhook(false);
+    if (error) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } else {
+      setNewWebhookUrl("");
+      queryClient.invalidateQueries({ queryKey: ["webhooks"] });
+      toast({ title: "Webhook ajouté", description: "Vous recevrez des notifications quand un rendu sera terminé." });
+    }
+  };
+
+  const handleToggleWebhook = async (id: string, currentActive: boolean) => {
+    await supabase.from("webhook_endpoints").update({ active: !currentActive }).eq("id", id);
+    queryClient.invalidateQueries({ queryKey: ["webhooks"] });
+  };
+
+  const handleDeleteWebhook = async (id: string) => {
+    await supabase.from("webhook_endpoints").delete().eq("id", id);
+    queryClient.invalidateQueries({ queryKey: ["webhooks"] });
+    toast({ title: "Supprimé" });
+  };
+
+  const toggleSecret = (id: string) => {
+    setRevealedSecrets(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const copySecret = (secret: string) => {
+    navigator.clipboard.writeText(secret);
+    toast({ title: "Copié", description: "Secret copié dans le presse-papier" });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="container mx-auto max-w-2xl px-4 py-8">
         <h1 className="text-3xl font-bold mb-8">Paramètres</h1>
 
+        {/* Profile */}
         <Card className="border-border/50 bg-card/60 mb-6">
           <CardHeader><CardTitle>Profil</CardTitle></CardHeader>
           <CardContent className="space-y-4">
@@ -79,6 +147,73 @@ export default function Settings() {
           </CardContent>
         </Card>
 
+        {/* Webhooks */}
+        <Card className="border-border/50 bg-card/60 mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Webhook className="h-5 w-5 text-primary" /> Webhooks
+            </CardTitle>
+            <CardDescription>
+              Recevez une notification HTTP quand un rendu est terminé. Chaque requête inclut un header <code className="text-xs bg-secondary px-1 rounded">X-Webhook-Signature</code> (HMAC SHA-256) pour vérifier l'authenticité.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Add new webhook */}
+            <div className="flex gap-2">
+              <Input
+                value={newWebhookUrl}
+                onChange={(e) => setNewWebhookUrl(e.target.value)}
+                placeholder="https://votre-service.com/webhook"
+                className="flex-1"
+              />
+              <Button variant="hero" size="sm" onClick={handleAddWebhook} disabled={addingWebhook || !newWebhookUrl.trim()}>
+                {addingWebhook ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              </Button>
+            </div>
+
+            {/* List */}
+            {webhooksLoading ? (
+              <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+            ) : !webhooks?.length ? (
+              <p className="text-sm text-muted-foreground text-center py-4">Aucun webhook configuré</p>
+            ) : (
+              <div className="space-y-3">
+                {webhooks.map((wh: any) => (
+                  <div key={wh.id} className="rounded-lg border border-border/50 bg-secondary/30 p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Badge variant={wh.active ? "default" : "secondary"} className="shrink-0">
+                          {wh.active ? "Actif" : "Inactif"}
+                        </Badge>
+                        <span className="text-sm truncate">{wh.url}</span>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Switch checked={wh.active} onCheckedChange={() => handleToggleWebhook(wh.id, wh.active)} />
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteWebhook(wh.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>Secret :</span>
+                      <code className="bg-background/50 px-1.5 py-0.5 rounded font-mono">
+                        {revealedSecrets.has(wh.id) ? wh.secret : "••••••••••••••••"}
+                      </code>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleSecret(wh.id)}>
+                        {revealedSecrets.has(wh.id) ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copySecret(wh.secret)}>
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Credit history */}
         <Card className="border-border/50 bg-card/60">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
