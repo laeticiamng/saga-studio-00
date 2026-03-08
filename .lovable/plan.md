@@ -1,189 +1,142 @@
 
-# CineClip AI - Plan de construction complet
 
-## Vue d'ensemble
-
-Transformer la landing page actuelle en une plateforme full-stack de generation de clips video et courts metrages, avec authentification, pipeline de generation IA multi-providers, systeme de credits/billing Stripe, et dashboard admin.
+# Audit complet pré-production — CineClip AI
 
 ---
 
-## Phase 1 : Infrastructure Backend (Supabase)
+## 1. SECURITE (Critique)
 
-### 1.1 Activer Lovable Cloud / Supabase
-- Connecter le projet a Supabase (Cloud)
-- Configurer l'authentification (email + OAuth Google/GitHub)
+### 1.1 Edge Functions sans JWT
+**Toutes les 14 edge functions** ont `verify_jwt = false`. Cela signifie que n'importe qui peut appeler directement :
+- `create-project` — creer des projets sans auth
+- `pipeline-worker` — lancer des pipelines sur n'importe quel projet
+- `generate-shots`, `plan-project`, `analyze-audio` — consommer des ressources sans controle
+- `stitch-render`, `check-shot-status` — manipuler des projets d'autres utilisateurs
 
-### 1.2 Schema de base de donnees (migrations SQL)
+**Seules** `admin-actions` et `check-subscription`/`customer-portal`/`create-checkout` valident le token dans le code. Les fonctions pipeline (`pipeline-worker`, `generate-shots`, `plan-project`, `analyze-audio`, `stitch-render`, `check-shot-status`) sont appelees avec le service role key mais ne verifient **pas** l'appelant.
 
-**Tables a creer :**
+**Action requise** : Au minimum, les fonctions appelees depuis le front (`create-project`, `estimate-cost`, `project-status`) doivent valider le JWT dans le code. Les fonctions internes (appelees par `pipeline-worker`) pourraient rester sans JWT si elles ne sont jamais appelees directement par le client.
 
-| Table | Description |
-|-------|-------------|
-| `profiles` | Infos utilisateur (display_name, avatar_url) |
-| `user_roles` | Roles (admin, moderator, user) avec enum `app_role` |
-| `credit_wallets` | Solde de credits par utilisateur |
-| `credit_ledger` | Historique des transactions credits |
-| `projects` | Projets (clip ou film) avec metadonnees |
-| `audio_analysis` | Resultat analyse audio (BPM, sections, beats) |
-| `plans` | Style bible, character bible, shotlist JSON |
-| `shots` | Shots individuels generes par l'IA |
-| `renders` | Fichiers finaux (16:9, 9:16, teaser) |
-| `moderation_flags` | Signalements pour moderation |
-| `provider_configs` | Configuration providers par defaut (admin) |
+### 1.2 ShareView bypass RLS
+`ShareView.tsx` (ligne 15) tente de lire `renders` et `projects` sans auth. Or les RLS requierent `auth.uid()`. Cela signifie que la page de partage **ne fonctionnera jamais** pour un visiteur non connecte.
 
-**Securite :**
-- RLS sur toutes les tables utilisateur
-- Fonction `has_role()` security definer pour eviter la recursion
-- Storage buckets : `audio-uploads`, `face-references`, `shot-outputs`, `renders` avec policies par user
+**Action requise** : Ajouter une politique RLS publique pour les projets "completed" sur `renders` et `projects` (SELECT uniquement, colonnes limitees), ou creer une edge function dediee au partage.
 
-### 1.3 Edge Functions
+### 1.3 CORS trop permissif
+Toutes les fonctions utilisent `Access-Control-Allow-Origin: *`. Acceptable en dev, a restreindre au domaine de production.
 
-| Fonction | Role |
-|----------|------|
-| `create-project` | Creer un projet clip ou film |
-| `analyze-audio` | Analyser l'audio (BPM, beats, sections) via Lovable AI |
-| `plan-project` | Generer style_bible + character_bible + shotlist via Lovable AI |
-| `generate-shots` | Appeler le provider video (Sora 2 / Runway / Luma / Veo) |
-| `check-shot-status` | Polling du statut des shots en cours |
-| `stitch-render` | Lancer l'assemblage final (FFmpeg via endpoint externe) |
-| `project-status` | Statut global du pipeline |
-| `estimate-cost` | Calculer le cout en credits avant generation |
-| `admin-actions` | Moderation, refunds, stats (protege par role admin) |
+### 1.4 Stripe webhook non securise correctement
+`stripe-webhook` a `verify_jwt = false` (correct pour les webhooks), mais si la variable `STRIPE_WEBHOOK_SECRET` est absente, le webhook accepterait potentiellement des payloads non verifies.
+
+### 1.5 Admin check cote client
+`Admin.tsx` ligne 114-122 verifie le role admin via une query RLS cote client. C'est correct car l'edge function `admin-actions` reverifie cote serveur. Pas de faille ici.
 
 ---
 
-## Phase 2 : Provider Abstraction Layer
+## 2. BUGS FONCTIONNELS
 
-### Interface TypeScript commune
+### 2.1 URL.createObjectURL sans cleanup
+`CreateClip.tsx` cree des object URLs (lignes 202, 232) sans jamais les revoquer (`URL.revokeObjectURL`). Fuite memoire qui s'accumule quand l'utilisateur ajoute/supprime des fichiers.
 
-```text
-Provider Interface:
-  - generateVideo(prompt, duration, style, seed) -> job_id
-  - checkStatus(job_id) -> status + output_url
-  - getCapabilities() -> max_duration, formats, features
-```
+### 2.2 CreateFilm ne debite pas les credits
+`CreateFilm.tsx` insere directement dans `projects` sans appeler `debit_credits`. Le clip passe par le pipeline worker qui debite, mais le film debite-t-il via la meme voie ? Le status initial est `"planning"` — le `pipeline-worker` attend `"analyzing"` ou `"planning"` et appellera `plan-project`, qui ne debite pas non plus. **Aucun debit de credits n'a lieu pour les films.**
 
-### Providers implementes
+### 2.3 CreateClip contourne `create-project`
+`CreateClip.tsx` insere directement dans `projects` (ligne 111-124) au lieu d'appeler l'edge function `create-project` qui gere le debit de 5 credits. Resultat : **les clips ne debitent pas les credits a la creation**.
 
-| Provider | Duree max | Notes |
-|----------|-----------|-------|
-| OpenAI Sora 2 | Variable | Provider par defaut, audio sync |
-| Runway Gen-4 | 5-10s | Shots courts |
-| Luma Dream Machine | Variable | Support references image |
-| Google Veo 3.1 | 8s | Alternative |
+### 2.4 Face references et ref photos non transmises au pipeline
+Les URLs des visages et photos de reference sont uploadees dans le storage mais **jamais enregistrees dans le projet ni transmises au pipeline**. Elles sont perdues.
 
-Chaque provider est active/desactive via variables d'environnement (secrets Supabase). Si la cle manque, le provider est masque dans l'UI.
+### 2.5 Aspect ratio ignore
+La valeur `aspectRatio` selectionnee dans CreateClip et CreateFilm n'est stockee nulle part dans la table `projects` et n'est pas utilisee par le pipeline.
+
+### 2.6 Auth redirect dans le render
+`Auth.tsx` ligne 23-26 fait `navigate()` directement dans le corps du composant (pas dans un `useEffect`). Cela provoque un warning React "Cannot update during render".
 
 ---
 
-## Phase 3 : Frontend - Pages et composants
+## 3. INTEGRITE DES DONNEES
 
-### 3.1 Navigation et layout
-- Navbar sticky avec logo CineClip AI, liens, bouton connexion/credits
-- Layout principal avec sidebar pour projets
-- Footer mis a jour
+### 3.1 FK manquantes
+Les foreign keys suivantes ne sont pas presentes dans le schema (d'apres les metadata) :
+- `shots.project_id` → `projects.id`
+- `renders.project_id` → `projects.id`
+- `plans.project_id` → `projects.id`
+- `audio_analysis.project_id` → `projects.id`
+- `credit_ledger.user_id` → `auth.users.id`
 
-### 3.2 Pages
+Meme si les migrations les ont ajoutees, le schema rapporte `<foreign-keys>` vide pour toutes ces tables. A verifier.
 
-| Route | Description |
-|-------|-------------|
-| `/` | Landing page (existante, mise a jour) |
-| `/auth` | Login / Signup |
-| `/dashboard` | Liste des projets, stats rapides |
-| `/create/clip` | Formulaire creation clip (upload audio, mode, style, duree) |
-| `/create/film` | Formulaire creation film (titre, synopsis, style, duree) |
-| `/project/:id` | Vue projet : pipeline live, timeline, preview |
-| `/project/:id/result` | Page resultat : download, exports, logs |
-| `/pricing` | Plans Stripe + credit packs |
-| `/admin` | Dashboard admin (protege par role) |
-| `/settings` | Parametres compte, provider prefere |
+### 3.2 Trigger `validate_render_completion` presente dans les fonctions mais absente des triggers
+Le schema indique "There are no triggers in the database". Le trigger n'est donc **pas actif** — la validation render est inoperante.
 
-### 3.3 Composants cles
-
-- **ProjectCreationWizard** : Multi-step form (audio upload -> mode -> style -> estimation -> confirmation)
-- **PipelineProgress** : Timeline visuelle en temps reel (Analyze -> Plan -> Generate -> QA -> Stitch -> Export)
-- **ShotGrid** : Grille de tous les shots generes avec statut
-- **VideoPlayer** : Lecteur video integre pour preview
-- **CreditDisplay** : Badge credits dans la navbar
-- **CostEstimator** : Estimation dynamique du cout avant generation
-- **StylePresetPicker** : Selecteur visuel de styles (Cinematic, Anime, Noir, Hyperpop, Afrofuturism, etc.)
-- **AdminProjectTable** : Table de moderation avec filtres
+### 3.3 Trigger `handle_new_user` pour l'onboarding
+La fonction existe mais aucun trigger n'est declare. Si le trigger a ete cree dans une migration mais non detecte, c'est un risque : les nouveaux utilisateurs pourraient ne pas recevoir leur wallet + role initial.
 
 ---
 
-## Phase 4 : Pipeline de generation
+## 4. PERFORMANCE
 
-### Flux complet (Clip)
+### 4.1 Admin dashboard requetes excessives
+`Admin.tsx` fait 7 requetes simultanees (projects, jobs, renders, flags, ledger, wallets, profiles) sans pagination reelle. Avec la croissance des donnees, cela deviendra lent. Le `refetchInterval: 10000` sur jobs aggrave la charge.
 
-```text
-1. Upload audio -> Supabase Storage
-2. analyze-audio -> Extract BPM, beats, sections, energy
-3. plan-project -> Director Agent via Lovable AI
-   -> style_bible + character_bible + shotlist (20-60 shots)
-4. generate-shots -> Pour chaque shot :
-   - Appel provider API
-   - Polling statut
-   - QA basique (echec -> regen, deviation style -> regen contrainte)
-   - Stockage output dans Storage
-5. stitch-render -> FFmpeg :
-   - Aligner cuts sur beat grid
-   - Transitions entre shots
-   - Export 16:9 master + 9:16 crop + teaser 15s
-6. Notification utilisateur -> Projet pret
-```
+### 4.2 check-subscription appele en boucle
+Les logs reseau montrent `check-subscription` appele 4 fois consecutives en 3 secondes. Le `AuthContext` l'appelle depuis `onAuthStateChange` ET `getSession`, causant des appels dupliques.
 
-### Job Queue (sans service externe)
-- Table `job_queue` dans Supabase
-- Edge function worker pollee via pg_cron (toutes les 30s)
-- Chaque etape du pipeline est un job avec statut et retry logic
+### 4.3 Pas d'index sur les colonnes frequemment filtrees
+`shots.project_id`, `shots.status`, `job_queue.project_id`, `job_queue.status`, `credit_ledger.ref_id` — aucun index specifique n'est mentionne au-dela des PKs.
 
 ---
 
-## Phase 5 : Billing (Stripe)
+## 5. UX / LOCALISATION
 
-- Activer l'integration Stripe Lovable
-- Plans d'abonnement : Free (10 credits/mois), Pro (100 credits), Studio (500 credits)
-- Credit packs additionnels : 50 credits, 200 credits, 500 credits
-- Formule de cout : `credits = base_cost + (nb_shots x shot_cost x resolution_multiplier)`
-- Verification du solde avant chaque generation
-- Webhook Stripe pour mise a jour automatique du wallet
+### 5.1 Textes anglais residuels
+- Status dans le dashboard admin : `"completed"`, `"processing"`, `"pending"`, `"failed"`, etc. affiches en anglais dans les badges
+- `Dashboard.tsx` ligne 99 : `{project.type}` affiche `"clip"` ou `"film"` en anglais
+- `Dashboard.tsx` ligne 112 : `"Pas de style"` est correct, mais le style preset est affiche en anglais (ex: `"cinematic"`)
+- `ShareView.tsx` ligne 62 : `{project.type}` et `{project.style_preset}` en anglais
 
----
-
-## Phase 6 : Admin Dashboard
-
-- Vue liste de tous les projets avec filtres (statut, user, date, flags)
-- Detail projet : prompts, outputs, shots, logs
-- Actions : desactiver utilisateur, rembourser credits, supprimer contenu
-- Stats : usage par provider, credits consommes, projets par jour
+### 5.2 Polices non chargees
+`index.css` reference `'Syne'` et `'Space Grotesk'` comme polices display/body, mais aucun `@import` Google Fonts ni fichier de police locale n'est present dans `index.html` ou les CSS. Les polices retombent sur les generiques sans-serif.
 
 ---
 
-## Ordre d'implementation
+## 6. DEPLOIEMENT / INFRA
 
-1. Activer Supabase / Lovable Cloud
-2. Migrations SQL (schema complet + RLS + fonctions)
-3. Auth (login/signup) + profil utilisateur
-4. Dashboard utilisateur (liste projets vide)
-5. Formulaire creation clip + creation film
-6. Edge functions pipeline (create -> analyze -> plan -> generate -> stitch)
-7. Provider abstraction + secrets API
-8. Pipeline progress UI en temps reel
-9. Page resultat avec exports
-10. Activer Stripe + pricing page + credit system
-11. Admin dashboard
-12. Polish : animations, responsive, error handling
+### 6.1 Pas de rate limiting
+Aucune des edge functions n'a de rate limiting. Un acteur malveillant peut spam `estimate-cost`, `pipeline-worker`, ou `create-project` sans limite.
+
+### 6.2 Pas de monitoring/alerting
+Aucun systeme de monitoring (logs structures, metriques, alertes) au-dela du dashboard admin maison.
+
+### 6.3 Pas de politique RGPD
+Footer mentionne "Confidentialite", "CGU", "Mentions legales" — tous pointent vers `#` (liens morts). Obligatoire pour un lancement en France.
+
+### 6.4 Service FFmpeg absent
+`stitch-render` cherche `FFMPEG_RENDER_SERVICE_URL` — ce secret n'existe pas. Tous les renders resteront en status `"pending"` indefiniment. La variable est absente des secrets configures.
 
 ---
 
-## Details techniques
+## 7. PLAN D'ACTION PRIORITISE
 
-- **Stack** : React + Vite + TypeScript + Tailwind (pas de Next.js)
-- **Backend** : Supabase Edge Functions (Deno) pour toute la logique serveur
-- **Storage** : Supabase Storage pour audio, references, shots, renders
-- **Auth** : Supabase Auth avec profils + roles
-- **State** : TanStack Query pour le data fetching + polling pipeline
-- **Routing** : React Router v6 avec routes protegees
-- **FFmpeg** : L'assemblage final necessitera soit un endpoint FFmpeg externe, soit un service tiers (limitation Edge Functions pour le traitement video lourd) - on preparera l'architecture et on pourra integrer un service comme Shotstack ou un serveur FFmpeg dedie plus tard
-- **Providers video** : Les cles API seront stockees en secrets Supabase, les appels se font uniquement depuis les Edge Functions
+### P0 — Bloquants production
+1. **Corriger le debit credits** : CreateClip et CreateFilm doivent passer par `create-project` edge function ou appeler `debit_credits` RPC
+2. **Activer les triggers DB** : `validate_render_completion` et `handle_new_user` doivent etre attaches via migration
+3. **Fixer ShareView** : Politique RLS publique ou edge function dediee
+4. **Transmettre face/ref URLs au pipeline** : Stocker dans la table `projects` (colonnes a ajouter) ou dans `plans`
+5. **Fix Auth.tsx redirect** : Deplacer dans `useEffect`
+
+### P1 — Important
+6. **Valider JWT** dans les edge functions exposees au front (create-project, estimate-cost, project-status)
+7. **Charger les polices** Syne et Space Grotesk dans `index.html`
+8. **Traduire** tous les status et types affiches dans l'admin et le dashboard
+9. **Fix double appel** check-subscription dans AuthContext
+10. **Ajouter indexes DB** sur colonnes filtrees frequemment
+
+### P2 — Ameliorations
+11. Cleanup object URLs dans CreateClip
+12. Restreindre CORS en production
+13. Pages legales (CGU, confidentialite, mentions)
+14. Rate limiting sur les edge functions critiques
+15. Colonne `aspect_ratio` dans `projects` + transmission au pipeline
 
