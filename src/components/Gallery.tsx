@@ -2,7 +2,6 @@ import example1 from "@/assets/example-1.jpg";
 import example2 from "@/assets/example-2.jpg";
 import example3 from "@/assets/example-3.jpg";
 import { motion } from "framer-motion";
-import { motion } from "framer-motion";
 import AnimatedSection from "./AnimatedSection";
 
 const examples = [

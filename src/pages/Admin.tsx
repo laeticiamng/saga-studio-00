@@ -642,6 +642,7 @@ export default function Admin() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <Footer />
     </div>
   );
 }
