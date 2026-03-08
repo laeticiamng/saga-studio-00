@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Film, LogOut, User, LayoutDashboard, CreditCard, Shield, Search } from "lucide-react";
 import { CreditDisplay } from "@/components/CreditDisplay";
 import CommandPalette from "@/components/CommandPalette";
+import ThemeToggle from "@/components/ThemeToggle";
 import { useState } from "react";
 
 const sectionLinks = [
@@ -69,6 +70,8 @@ export default function Navbar() {
                 ⌘K
               </kbd>
             </Button>
+
+            <ThemeToggle />
 
             {user ? (
               <>

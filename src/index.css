@@ -6,7 +6,9 @@
    All colors MUST be HSL. */
 
 @layer base {
-  :root {
+  /* Dark mode (default) */
+  :root,
+  .dark {
     --font-display: 'Syne', sans-serif;
     --font-body: 'Space Grotesk', sans-serif;
 
@@ -50,6 +52,51 @@
     --shadow-elevated: 0 20px 60px -10px hsl(35 100% 20% / 0.4);
 
     /* Transitions */
+    --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Light mode */
+  .light {
+    --font-display: 'Syne', sans-serif;
+    --font-body: 'Space Grotesk', sans-serif;
+
+    --background: 40 30% 97%;
+    --foreground: 0 0% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+
+    --primary: 35 100% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 40 20% 92%;
+    --secondary-foreground: 0 0% 15%;
+
+    --muted: 40 15% 90%;
+    --muted-foreground: 0 0% 45%;
+
+    --accent: 25 95% 48%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 40 15% 85%;
+    --input: 40 15% 85%;
+    --ring: 35 100% 45%;
+
+    --radius: 0.75rem;
+
+    --gradient-primary: linear-gradient(135deg, hsl(35 100% 45%), hsl(15 100% 45%));
+    --gradient-hero: linear-gradient(180deg, hsl(40 30% 97%), hsl(35 40% 90%));
+    --gradient-card: linear-gradient(135deg, hsl(0 0% 100% / 0.8), hsl(35 30% 95% / 0.6));
+
+    --glow-primary: 0 0 40px hsl(35 100% 45% / 0.15);
+    --shadow-elevated: 0 20px 60px -10px hsl(0 0% 0% / 0.1);
+
     --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
