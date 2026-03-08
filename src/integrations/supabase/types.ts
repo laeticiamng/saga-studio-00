@@ -261,12 +261,15 @@ export type Database = {
       }
       projects: {
         Row: {
+          aspect_ratio: string | null
           audio_url: string | null
           created_at: string
           duration_sec: number | null
+          face_urls: Json | null
           id: string
           mode: string | null
           provider_default: string | null
+          ref_photo_urls: Json | null
           status: Database["public"]["Enums"]["project_status"]
           style_preset: string | null
           synopsis: string | null
@@ -276,12 +279,15 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          aspect_ratio?: string | null
           audio_url?: string | null
           created_at?: string
           duration_sec?: number | null
+          face_urls?: Json | null
           id?: string
           mode?: string | null
           provider_default?: string | null
+          ref_photo_urls?: Json | null
           status?: Database["public"]["Enums"]["project_status"]
           style_preset?: string | null
           synopsis?: string | null
@@ -291,12 +297,15 @@ export type Database = {
           user_id: string
         }
         Update: {
+          aspect_ratio?: string | null
           audio_url?: string | null
           created_at?: string
           duration_sec?: number | null
+          face_urls?: Json | null
           id?: string
           mode?: string | null
           provider_default?: string | null
+          ref_photo_urls?: Json | null
           status?: Database["public"]["Enums"]["project_status"]
           style_preset?: string | null
           synopsis?: string | null
