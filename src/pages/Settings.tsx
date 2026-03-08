@@ -261,6 +261,7 @@ export default function Settings() {
           </CardContent>
         </Card>
       </main>
+      <Footer />
     </div>
   );
 }

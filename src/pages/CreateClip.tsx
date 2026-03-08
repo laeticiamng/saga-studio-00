@@ -362,6 +362,7 @@ export default function CreateClip() {
           </Card>
         )}
       </main>
+      <Footer />
     </div>
   );
 }
