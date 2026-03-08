@@ -87,8 +87,8 @@ const Hero = () => {
           transition={{ duration: 0.7, delay: 0.3 }}
           className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-12"
         >
-          La première plateforme qui génère des vidéos complètes de 4-5 minutes avec une
-          cohérence visuelle parfaite. Votre visage, votre histoire, votre musique.
+          Décrivez votre idée, uploadez votre musique, et obtenez une vidéo complète de 4-5 minutes
+          avec un style visuel uniforme. Votre visage, votre histoire, votre musique.
         </motion.p>
 
         <motion.div
@@ -113,7 +113,7 @@ const Hero = () => {
           transition={{ duration: 0.8, delay: 0.7 }}
           className="mt-16 flex flex-wrap justify-center gap-8 text-sm text-muted-foreground"
         >
-          {["Jusqu'à 4K selon plan", "Cohérence parfaite", "Export en une seule fois"].map((t) => (
+          {["Jusqu'à 4K selon plan", "Style uniforme garanti", "Export en une seule fois"].map((t) => (
             <div key={t} className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
               <span>{t}</span>

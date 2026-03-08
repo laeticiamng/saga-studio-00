@@ -3,7 +3,7 @@ import AnimatedSection from "./AnimatedSection";
 
 const steps = [
   { icon: Upload, number: "01", title: "Décrivez votre vision", description: "Expliquez votre histoire, uploadez votre visage et votre musique, définissez le style artistique." },
-  { icon: Wand2, number: "02", title: "L'IA crée votre vidéo", description: "Notre IA de nouvelle génération génère votre clip complet avec une cohérence visuelle parfaite." },
+  { icon: Wand2, number: "02", title: "L'IA crée votre vidéo", description: "L'intelligence artificielle génère chaque scène de votre clip avec un style visuel uniforme du début à la fin." },
   { icon: Video, number: "03", title: "Prévisualisez et ajustez", description: "Visionnez votre création et affinez les détails si nécessaire avant l'export final." },
   { icon: Download, number: "04", title: "Exportez et partagez", description: "Téléchargez votre vidéo finale en haute définition (jusqu'à 4K selon votre plan), prête à être publiée." },
 ];

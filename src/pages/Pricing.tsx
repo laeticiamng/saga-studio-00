@@ -29,7 +29,7 @@ const PLANS = [
     price: "0 €",
     period: "/mois",
     credits: 10,
-    features: ["10 crédits/mois", "Exports 720p", "File d'attente standard", "Support communautaire"],
+    features: ["10 crédits/mois", "Exports 720p", "Génération standard", "Support communautaire"],
     cta: "Plan actuel",
     highlight: false,
     stripe_key: null as string | null,
@@ -40,7 +40,7 @@ const PLANS = [
     price: "19 €",
     period: "/mois",
     credits: 100,
-    features: ["100 crédits/mois", "Exports 1080p", "File prioritaire", "Tous les styles", "Support email"],
+    features: ["100 crédits/mois", "Exports 1080p", "Génération rapide", "Tous les styles", "Support email"],
     cta: "Passer en Pro",
     highlight: true,
     stripe_key: "pro" as const,
@@ -51,7 +51,7 @@ const PLANS = [
     price: "49 €",
     period: "/mois",
     credits: 500,
-    features: ["500 crédits/mois", "Exports 4K", "File instantanée", "Style bible personnalisé", "Verrouillage personnages", "Support dédié"],
+    features: ["500 crédits/mois", "Exports 4K", "Génération prioritaire", "Guide de style sur mesure", "Personnages cohérents entre les scènes", "Support dédié"],
     cta: "Passer en Studio",
     highlight: false,
     stripe_key: "studio" as const,
@@ -126,7 +126,7 @@ export default function Pricing() {
               <Card key={plan.name} className={`border-border/50 bg-card/60 relative ${plan.highlight ? "border-primary ring-2 ring-primary/20" : ""} ${current ? "ring-2 ring-green-500/40" : ""}`}>
                 {plan.highlight && !current && (
                   <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground">
-                    Le plus populaire
+                    Recommandé
                   </Badge>
                 )}
                 {current && (

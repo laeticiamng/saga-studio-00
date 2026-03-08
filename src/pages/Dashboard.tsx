@@ -101,14 +101,20 @@ export default function Dashboard() {
             <CardContent className="flex flex-col items-center justify-center py-20">
               <Film className="h-16 w-16 text-muted-foreground/50 mb-4" />
               <h3 className="text-lg font-medium mb-2">Aucun projet pour le moment</h3>
-              <p className="text-muted-foreground mb-6">Créez votre première vidéo propulsée par l'IA</p>
-              <div className="flex gap-3">
-                <Button variant="hero" asChild>
-                  <Link to="/create/clip"><Music className="h-4 w-4 mr-2" /> Générer un clip</Link>
-                </Button>
-                <Button variant="glass" asChild>
-                  <Link to="/create/film"><Film className="h-4 w-4 mr-2" /> Générer un film</Link>
-                </Button>
+              <p className="text-muted-foreground mb-6 text-center max-w-md">Créez votre première vidéo propulsée par l'IA</p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="text-center">
+                  <Button variant="hero" asChild>
+                    <Link to="/create/clip"><Music className="h-4 w-4 mr-2" /> Créer un clip</Link>
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-2">À partir de votre musique</p>
+                </div>
+                <div className="text-center">
+                  <Button variant="glass" asChild>
+                    <Link to="/create/film"><Film className="h-4 w-4 mr-2" /> Créer un film</Link>
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-2">À partir d'un scénario</p>
+                </div>
               </div>
             </CardContent>
           </Card>

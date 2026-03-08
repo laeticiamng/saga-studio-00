@@ -209,6 +209,11 @@ export default function Auth() {
               {isLogin ? "S'inscrire" : "Se connecter"}
             </button>
           </p>
+          {!isLogin && (
+            <p className="mt-3 text-center text-xs text-muted-foreground">
+              🎁 10 crédits offerts à l'inscription — Aucune carte bancaire requise
+            </p>
+          )}
         </CardContent>
       </Card>
       </div>
