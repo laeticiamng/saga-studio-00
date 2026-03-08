@@ -23,7 +23,7 @@ const Hero = () => {
   const contentOpacity = useTransform(scrollYProgress, [0, 0.6], [1, 0]);
 
   const handleGetStarted = () => {
-    navigate(user ? "/dashboard" : "/auth");
+    navigate(user ? "/create/clip" : "/auth");
   };
 
   return (

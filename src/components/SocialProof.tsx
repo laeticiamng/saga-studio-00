@@ -1,6 +1,5 @@
 import { motion, useMotionValue, useTransform, animate, useScroll } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
-import { Star } from "lucide-react";
 import AnimatedSection from "./AnimatedSection";
 
 function Counter({ target, suffix = "" }: { target: number; suffix?: string }) {
@@ -29,29 +28,26 @@ function Counter({ target, suffix = "" }: { target: number; suffix?: string }) {
 }
 
 const stats = [
-  { value: 500, suffix: "+", label: "Vidéos créées en bêta" },
-  { value: 50, suffix: "+", label: "Créateurs early-access" },
-  { value: 95, suffix: "%", label: "Taux de satisfaction" },
+  { value: 4, suffix: "", label: "Modèles IA intégrés" },
+  { value: 13, suffix: "", label: "Styles visuels disponibles" },
+  { value: 5, suffix: " min", label: "Durée max par vidéo" },
 ];
 
-const testimonials = [
+const highlights = [
   {
-    name: "Marie L.",
-    role: "Réalisatrice indépendante",
-    text: "CineClip AI a transformé ma façon de prototyper mes projets. Le résultat est bluffant pour un outil aussi simple.",
-    rating: 5,
+    title: "Cohérence visuelle",
+    text: "Notre pipeline garantit un style uniforme du premier au dernier plan, grâce aux style bibles générés par IA.",
+    icon: "🎨",
   },
   {
-    name: "Thomas D.",
-    role: "Créateur YouTube",
-    text: "La cohérence visuelle entre les plans est impressionnante. Un vrai gain de temps pour mes previsualisations.",
-    rating: 5,
+    title: "Pipeline automatisé",
+    text: "De l'analyse audio à l'export final, tout est orchestré automatiquement. Vous décrivez, l'IA produit.",
+    icon: "⚡",
   },
   {
-    name: "Sofia R.",
-    role: "Directrice artistique",
-    text: "L'un des meilleurs outils de création vidéo IA que j'ai testé. La qualité cinématique est au rendez-vous.",
-    rating: 4,
+    title: "Multi-fournisseurs",
+    text: "Choisissez parmi OpenAI, Runway, Luma ou Google Veo — ou laissez le mode Auto sélectionner le meilleur.",
+    icon: "🔄",
   },
 ];
 
@@ -93,32 +89,25 @@ export default function SocialProof() {
           </AnimatedSection>
         </motion.div>
 
-        {/* Testimonials heading */}
+        {/* Highlights heading */}
         <AnimatedSection delay={0.15}>
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">
-            Ce que disent nos créateurs
+            Pourquoi CineClip AI ?
           </h2>
         </AnimatedSection>
 
         {/* Cards with parallax drift */}
         <motion.div style={{ y: cardsY }} className="grid md:grid-cols-3 gap-6">
-          {testimonials.map((t, i) => (
-            <AnimatedSection key={t.name} delay={0.1 * (i + 1)}>
+          {highlights.map((h, i) => (
+            <AnimatedSection key={h.title} delay={0.1 * (i + 1)}>
               <motion.div
                 whileHover={{ y: -6, scale: 1.02 }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 className="rounded-xl border border-border/50 bg-card/60 backdrop-blur-sm p-6 h-full flex flex-col"
               >
-                <div className="flex gap-1 mb-4">
-                  {Array.from({ length: t.rating }).map((_, j) => (
-                    <Star key={j} className="w-4 h-4 fill-primary text-primary" />
-                  ))}
-                </div>
-                <p className="text-foreground/90 mb-6 flex-1 leading-relaxed">"{t.text}"</p>
-                <div>
-                  <p className="font-semibold text-foreground">{t.name}</p>
-                  <p className="text-sm text-muted-foreground">{t.role}</p>
-                </div>
+                <span className="text-3xl mb-4">{h.icon}</span>
+                <h3 className="font-semibold text-foreground text-lg mb-2">{h.title}</h3>
+                <p className="text-muted-foreground leading-relaxed flex-1">{h.text}</p>
               </motion.div>
             </AnimatedSection>
           ))}

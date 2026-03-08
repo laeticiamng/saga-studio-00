@@ -5,9 +5,9 @@ import { motion } from "framer-motion";
 import AnimatedSection from "./AnimatedSection";
 
 const examples = [
-  { image: example1, title: "Clip musical futuriste", duration: "4:32", style: "Sci-Fi / Cyberpunk" },
-  { image: example2, title: "Animation cohérente", duration: "5:15", style: "Animation 3D" },
-  { image: example3, title: "Court-métrage dramatique", duration: "4:48", style: "Cinématique réaliste" },
+  { image: example1, title: "Clip musical futuriste", style: "Sci-Fi / Cyberpunk" },
+  { image: example2, title: "Animation cohérente", style: "Animation 3D" },
+  { image: example3, title: "Court-métrage dramatique", style: "Cinématique réaliste" },
 ];
 
 const Gallery = () => {
@@ -54,8 +54,6 @@ const Gallery = () => {
                 <div className="absolute bottom-0 left-0 right-0 p-6 text-white transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
                   <h3 className="text-xl font-semibold mb-1">{example.title}</h3>
                   <div className="flex items-center gap-3 text-sm text-white/80">
-                    <span>{example.duration}</span>
-                    <span>•</span>
                     <span>{example.style}</span>
                   </div>
                 </div>
