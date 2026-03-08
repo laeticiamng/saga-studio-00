@@ -81,8 +81,28 @@ export default function Settings() {
     if (error) toast({ title: "Erreur", description: error.message, variant: "destructive" });
     else toast({ title: "Enregistré", description: "Profil mis à jour" });
   };
+  const handleChangePassword = async () => {
+    if (newPassword.length < 6) {
+      toast({ title: "Erreur", description: "Le mot de passe doit contenir au moins 6 caractères.", variant: "destructive" });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast({ title: "Erreur", description: "Les mots de passe ne correspondent pas.", variant: "destructive" });
+      return;
+    }
+    setChangingPassword(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setChangingPassword(false);
+    if (error) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Mot de passe modifié", description: "Votre nouveau mot de passe est actif." });
+      setNewPassword("");
+      setConfirmPassword("");
+    }
+  };
 
-  const handleAddWebhook = async () => {
+
     if (!user || !newWebhookUrl.trim()) return;
     try {
       new URL(newWebhookUrl); // validate URL
