@@ -157,6 +157,3 @@ export function PipelineProgress({ status, completedShots = 0, totalShots = 0 }:
     </Card>
   );
 }
-
-// Card import for wrapping
-import { Card } from "@/components/ui/card";
