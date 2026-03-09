@@ -17,11 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 const PROVIDER_LABELS: Record<string, string> = {
-  auto: "Auto",
-  openai: "OpenAI",
-  runway: "Runway",
-  luma: "Luma",
-  google_veo: "Veo",
+  auto: "Auto", openai: "OpenAI", runway: "Runway", luma: "Luma", google_veo: "Veo",
 };
 
 export default function CreateFilm() {
@@ -54,9 +50,7 @@ export default function CreateFilm() {
     }
   }, [duration, provider]);
 
-  useEffect(() => {
-    fetchEstimate();
-  }, [fetchEstimate]);
+  useEffect(() => { fetchEstimate(); }, [fetchEstimate]);
 
   const durationSec = parseInt(duration);
   const estimatedShots = estimate?.estimated_shots ?? Math.ceil(durationSec / 7);
@@ -66,16 +60,10 @@ export default function CreateFilm() {
     if (!user) return;
     setLoading(true);
     try {
-      // Use create-project edge function for proper credit debit
       const { data, error } = await supabase.functions.invoke("create-project", {
         body: {
-          type: "film",
-          title,
-          synopsis,
-          style_preset: style,
-          duration_sec: durationSec,
-          mode: "story",
-          aspect_ratio: aspectRatio,
+          type: "film", title, synopsis, style_preset: style,
+          duration_sec: durationSec, mode: "story", aspect_ratio: aspectRatio,
         },
       });
 
@@ -83,8 +71,6 @@ export default function CreateFilm() {
       if (data?.error) throw new Error(data.error);
 
       const project = data.project;
-
-      // Update to planning status and set provider
       await supabase.from("projects").update({
         status: "planning" as const,
         provider_default: provider === "auto" ? null : provider,
@@ -93,9 +79,7 @@ export default function CreateFilm() {
       toast({ title: "🎬 C'est parti !", description: "Votre film est en cours de création. Suivez l'avancement en temps réel." });
       navigate(`/project/${project.id}`);
 
-      supabase.functions.invoke("pipeline-worker", {
-        body: { project_id: project.id },
-      }).catch(console.error);
+      supabase.functions.invoke("pipeline-worker", { body: { project_id: project.id } }).catch(console.error);
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message, variant: "destructive" });
     } finally {
@@ -103,31 +87,66 @@ export default function CreateFilm() {
     }
   };
 
+  const synopsisValid = synopsis.length >= 50;
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container mx-auto max-w-2xl px-4 py-8">
-        <h1 className="text-3xl font-bold mb-2">Générer un film</h1>
-        <p className="text-muted-foreground mb-8">Décrivez votre histoire et l'IA lui donnera vie</p>
+      <main className="container mx-auto max-w-2xl px-4 py-10 md:py-16">
+        {/* Page Header */}
+        <div className="mb-10">
+          <h1 className="text-3xl md:text-4xl font-bold mb-3">Générer un film</h1>
+          <p className="text-muted-foreground text-base md:text-lg max-w-lg">
+            Décrivez votre histoire et l'IA lui donnera vie en quelques minutes. Court-métrage de 1 à 6 minutes.
+          </p>
+        </div>
 
         <Card className="border-border/50 bg-card/60">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Film className="h-5 w-5 text-primary" /> Détails du film</CardTitle>
-            <CardDescription>Parlez-nous de votre court-métrage</CardDescription>
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Film className="h-5 w-5 text-primary" /> Détails du film
+            </CardTitle>
+            <CardDescription className="text-sm">
+              Renseignez le titre, le synopsis et les options de votre court-métrage. Plus le synopsis est détaillé, meilleur sera le résultat.
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-8">
+            {/* Titre */}
             <div className="space-y-2">
-              <Label>Titre</Label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Le Dernier Signal" required />
+              <Label className="text-sm font-medium">Titre</Label>
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Le Dernier Signal" className="h-11" required />
+              <p className="text-xs text-muted-foreground">Le titre apparaîtra sur la vidéo finale et dans votre tableau de bord.</p>
             </div>
+
+            {/* Synopsis */}
             <div className="space-y-2">
-              <Label>Synopsis (5-8 lignes)</Label>
-              <Textarea value={synopsis} onChange={(e) => setSynopsis(e.target.value)} placeholder="Dans un monde où…" rows={6} required />
+              <Label className="text-sm font-medium">Synopsis</Label>
+              <Textarea
+                value={synopsis}
+                onChange={(e) => setSynopsis(e.target.value)}
+                placeholder="Dans un monde où la technologie a remplacé les émotions humaines, une jeune ingénieure découvre un ancien appareil capable de restaurer les souvenirs perdus…"
+                rows={7}
+                className="resize-none leading-relaxed"
+                required
+              />
+              <div className="flex justify-between items-center">
+                <p className="text-xs text-muted-foreground">
+                  Décrivez l'histoire en 5 à 8 lignes : personnages, contexte, intrigue et dénouement.
+                </p>
+                <span className={`text-xs font-medium ${synopsisValid ? "text-primary" : synopsis.length > 0 ? "text-destructive" : "text-muted-foreground"}`}>
+                  {synopsis.length}/50
+                </span>
+              </div>
+              {synopsis.length > 0 && !synopsisValid && (
+                <p className="text-xs text-destructive">Le synopsis doit contenir au moins 50 caractères.</p>
+              )}
             </div>
+
+            {/* Durée */}
             <div className="space-y-2">
-              <Label>Durée</Label>
+              <Label className="text-sm font-medium">Durée</Label>
               <Select value={duration} onValueChange={setDuration}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="60">1 minute</SelectItem>
                   <SelectItem value="120">2 minutes</SelectItem>
@@ -137,19 +156,44 @@ export default function CreateFilm() {
                   <SelectItem value="360">6 minutes</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">Plus la durée est longue, plus le nombre de scènes et le coût en crédits augmentent.</p>
             </div>
-            <div className="space-y-2">
-              <Label>Style</Label>
+
+            {/* Style */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Style visuel</Label>
               <StylePresetPicker value={style} onChange={setStyle} />
             </div>
+
+            {/* Format d'export */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Format d'export</Label>
+              <RadioGroup value={aspectRatio} onValueChange={setAspectRatio} className="flex flex-wrap gap-4">
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="16:9" id="r-landscape" />
+                  <Label htmlFor="r-landscape" className="cursor-pointer text-sm">16:9 Paysage</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="9:16" id="r-portrait" />
+                  <Label htmlFor="r-portrait" className="cursor-pointer text-sm">9:16 Portrait</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="both" id="r-both" />
+                  <Label htmlFor="r-both" className="cursor-pointer text-sm">Les deux</Label>
+                </div>
+              </RadioGroup>
+              <p className="text-xs text-muted-foreground">16:9 pour YouTube, 9:16 pour TikTok / Reels, ou les deux formats.</p>
+            </div>
+
+            {/* Options avancées */}
             <details className="group">
-              <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5">
+              <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 py-2">
                 <Cpu className="h-3.5 w-3.5 text-primary" /> Options avancées
               </summary>
-              <div className="mt-3 space-y-2">
-                <Label>Moteur IA</Label>
+              <div className="mt-3 space-y-3 pl-5 border-l-2 border-border">
+                <Label className="text-sm font-medium">Moteur IA</Label>
                 <Select value={provider} onValueChange={setProvider}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="auto">Automatique (recommandé)</SelectItem>
                     <SelectItem value="openai">OpenAI</SelectItem>
@@ -158,56 +202,41 @@ export default function CreateFilm() {
                     <SelectItem value="google_veo">Google Veo</SelectItem>
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">En mode automatique, le meilleur moteur est choisi pour vous.</p>
+                <p className="text-xs text-muted-foreground">En mode automatique, le meilleur moteur est choisi selon votre style et votre synopsis.</p>
               </div>
             </details>
-            <div className="space-y-2">
-              <Label>Format d'export</Label>
-              <RadioGroup value={aspectRatio} onValueChange={setAspectRatio} className="flex gap-4">
-                <div className="flex items-center gap-2">
-                  <RadioGroupItem value="16:9" id="r-landscape" />
-                  <Label htmlFor="r-landscape" className="cursor-pointer">16:9 Paysage</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <RadioGroupItem value="9:16" id="r-portrait" />
-                  <Label htmlFor="r-portrait" className="cursor-pointer">9:16 Portrait</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <RadioGroupItem value="both" id="r-both" />
-                  <Label htmlFor="r-both" className="cursor-pointer">Les deux</Label>
-                </div>
-              </RadioGroup>
-            </div>
 
-            <div className="rounded-xl bg-secondary/50 p-4 space-y-2">
-              <div className="flex justify-between">
+            {/* Estimation */}
+            <div className="rounded-xl bg-secondary/40 p-5 sm:p-6 space-y-3 text-sm">
+              <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Moteur IA</span>
-                <span>{PROVIDER_LABELS[provider]}</span>
+                <span className="font-medium">{PROVIDER_LABELS[provider]}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Scènes estimées</span>
                 <span>~{estimatedShots}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Temps estimé</span>
-                <span>~5-15 min</span>
+                <span>~5–15 min</span>
               </div>
-              <div className="flex justify-between font-medium">
-                <span className="flex items-center gap-1"><Coins className="h-4 w-4 text-primary" /> Coût estimé</span>
-                <span className="text-primary flex items-center gap-1">
+              <div className="border-t border-border my-1" />
+              <div className="flex justify-between items-center font-semibold text-base">
+                <span className="flex items-center gap-1.5">
+                  <Coins className="h-4 w-4 text-primary" /> Coût estimé
+                </span>
+                <span className="text-primary flex items-center gap-1.5">
                   {estimating && <Loader2 className="h-3 w-3 animate-spin" />}
                   {estimatedCredits} crédits
                 </span>
               </div>
             </div>
 
-            <Button variant="hero" className="w-full" onClick={handleOneClickGenerate} disabled={loading || !title || synopsis.length < 50}>
+            {/* Submit */}
+            <Button variant="hero" size="lg" className="w-full" onClick={handleOneClickGenerate} disabled={loading || !title || !synopsisValid}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
               {loading ? "Création en cours…" : "Générer mon film"}
             </Button>
-            {synopsis.length > 0 && synopsis.length < 50 && (
-              <p className="text-xs text-destructive text-center">Le synopsis doit contenir au moins 50 caractères ({synopsis.length}/50)</p>
-            )}
           </CardContent>
         </Card>
       </main>
