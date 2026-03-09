@@ -10,10 +10,10 @@ export default function Terms() {
       <main className="container mx-auto max-w-3xl px-4 py-16">
         <h1 className="text-3xl font-bold mb-8">Conditions Générales d'Utilisation</h1>
         <div className="max-w-none space-y-6 text-muted-foreground">
-          <p>Dernière mise à jour : 8 mars 2026</p>
+          <p>Dernière mise à jour : 9 mars 2026</p>
 
           <h2 className="text-xl font-semibold text-foreground">1. Objet</h2>
-          <p>Les présentes CGU régissent l'utilisation de la plateforme CineClip AI, service de génération vidéo par intelligence artificielle.</p>
+          <p>Les présentes CGU régissent l'utilisation de la plateforme CineClip AI, service de génération vidéo par intelligence artificielle édité par EMOTIONSCARE SASU (SIREN 944 505 445), dont le siège social est situé à 80000 Amiens, France.</p>
 
           <h2 className="text-xl font-semibold text-foreground">2. Inscription</h2>
           <p>L'accès aux fonctionnalités de génération nécessite la création d'un compte avec une adresse email valide. L'utilisateur est responsable de la confidentialité de ses identifiants.</p>
@@ -29,6 +29,12 @@ export default function Terms() {
 
           <h2 className="text-xl font-semibold text-foreground">6. Limitation de responsabilité</h2>
           <p>CineClip AI est fourni « en l'état ». Nous ne garantissons pas une disponibilité ininterrompue ni un résultat spécifique de la génération IA.</p>
+
+          <h2 className="text-xl font-semibold text-foreground">7. Contact</h2>
+          <p>
+            Pour toute question relative aux présentes CGU, contactez-nous à{" "}
+            <a href="mailto:contact@emotionscare.com" className="text-primary hover:underline">contact@emotionscare.com</a>.
+          </p>
         </div>
       </main>
       <Footer />
