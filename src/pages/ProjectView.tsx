@@ -308,31 +308,35 @@ export default function ProjectView() {
 
           {/* Preview Tab */}
           {hasCompletedShots && (
-            <TabsContent value="preview">
-              <ShotPreviewPlayer shots={shots || []} audioUrl={project.audio_url} bpm={audioAnalysis?.bpm} />
+            <TabsContent value="preview" forceMount className="data-[state=inactive]:hidden">
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: "easeOut" }}>
+                <ShotPreviewPlayer shots={shots || []} audioUrl={project.audio_url} bpm={audioAnalysis?.bpm} />
+              </motion.div>
             </TabsContent>
           )}
 
           {/* Shots Tab */}
-          <TabsContent value="shots">
-            {shots && shots.length > 0 ? (
-              <ShotGrid shots={shots} />
-            ) : (
-              <Card className="border-border/50 bg-card/40">
-                <CardContent className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-                  <Clapperboard className="h-12 w-12 text-muted-foreground/30" />
-                  <p className="text-muted-foreground font-medium">Aucun plan généré</p>
-                  <p className="text-xs text-muted-foreground max-w-sm">
-                    Les plans seront créés automatiquement lors de l'étape de génération du pipeline.
-                  </p>
-                  {project.status === "draft" && (
-                    <Button variant="hero" size="sm" onClick={startPipeline} disabled={pipelineRunning} className="mt-2 gap-2">
-                      <Play className="h-4 w-4" /> Lancer le pipeline
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            )}
+          <TabsContent value="shots" forceMount className="data-[state=inactive]:hidden">
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: "easeOut" }}>
+              {shots && shots.length > 0 ? (
+                <ShotGrid shots={shots} />
+              ) : (
+                <Card className="border-border/50 bg-card/40">
+                  <CardContent className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+                    <Clapperboard className="h-12 w-12 text-muted-foreground/30" />
+                    <p className="text-muted-foreground font-medium">Aucun plan généré</p>
+                    <p className="text-xs text-muted-foreground max-w-sm">
+                      Les plans seront créés automatiquement lors de l'étape de génération du pipeline.
+                    </p>
+                    {project.status === "draft" && (
+                      <Button variant="hero" size="sm" onClick={startPipeline} disabled={pipelineRunning} className="mt-2 gap-2">
+                        <Play className="h-4 w-4" /> Lancer le pipeline
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </motion.div>
           </TabsContent>
 
           {/* Plan Tab */}
