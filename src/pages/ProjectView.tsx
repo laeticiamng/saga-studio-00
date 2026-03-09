@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Play, Film, RefreshCw, Music, Palette, List, Share2, Eye, ArrowLeft, Clock, Clapperboard, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useCallback, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 const statusLabels: Record<string, string> = {
@@ -307,36 +308,41 @@ export default function ProjectView() {
 
           {/* Preview Tab */}
           {hasCompletedShots && (
-            <TabsContent value="preview">
-              <ShotPreviewPlayer shots={shots || []} audioUrl={project.audio_url} bpm={audioAnalysis?.bpm} />
+            <TabsContent value="preview" forceMount className="data-[state=inactive]:hidden">
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: "easeOut" }}>
+                <ShotPreviewPlayer shots={shots || []} audioUrl={project.audio_url} bpm={audioAnalysis?.bpm} />
+              </motion.div>
             </TabsContent>
           )}
 
           {/* Shots Tab */}
-          <TabsContent value="shots">
-            {shots && shots.length > 0 ? (
-              <ShotGrid shots={shots} />
-            ) : (
-              <Card className="border-border/50 bg-card/40">
-                <CardContent className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-                  <Clapperboard className="h-12 w-12 text-muted-foreground/30" />
-                  <p className="text-muted-foreground font-medium">Aucun plan généré</p>
-                  <p className="text-xs text-muted-foreground max-w-sm">
-                    Les plans seront créés automatiquement lors de l'étape de génération du pipeline.
-                  </p>
-                  {project.status === "draft" && (
-                    <Button variant="hero" size="sm" onClick={startPipeline} disabled={pipelineRunning} className="mt-2 gap-2">
-                      <Play className="h-4 w-4" /> Lancer le pipeline
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            )}
+          <TabsContent value="shots" forceMount className="data-[state=inactive]:hidden">
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: "easeOut" }}>
+              {shots && shots.length > 0 ? (
+                <ShotGrid shots={shots} />
+              ) : (
+                <Card className="border-border/50 bg-card/40">
+                  <CardContent className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+                    <Clapperboard className="h-12 w-12 text-muted-foreground/30" />
+                    <p className="text-muted-foreground font-medium">Aucun plan généré</p>
+                    <p className="text-xs text-muted-foreground max-w-sm">
+                      Les plans seront créés automatiquement lors de l'étape de génération du pipeline.
+                    </p>
+                    {project.status === "draft" && (
+                      <Button variant="hero" size="sm" onClick={startPipeline} disabled={pipelineRunning} className="mt-2 gap-2">
+                        <Play className="h-4 w-4" /> Lancer le pipeline
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </motion.div>
           </TabsContent>
 
           {/* Plan Tab */}
           {plan && (
-            <TabsContent value="plan" className="space-y-6">
+            <TabsContent value="plan" forceMount className="space-y-6 data-[state=inactive]:hidden">
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: "easeOut" }} className="space-y-6">
               {styleBible && Object.keys(styleBible).length > 0 && (
                 <Card className="border-border/50 bg-card/60">
                   <CardHeader className="pb-4">
@@ -349,13 +355,19 @@ export default function ProjectView() {
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {Object.entries(styleBible).map(([key, val]) => (
-                        <div key={key} className="rounded-lg bg-secondary/30 p-4">
+                      {Object.entries(styleBible).map(([key, val], i) => (
+                        <motion.div
+                          key={key}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.25, delay: i * 0.05 }}
+                          className="rounded-lg bg-secondary/30 p-4"
+                        >
                           <span className="text-xs font-semibold text-primary uppercase tracking-wider">{key.replace(/_/g, " ")}</span>
                           <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
                             {typeof val === "string" ? val : JSON.stringify(val)}
                           </p>
-                        </div>
+                        </motion.div>
                       ))}
                     </div>
                   </CardContent>
@@ -375,23 +387,31 @@ export default function ProjectView() {
                   <CardContent>
                     <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
                       {shotlistJson.map((shot: any, i: number) => (
-                        <div key={i} className="flex items-start gap-4 rounded-lg bg-secondary/30 p-4 hover:bg-secondary/40 transition-colors">
+                        <motion.div
+                          key={i}
+                          initial={{ opacity: 0, x: -8 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.2, delay: i * 0.03 }}
+                          className="flex items-start gap-4 rounded-lg bg-secondary/30 p-4 hover:bg-secondary/40 transition-colors"
+                        >
                           <span className="text-sm font-bold text-primary shrink-0 w-8 text-right">#{i + 1}</span>
                           <p className="text-sm text-muted-foreground leading-relaxed">
                             {shot.prompt || shot.description || JSON.stringify(shot)}
                           </p>
-                        </div>
+                        </motion.div>
                       ))}
                     </div>
                   </CardContent>
                 </Card>
               )}
+              </motion.div>
             </TabsContent>
           )}
 
           {/* Audio Tab */}
           {audioAnalysis && (
-            <TabsContent value="audio">
+            <TabsContent value="audio" forceMount className="data-[state=inactive]:hidden">
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: "easeOut" }}>
               <Card className="border-border/50 bg-card/60">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-lg flex items-center gap-2">
@@ -422,27 +442,37 @@ export default function ProjectView() {
                       <h4 className="text-sm font-medium mb-3">Structure du morceau</h4>
                       <div className="flex gap-2 flex-wrap">
                         {sectionsJson.map((sec: any, i: number) => (
-                          <Badge key={i} variant="outline" className="text-xs py-1.5 px-3">
-                            {sec.label || sec.type || `Section ${i + 1}`}
-                            {sec.start != null && (
-                              <span className="ml-1.5 text-muted-foreground">
-                                {Math.floor(sec.start / 60)}:{String(Math.round(sec.start % 60)).padStart(2, "0")}
-                              </span>
-                            )}
-                          </Badge>
+                          <motion.div
+                            key={i}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.2, delay: i * 0.04 }}
+                          >
+                            <Badge variant="outline" className="text-xs py-1.5 px-3">
+                              {sec.label || sec.type || `Section ${i + 1}`}
+                              {sec.start != null && (
+                                <span className="ml-1.5 text-muted-foreground">
+                                  {Math.floor(sec.start / 60)}:{String(Math.round(sec.start % 60)).padStart(2, "0")}
+                                </span>
+                              )}
+                            </Badge>
+                          </motion.div>
                         ))}
                       </div>
                     </div>
                   )}
                 </CardContent>
               </Card>
+              </motion.div>
             </TabsContent>
           )}
 
           {/* Export Tab */}
           {(render || project.status === "completed") && (
-            <TabsContent value="render">
-              <RenderExportPanel projectId={project.id} render={render} projectStatus={project.status} />
+            <TabsContent value="render" forceMount className="data-[state=inactive]:hidden">
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: "easeOut" }}>
+                <RenderExportPanel projectId={project.id} render={render} projectStatus={project.status} />
+              </motion.div>
             </TabsContent>
           )}
         </Tabs>

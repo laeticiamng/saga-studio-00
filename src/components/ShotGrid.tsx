@@ -5,6 +5,7 @@ import { CheckCircle, Loader2, AlertCircle, Clock, RotateCcw, Play } from "lucid
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { motion } from "framer-motion";
 
 interface Shot {
   id: string;
@@ -47,11 +48,17 @@ export function ShotGrid({ shots }: { shots: Shot[] }) {
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-      {shots.map((shot) => {
+      {shots.map((shot, i) => {
         const config = statusConfig[shot.status] || statusConfig.pending;
         const isPlaying = playingId === shot.id;
 
         return (
+          <motion.div
+            key={shot.id}
+            initial={{ opacity: 0, y: 16, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.3, delay: Math.min(i * 0.04, 0.6), ease: "easeOut" }}
+          >
           <Card key={shot.id} className="border-border/50 bg-card/40 overflow-hidden group hover:border-border transition-colors">
             {/* Thumbnail */}
             <div className="aspect-video bg-secondary/20 flex items-center justify-center relative overflow-hidden">
@@ -112,6 +119,7 @@ export function ShotGrid({ shots }: { shots: Shot[] }) {
               )}
             </div>
           </Card>
+          </motion.div>
         );
       })}
     </div>
