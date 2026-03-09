@@ -109,7 +109,7 @@ const Hero = () => {
           transition={{ duration: 0.8, delay: 0.7 }}
           className="mt-16 flex flex-wrap justify-center gap-8 text-sm text-muted-foreground"
         >
-          {["Jusqu'à 4K selon le plan", "13 styles visuels au choix", "Vidéo prête en ~10 min"].map((t) => (
+          {["Qualité HD et 4K", "13 styles visuels au choix", "Vidéo prête en ~10 min"].map((t) => (
             <div key={t} className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
               <span>{t}</span>

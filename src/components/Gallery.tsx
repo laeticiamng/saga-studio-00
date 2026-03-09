@@ -27,20 +27,6 @@ const Gallery = () => {
           </div>
         </AnimatedSection>
 
-        {/* Video demo placeholder — replaced with honest messaging */}
-        <AnimatedSection delay={0.05}>
-          <div className="mb-16 max-w-3xl mx-auto">
-            <div className="relative w-full aspect-video rounded-2xl overflow-hidden border border-border/30 bg-secondary/30 flex flex-col items-center justify-center gap-4 p-8 text-center">
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                <Film className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="text-xl font-semibold text-foreground">Démo vidéo bientôt disponible</h3>
-              <p className="text-muted-foreground max-w-md">
-                Nous préparons une vidéo de démonstration complète pour vous montrer le résultat en conditions réelles. En attendant, explorez les styles ci-dessous.
-              </p>
-            </div>
-          </div>
-        </AnimatedSection>
 
         <div className="grid md:grid-cols-3 gap-8">
           {examples.map((example, index) => (

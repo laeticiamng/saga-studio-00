@@ -58,7 +58,7 @@ const CTA = () => {
             </div>
 
             <p className="text-sm text-muted-foreground mt-8">
-              Aucune carte bancaire requise • Sans engagement • Résultat en ~10 minutes
+              1 clip complet offert • Sans engagement • Résultat en ~10 minutes
             </p>
           </div>
         </AnimatedSection>

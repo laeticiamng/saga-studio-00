@@ -92,9 +92,16 @@ export default function SocialProof() {
                   ))}
                 </div>
                 <p className="text-foreground leading-relaxed flex-1 mb-4">"{t.text}"</p>
-                <div>
-                  <p className="font-semibold text-sm">{t.name}</p>
-                  <p className="text-xs text-muted-foreground">{t.role}</p>
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className={`${avatarColors[i % avatarColors.length]} text-white text-xs font-bold`}>
+                      {t.name.split(" ").map(n => n[0]).join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-semibold text-sm">{t.name}</p>
+                    <p className="text-xs text-muted-foreground">{t.role} · Utilisateur bêta</p>
+                  </div>
                 </div>
               </motion.div>
             </AnimatedSection>
