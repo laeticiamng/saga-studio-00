@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
 import { CheckCircle, Loader2, Circle, AlertCircle, Clock } from "lucide-react";
 import { useState, useEffect } from "react";
 
