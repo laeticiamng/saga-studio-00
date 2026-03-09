@@ -54,7 +54,6 @@ export default function SocialProof() {
 
   const glowY = useTransform(scrollYProgress, [0, 1], ["40px", "-60px"]);
   const glowScale = useTransform(scrollYProgress, [0, 0.5, 1], [0.8, 1.2, 0.9]);
-  const countersY = useTransform(scrollYProgress, [0, 1], ["30px", "-20px"]);
   const cardsY = useTransform(scrollYProgress, [0, 1], ["50px", "-30px"]);
 
   return (
