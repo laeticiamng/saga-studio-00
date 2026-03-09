@@ -410,7 +410,8 @@ export default function ProjectView() {
 
           {/* Audio Tab */}
           {audioAnalysis && (
-            <TabsContent value="audio">
+            <TabsContent value="audio" forceMount className="data-[state=inactive]:hidden">
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: "easeOut" }}>
               <Card className="border-border/50 bg-card/60">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-lg flex items-center gap-2">
@@ -441,20 +442,28 @@ export default function ProjectView() {
                       <h4 className="text-sm font-medium mb-3">Structure du morceau</h4>
                       <div className="flex gap-2 flex-wrap">
                         {sectionsJson.map((sec: any, i: number) => (
-                          <Badge key={i} variant="outline" className="text-xs py-1.5 px-3">
-                            {sec.label || sec.type || `Section ${i + 1}`}
-                            {sec.start != null && (
-                              <span className="ml-1.5 text-muted-foreground">
-                                {Math.floor(sec.start / 60)}:{String(Math.round(sec.start % 60)).padStart(2, "0")}
-                              </span>
-                            )}
-                          </Badge>
+                          <motion.div
+                            key={i}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.2, delay: i * 0.04 }}
+                          >
+                            <Badge variant="outline" className="text-xs py-1.5 px-3">
+                              {sec.label || sec.type || `Section ${i + 1}`}
+                              {sec.start != null && (
+                                <span className="ml-1.5 text-muted-foreground">
+                                  {Math.floor(sec.start / 60)}:{String(Math.round(sec.start % 60)).padStart(2, "0")}
+                                </span>
+                              )}
+                            </Badge>
+                          </motion.div>
                         ))}
                       </div>
                     </div>
                   )}
                 </CardContent>
               </Card>
+              </motion.div>
             </TabsContent>
           )}
 
