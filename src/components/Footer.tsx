@@ -18,7 +18,7 @@ const Footer = () => {
       { label: "FAQ", href: "#faq" },
       { label: "À propos", href: "/about" },
       ...(user ? [{ label: "Mes projets", href: "/dashboard" }] : []),
-      { label: "Contact", href: "/about" },
+      { label: "Nous contacter", href: "/about" },
     ],
     Légal: [
       { label: "Confidentialité", href: "/privacy" },
@@ -41,12 +41,12 @@ const Footer = () => {
   };
 
   return (
-    <footer className="border-t border-border/50 pt-16 pb-8 px-4">
+    <footer className="border-t border-border/50 pt-14 pb-8 px-4">
       <div className="container mx-auto">
         <AnimatedSection>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
             <div className="col-span-2 md:col-span-1">
-              <Link to="/" className="flex items-center gap-2 mb-4">
+              <Link to="/" className="flex items-center gap-2.5 mb-4">
                 <div className="w-9 h-9 rounded-lg bg-gradient-primary flex items-center justify-center">
                   <Film className="w-5 h-5 text-primary-foreground" />
                 </div>
@@ -61,7 +61,7 @@ const Footer = () => {
 
             {Object.entries(footerLinks).map(([title, links]) => (
               <div key={title}>
-                <h4 className="text-sm font-semibold text-foreground mb-4">{title}</h4>
+                <h4 className="text-sm font-semibold text-foreground mb-4 uppercase tracking-wider">{title}</h4>
                 <ul className="space-y-2.5">
                   {links.map((link) => (
                     <li key={link.label}>

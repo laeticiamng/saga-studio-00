@@ -55,7 +55,6 @@ const statusIcons: Record<string, React.ReactNode> = {
 
 export default function Dashboard() {
   const { user } = useAuth();
-
   usePageTitle("Mes projets");
 
   const { data: projects, isLoading } = useQuery({
@@ -75,18 +74,21 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background">
       <OnboardingTour />
       <Navbar />
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <h1 className="text-3xl font-bold">Mes projets</h1>
+      <main className="container mx-auto px-4 py-10 md:py-14">
+        <div className="mb-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">Mes projets</h1>
+            <p className="text-muted-foreground mt-1 text-sm">Retrouvez et gérez toutes vos créations vidéo</p>
+          </div>
           <div className="flex gap-3">
             <Button variant="hero" size="sm" asChild>
               <Link to="/create/clip" className="gap-2">
-                <Music className="h-4 w-4" /> <span className="hidden xs:inline">Nouveau</span> clip
+                <Music className="h-4 w-4" /> Nouveau clip
               </Link>
             </Button>
             <Button variant="glass" size="sm" asChild>
               <Link to="/create/film" className="gap-2">
-                <Film className="h-4 w-4" /> <span className="hidden xs:inline">Nouveau</span> film
+                <Film className="h-4 w-4" /> Nouveau film
               </Link>
             </Button>
           </div>
@@ -98,11 +100,13 @@ export default function Dashboard() {
           </div>
         ) : !projects?.length ? (
           <Card className="border-dashed border-border/50 bg-card/40">
-            <CardContent className="flex flex-col items-center justify-center py-20">
-              <Film className="h-16 w-16 text-muted-foreground/50 mb-4" />
+            <CardContent className="flex flex-col items-center justify-center py-20 md:py-24">
+              <Film className="h-16 w-16 text-muted-foreground/50 mb-5" />
               <h3 className="text-lg font-medium mb-2">Aucun projet pour le moment</h3>
-              <p className="text-muted-foreground mb-6 text-center max-w-md">Créez votre première vidéo propulsée par l'IA</p>
-              <div className="flex flex-col sm:flex-row gap-3">
+              <p className="text-muted-foreground mb-8 text-center max-w-md text-sm">
+                Créez votre première vidéo propulsée par l'IA
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4">
                 <div className="text-center">
                   <Button variant="hero" asChild>
                     <Link to="/create/clip"><Music className="h-4 w-4 mr-2" /> Créer un clip</Link>
@@ -122,7 +126,7 @@ export default function Dashboard() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {projects.map((project) => (
               <Link key={project.id} to={`/project/${project.id}`}>
-                <Card className="border-border/50 bg-card/60 hover:bg-card/80 transition-all cursor-pointer group">
+                <Card className="border-border/50 bg-card/60 hover:bg-card/80 transition-all cursor-pointer group h-full">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <Badge variant="outline" className="text-xs">
@@ -134,7 +138,7 @@ export default function Dashboard() {
                         {statusLabels[project.status] || project.status}
                       </div>
                     </div>
-                    <CardTitle className="text-lg group-hover:text-primary transition-colors">
+                    <CardTitle className="text-lg group-hover:text-primary transition-colors mt-2">
                       {project.title}
                     </CardTitle>
                   </CardHeader>

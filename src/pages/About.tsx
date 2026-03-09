@@ -102,27 +102,27 @@ export default function About() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container mx-auto max-w-3xl px-4 py-16">
+      <main className="container mx-auto max-w-3xl px-4 py-16 md:py-20">
         <AnimatedSection>
           <div className="text-center mb-16">
             <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
               <Film className="h-8 w-8 text-primary" />
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">À propos de CineClip AI</h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+            <h1>À propos de CineClip AI</h1>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed mt-4">
               Nous croyons que tout le monde devrait pouvoir créer des vidéos de qualité professionnelle, sans compétence technique et sans budget de production.
             </p>
           </div>
         </AnimatedSection>
 
         <AnimatedSection delay={0.1}>
-          <div className="space-y-6 mb-16">
+          <div className="space-y-5 mb-16">
             <h2 className="text-2xl font-bold">Notre mission</h2>
             <p className="text-muted-foreground leading-relaxed">
               CineClip AI est né d'un constat simple : produire une vidéo de qualité demande du temps, des compétences et des outils coûteux. Nous avons voulu changer cela.
             </p>
             <p className="text-muted-foreground leading-relaxed">
-              Notre plateforme utilise l'intelligence artificielle pour transformer vos idées en vidéos complètes — clips musicaux, courts-métrages, contenus créatifs — en quelques minutes seulement. Vous décrivez, l'IA crée.
+              Notre plateforme utilise l'intelligence artificielle pour transformer vos idées en vidéos complètes — clips musicaux, courts-métrages, contenus créatifs — en quelques minutes seulement.
             </p>
             <p className="text-muted-foreground leading-relaxed">
               Que vous soyez musicien, créateur de contenu, réalisateur indépendant ou simplement curieux, CineClip AI met la création vidéo à votre portée.
@@ -132,13 +132,13 @@ export default function About() {
 
         <AnimatedSection delay={0.2}>
           <h2 className="text-2xl font-bold mb-8">Nos valeurs</h2>
-          <div className="grid sm:grid-cols-2 gap-6 mb-16">
+          <div className="grid sm:grid-cols-2 gap-5 mb-16">
             {values.map((v) => (
               <div key={v.title} className="rounded-xl border border-border/50 bg-card/60 p-6 space-y-3">
                 <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                   <v.icon className="w-5 h-5 text-primary" />
                 </div>
-                <h3 className="font-semibold text-foreground">{v.title}</h3>
+                <h3 className="font-semibold text-foreground text-base">{v.title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{v.description}</p>
               </div>
             ))}
@@ -148,7 +148,7 @@ export default function About() {
         <AnimatedSection delay={0.3}>
           <div className="rounded-xl border border-border/50 bg-card/60 p-8">
             <h2 className="text-2xl font-bold mb-2 text-center">Une question ?</h2>
-            <p className="text-muted-foreground mb-6 text-center">
+            <p className="text-muted-foreground mb-6 text-center text-sm">
               Remplissez le formulaire ci-dessous. Nous répondons généralement sous 24 heures.
             </p>
             <ContactForm />

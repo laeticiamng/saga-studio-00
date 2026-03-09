@@ -114,20 +114,20 @@ export default function Pricing() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container mx-auto px-4 py-12">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-3">Des tarifs simples et transparents</h1>
-          <p className="text-lg text-muted-foreground max-w-xl mx-auto">
+      <main className="container mx-auto px-4 py-16 md:py-20">
+        <div className="page-header">
+          <h1>Des tarifs simples et transparents</h1>
+          <p>
             Commencez gratuitement avec 10 crédits. Passez à un abonnement ou achetez des packs quand vous en avez besoin.
           </p>
         </div>
 
         {/* Credit explainer */}
-        <div className="max-w-2xl mx-auto mb-10 rounded-xl border border-border/50 bg-card/40 p-4 text-center">
+        <div className="max-w-2xl mx-auto mb-12 rounded-xl border border-border/50 bg-card/40 p-5 text-center">
           <p className="text-sm text-muted-foreground flex items-center justify-center gap-2 flex-wrap">
             <Coins className="h-4 w-4 text-primary" />
             <strong className="text-foreground">1 crédit ≈ 1 scène générée.</strong>
-            Un clip de 2 minutes contient environ 15 à 25 scènes selon le style choisi.
+            Un clip de 2 min ≈ 15-25 crédits selon le style.
             <Tooltip>
               <TooltipTrigger>
                 <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
@@ -139,7 +139,7 @@ export default function Pricing() {
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3 max-w-4xl mx-auto mb-16">
+        <div className="grid gap-6 md:grid-cols-3 max-w-4xl mx-auto mb-20">
           {PLANS.map((plan) => {
             const current = isCurrentPlan(plan);
             return (
@@ -154,21 +154,21 @@ export default function Pricing() {
                     Votre plan
                   </Badge>
                 )}
-                <CardHeader className="text-center">
+                <CardHeader className="text-center pb-4">
                   <CardTitle className="text-xl">{plan.name}</CardTitle>
-                  <div className="mt-2">
+                  <div className="mt-3">
                     <span className="text-4xl font-bold">{plan.price}</span>
-                    <span className="text-muted-foreground">{plan.period}</span>
+                    <span className="text-muted-foreground text-sm">{plan.period}</span>
                   </div>
-                  <CardDescription className="flex items-center justify-center gap-1 mt-1">
+                  <CardDescription className="flex items-center justify-center gap-1 mt-2">
                     <Coins className="h-4 w-4 text-primary" /> {plan.credits} crédits{plan.stripe_key ? "/mois" : ""}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ul className="space-y-2 mb-6">
+                  <ul className="space-y-2.5 mb-6">
                     {plan.features.map((f) => (
-                      <li key={f} className="flex items-center gap-2 text-sm">
-                        <Check className="h-4 w-4 text-primary shrink-0" /> {f}
+                      <li key={f} className="flex items-start gap-2 text-sm">
+                        <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" /> <span>{f}</span>
                       </li>
                     ))}
                   </ul>
@@ -189,7 +189,7 @@ export default function Pricing() {
                       Plan actuel
                     </Button>
                   ) : (
-                    <Button variant="glass" className="w-full" onClick={() => navigate("/auth")}>
+                    <Button variant="glass" className="w-full" onClick={() => navigate("/auth?signup")}>
                       Commencer gratuitement
                     </Button>
                   )}
@@ -200,8 +200,8 @@ export default function Pricing() {
         </div>
 
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-2xl font-bold text-center mb-2">Besoin de plus de crédits ?</h2>
-          <p className="text-center text-muted-foreground mb-6 text-sm">Achetez des packs ponctuels, sans abonnement. Les crédits n'expirent pas.</p>
+          <h2 className="text-2xl font-bold text-center mb-3">Besoin de plus de crédits ?</h2>
+          <p className="text-center text-muted-foreground mb-8 text-sm">Achetez des packs ponctuels, sans abonnement. Les crédits n'expirent pas.</p>
           <div className="grid gap-4 md:grid-cols-3">
             {PACKS.map((pack) => (
               <Card key={pack.credits} className="border-border/50 bg-card/40">

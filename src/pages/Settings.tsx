@@ -6,7 +6,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -26,7 +26,6 @@ export default function Settings() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  // Webhook state
   const [newWebhookUrl, setNewWebhookUrl] = useState("");
   const [addingWebhook, setAddingWebhook] = useState(false);
   const [revealedSecrets, setRevealedSecrets] = useState<Set<string>>(new Set());
@@ -79,8 +78,9 @@ export default function Settings() {
     const { error } = await supabase.from("profiles").update({ display_name: displayName }).eq("id", user.id);
     setLoading(false);
     if (error) toast({ title: "Erreur", description: error.message, variant: "destructive" });
-    else toast({ title: "Enregistré", description: "Profil mis à jour" });
+    else toast({ title: "Enregistré", description: "Profil mis à jour." });
   };
+
   const handleChangePassword = async () => {
     if (newPassword.length < 6) {
       toast({ title: "Erreur", description: "Le mot de passe doit contenir au moins 6 caractères.", variant: "destructive" });
@@ -104,24 +104,19 @@ export default function Settings() {
 
   const handleAddWebhook = async () => {
     if (!user || !newWebhookUrl.trim()) return;
-    try {
-      new URL(newWebhookUrl); // validate URL
-    } catch {
+    try { new URL(newWebhookUrl); } catch {
       toast({ title: "URL invalide", description: "Entrez une URL valide (https://...)", variant: "destructive" });
       return;
     }
     setAddingWebhook(true);
-    const { error } = await supabase.from("webhook_endpoints").insert({
-      user_id: user.id,
-      url: newWebhookUrl.trim(),
-    });
+    const { error } = await supabase.from("webhook_endpoints").insert({ user_id: user.id, url: newWebhookUrl.trim() });
     setAddingWebhook(false);
     if (error) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } else {
       setNewWebhookUrl("");
       queryClient.invalidateQueries({ queryKey: ["webhooks"] });
-      toast({ title: "Webhook ajouté", description: "Vous recevrez des notifications quand un rendu sera terminé." });
+      toast({ title: "Webhook ajouté" });
     }
   };
 
@@ -146,37 +141,40 @@ export default function Settings() {
 
   const copySecret = (secret: string) => {
     navigator.clipboard.writeText(secret);
-    toast({ title: "Copié", description: "Secret copié dans le presse-papier" });
+    toast({ title: "Copié", description: "Secret copié dans le presse-papier." });
   };
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container mx-auto max-w-2xl px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8">Paramètres</h1>
+      <main className="container mx-auto max-w-2xl px-4 py-10 md:py-14 space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Paramètres</h1>
+          <p className="text-muted-foreground mt-1 text-sm">Gérez votre profil, mot de passe et préférences</p>
+        </div>
 
         {/* Profile */}
-        <Card className="border-border/50 bg-card/60 mb-6">
-          <CardHeader><CardTitle>Profil</CardTitle></CardHeader>
+        <Card className="border-border/50 bg-card/60">
+          <CardHeader><CardTitle className="text-lg">Profil</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>Email</Label>
-              <Input value={user?.email || ""} disabled />
+              <Input value={user?.email || ""} disabled className="text-muted-foreground" />
             </div>
             <div className="space-y-2">
               <Label>Nom d'affichage</Label>
               <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
             </div>
-            <Button variant="hero" onClick={handleSave} disabled={loading}>
+            <Button variant="hero" size="sm" onClick={handleSave} disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />} Enregistrer
             </Button>
           </CardContent>
         </Card>
 
         {/* Change password */}
-        <Card className="border-border/50 bg-card/60 mb-6">
+        <Card className="border-border/50 bg-card/60">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><KeyRound className="h-5 w-5 text-primary" /> Changer le mot de passe</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-lg"><KeyRound className="h-5 w-5 text-primary" /> Changer le mot de passe</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -193,75 +191,68 @@ export default function Settings() {
             {confirmPassword && newPassword !== confirmPassword && (
               <p className="text-xs text-destructive">Les mots de passe ne correspondent pas</p>
             )}
-            <Button variant="hero" onClick={handleChangePassword} disabled={changingPassword || !newPassword || newPassword !== confirmPassword || newPassword.length < 6}>
+            <Button variant="hero" size="sm" onClick={handleChangePassword} disabled={changingPassword || !newPassword || newPassword !== confirmPassword || newPassword.length < 6}>
               {changingPassword && <Loader2 className="h-4 w-4 animate-spin mr-2" />} Modifier le mot de passe
             </Button>
           </CardContent>
         </Card>
 
-        {/* Webhooks — Advanced, collapsible */}
-        <Card className="border-border/50 bg-card/60 mb-6">
+        {/* Webhooks */}
+        <Card className="border-border/50 bg-card/60">
           <details>
-            <summary className="cursor-pointer px-6 py-4 flex items-center gap-2 font-semibold text-foreground">
-              <Webhook className="h-5 w-5 text-primary" /> Notifications webhook
+            <summary className="cursor-pointer px-6 py-4 flex items-center gap-2 font-semibold text-foreground text-sm">
+              <Webhook className="h-4 w-4 text-primary" /> Notifications webhook
               <span className="text-xs font-normal text-muted-foreground ml-2">(avancé)</span>
             </summary>
             <CardContent className="pt-0 space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Recevez automatiquement un appel HTTP sur votre serveur quand un rendu vidéo est terminé. Utile si vous intégrez CineClip à votre propre application ou workflow.
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Recevez un appel HTTP quand un rendu vidéo est terminé. Utile pour intégrer CineClip à votre propre application.
               </p>
-            {/* Add new webhook */}
-            <div className="flex gap-2">
-              <Input
-                value={newWebhookUrl}
-                onChange={(e) => setNewWebhookUrl(e.target.value)}
-                placeholder="https://votre-service.com/webhook"
-                className="flex-1"
-              />
-              <Button variant="hero" size="sm" onClick={handleAddWebhook} disabled={addingWebhook || !newWebhookUrl.trim()}>
-                {addingWebhook ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              </Button>
-            </div>
+              <div className="flex gap-2">
+                <Input value={newWebhookUrl} onChange={(e) => setNewWebhookUrl(e.target.value)} placeholder="https://votre-service.com/webhook" className="flex-1" />
+                <Button variant="hero" size="sm" onClick={handleAddWebhook} disabled={addingWebhook || !newWebhookUrl.trim()}>
+                  {addingWebhook ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                </Button>
+              </div>
 
-            {/* List */}
-            {webhooksLoading ? (
-              <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
-            ) : !webhooks?.length ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Aucun webhook configuré</p>
-            ) : (
-              <div className="space-y-3">
-                {webhooks.map((wh: any) => (
-                  <div key={wh.id} className="rounded-lg border border-border/50 bg-secondary/30 p-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Badge variant={wh.active ? "default" : "secondary"} className="shrink-0">
-                          {wh.active ? "Actif" : "Inactif"}
-                        </Badge>
-                        <span className="text-sm truncate">{wh.url}</span>
+              {webhooksLoading ? (
+                <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+              ) : !webhooks?.length ? (
+                <p className="text-sm text-muted-foreground text-center py-4">Aucun webhook configuré</p>
+              ) : (
+                <div className="space-y-3">
+                  {webhooks.map((wh: any) => (
+                    <div key={wh.id} className="rounded-lg border border-border/50 bg-secondary/30 p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Badge variant={wh.active ? "default" : "secondary"} className="shrink-0 text-xs">
+                            {wh.active ? "Actif" : "Inactif"}
+                          </Badge>
+                          <span className="text-sm truncate">{wh.url}</span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Switch checked={wh.active} onCheckedChange={() => handleToggleWebhook(wh.id, wh.active)} />
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteWebhook(wh.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Switch checked={wh.active} onCheckedChange={() => handleToggleWebhook(wh.id, wh.active)} />
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteWebhook(wh.id)}>
-                          <Trash2 className="h-4 w-4" />
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>Secret :</span>
+                        <code className="bg-background/50 px-1.5 py-0.5 rounded font-mono text-xs">
+                          {revealedSecrets.has(wh.id) ? wh.secret : "••••••••••••••••"}
+                        </code>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleSecret(wh.id)}>
+                          {revealedSecrets.has(wh.id) ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copySecret(wh.secret)}>
+                          <Copy className="h-3 w-3" />
                         </Button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>Secret :</span>
-                      <code className="bg-background/50 px-1.5 py-0.5 rounded font-mono">
-                        {revealedSecrets.has(wh.id) ? wh.secret : "••••••••••••••••"}
-                      </code>
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleSecret(wh.id)}>
-                        {revealedSecrets.has(wh.id) ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copySecret(wh.secret)}>
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
             </CardContent>
           </details>
         </Card>
@@ -269,10 +260,10 @@ export default function Settings() {
         {/* Credit history */}
         <Card className="border-border/50 bg-card/60">
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+            <CardTitle className="flex items-center justify-between text-lg">
               Historique des crédits
               {wallet && (
-                <Badge variant="secondary" className="text-base">
+                <Badge variant="secondary" className="text-sm font-medium">
                   Solde : {wallet.balance} crédits
                 </Badge>
               )}
