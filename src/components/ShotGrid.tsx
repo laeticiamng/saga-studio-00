@@ -5,6 +5,7 @@ import { CheckCircle, Loader2, AlertCircle, Clock, RotateCcw, Play } from "lucid
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { motion } from "framer-motion";
 
 interface Shot {
   id: string;
