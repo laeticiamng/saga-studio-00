@@ -1,7 +1,8 @@
-import { motion, useMotionValue, useTransform, animate, useScroll } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { useRef } from "react";
 import AnimatedSection from "./AnimatedSection";
 import { Star } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 function Counter({ target, suffix = "" }: { target: number; suffix?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
