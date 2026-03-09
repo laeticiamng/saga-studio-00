@@ -119,6 +119,7 @@ export function ShotGrid({ shots }: { shots: Shot[] }) {
               )}
             </div>
           </Card>
+          </motion.div>
         );
       })}
     </div>
