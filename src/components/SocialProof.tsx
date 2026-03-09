@@ -1,6 +1,6 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
-import AnimatedSection from "./AnimatedSection";
+import AnimatedSection, { StaggerContainer, StaggerItem } from "./AnimatedSection";
 import { Star } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
@@ -54,7 +54,6 @@ export default function SocialProof() {
 
   const glowY = useTransform(scrollYProgress, [0, 1], ["40px", "-60px"]);
   const glowScale = useTransform(scrollYProgress, [0, 0.5, 1], [0.8, 1.2, 0.9]);
-  const cardsY = useTransform(scrollYProgress, [0, 1], ["50px", "-30px"]);
 
   return (
     <section ref={sectionRef} id="proof" className="page-section relative overflow-hidden">
@@ -66,7 +65,7 @@ export default function SocialProof() {
 
       <div className="container mx-auto relative z-10">
         {/* Testimonials */}
-        <AnimatedSection delay={0.1}>
+        <AnimatedSection variant="blurIn" delay={0.1}>
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
             Ce qu'en disent nos premiers utilisateurs
           </h2>
@@ -75,11 +74,11 @@ export default function SocialProof() {
           </p>
         </AnimatedSection>
 
-        <div className="grid md:grid-cols-3 gap-6 mb-20">
+        <StaggerContainer staggerDelay={0.12} className="grid md:grid-cols-3 gap-6 mb-20">
           {testimonials.map((t, i) => (
-            <AnimatedSection key={t.name} delay={0.08 * (i + 1)}>
+            <StaggerItem key={t.name} variant="fadeUp">
               <motion.div
-                whileHover={{ y: -4 }}
+                whileHover={{ y: -6, scale: 1.02 }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 className="rounded-xl border border-border/50 bg-card/60 backdrop-blur-sm p-6 h-full flex flex-col"
               >
@@ -104,20 +103,20 @@ export default function SocialProof() {
                   </div>
                 </div>
               </motion.div>
-            </AnimatedSection>
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerContainer>
 
         {/* Why CineClip */}
-        <AnimatedSection delay={0.15}>
+        <AnimatedSection variant="blurIn" delay={0.15}>
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">
             Pourquoi choisir CineClip AI ?
           </h2>
         </AnimatedSection>
 
-        <motion.div style={{ y: cardsY }} className="grid md:grid-cols-3 gap-6">
-          {highlights.map((h, i) => (
-            <AnimatedSection key={h.title} delay={0.1 * (i + 1)}>
+        <StaggerContainer staggerDelay={0.12} className="grid md:grid-cols-3 gap-6">
+          {highlights.map((h) => (
+            <StaggerItem key={h.title} variant="scaleIn">
               <motion.div
                 whileHover={{ y: -6, scale: 1.02 }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
@@ -127,9 +126,9 @@ export default function SocialProof() {
                 <h3 className="font-semibold text-foreground text-lg mb-2">{h.title}</h3>
                 <p className="text-muted-foreground leading-relaxed flex-1">{h.text}</p>
               </motion.div>
-            </AnimatedSection>
+            </StaggerItem>
           ))}
-        </motion.div>
+        </StaggerContainer>
       </div>
     </section>
   );

@@ -24,12 +24,18 @@ const CTA = () => {
       />
 
       <div className="container mx-auto relative z-10">
-        <AnimatedSection>
+        <AnimatedSection variant="blurIn">
           <div className="max-w-3xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card/40 backdrop-blur-sm border border-border/50 mb-8">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card/40 backdrop-blur-sm border border-border/50 mb-8"
+            >
               <Sparkles className="w-4 h-4 text-primary" />
               <span className="text-sm text-muted-foreground">Gratuit, sans engagement, sans carte bancaire</span>
-            </div>
+            </motion.div>
 
             <h2 className="text-4xl md:text-6xl font-bold mb-6">
               Prêt à créer
@@ -41,7 +47,13 @@ const CTA = () => {
               Votre premier clip est offert. Uploadez votre musique, choisissez un style, et recevez votre vidéo en quelques minutes.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+            >
               <Button
                 variant="hero"
                 size="lg"
@@ -55,11 +67,17 @@ const CTA = () => {
               <Button variant="glass" size="lg" onClick={() => navigate("/pricing")}>
                 Voir les tarifs
               </Button>
-            </div>
+            </motion.div>
 
-            <p className="text-sm text-muted-foreground mt-8">
+            <motion.p
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+              className="text-sm text-muted-foreground mt-8"
+            >
               1 clip complet offert • Sans engagement • Résultat en ~10 minutes
-            </p>
+            </motion.p>
           </div>
         </AnimatedSection>
       </div>
