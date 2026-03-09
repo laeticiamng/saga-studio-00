@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { GlobalNotifications } from "@/components/GlobalNotifications";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import AdminRoute from "@/components/AdminRoute";
 import CookieBanner from "@/components/CookieBanner";
 import { Loader2 } from "lucide-react";
 
@@ -45,7 +46,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <AuthProvider>
             <GlobalNotifications />
             <CookieBanner />
@@ -61,7 +62,7 @@ const App = () => (
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 <Route path="/share/:id" element={<ShareView />} />
-                <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+                <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/legal" element={<Legal />} />
