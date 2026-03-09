@@ -28,19 +28,17 @@ const CTA = () => {
           <div className="max-w-3xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card/40 backdrop-blur-sm border border-border/50 mb-8">
               <Sparkles className="w-4 h-4 text-primary" />
-              <span className="text-sm text-muted-foreground">10 crédits offerts, sans engagement</span>
+              <span className="text-sm text-muted-foreground">Gratuit, sans engagement, sans carte bancaire</span>
             </div>
 
             <h2 className="text-4xl md:text-6xl font-bold mb-6">
-              Créez votre première vidéo
+              Prêt à créer
               <br />
-              <span className="text-primary">en quelques minutes</span>
+              <span className="text-primary">votre premier clip ?</span>
             </h2>
 
             <p className="text-xl text-muted-foreground mb-12">
-              Décrivez votre idée, uploadez votre musique, et laissez l'IA faire le reste.
-              <br className="hidden md:block" />
-              Aucune compétence technique, aucun logiciel à installer.
+              Votre premier clip est offert. Uploadez votre musique, choisissez un style, et recevez votre vidéo en quelques minutes.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -48,7 +46,7 @@ const CTA = () => {
                 variant="hero"
                 size="lg"
                 className="group"
-                onClick={() => navigate(user ? "/create/clip" : "/auth")}
+                onClick={() => navigate(user ? "/create/clip" : "/auth?signup")}
               >
                 <Video className="w-5 h-5 group-hover:scale-110 transition-transform" />
                 Essai gratuit — Créer ma vidéo
@@ -60,7 +58,7 @@ const CTA = () => {
             </div>
 
             <p className="text-sm text-muted-foreground mt-8">
-              Aucune carte bancaire requise • Sans engagement • Résultat en ~10 minutes
+              1 clip complet offert • Sans engagement • Résultat en ~10 minutes
             </p>
           </div>
         </AnimatedSection>

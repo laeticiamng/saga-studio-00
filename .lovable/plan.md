@@ -1,88 +1,189 @@
 
+# CineClip AI - Plan de construction complet
 
-# AUDIT BETA-TESTEUR NON TECHNIQUE — CineClip AI
+## Vue d'ensemble
 
----
-
-## 1. RESUME EXECUTIF
-
-### Ce qu'un novice comprend en arrivant
-En 5 secondes, le hero est clair : "Transformez votre musique en clip video avec l'IA". La promesse est immediate, le sous-titre concret ("Uploadez votre musique, choisissez un style visuel, recevez une video"). Les reassurances sous le hero ("Donnees securisees en Europe", "Video prete en 5-15 min") renforcent la comprehension. **La homepage fait un bon travail de premiere impression.**
-
-### Ce qu'il ne comprend PAS
-1. **"Credits"** — le mot "credits" est utilise partout (hero, pricing, CTA) sans jamais etre explique avant la page pricing. Un novice ne sait pas combien de credits coute un clip, ni ce que ca represente concretement. Le hero dit "10 credits offerts" mais 10 credits = combien de videos ? Une ? Dix ? Zero ?
-2. **Difference clip vs film** — le dashboard propose "Nouveau clip" et "Nouveau film" sans aucune explication de la difference. Un novice hesite.
-3. **"Démo video bientôt disponible"** — la galerie montre 3 images fixes et un placeholder "demo bientot disponible". Pour un produit qui vend des VIDEOS, ne pas montrer un seul resultat video est un frein majeur a la confiance.
-4. **Temoignages non verifies** — 3 temoignages avec prenoms tronques ("Lea M.", "Thomas R.") sans photo, sans lien, sans preuve. Semblent inventes.
-5. **Qui est derriere ?** — aucun lien "A propos" dans la navbar principale. Il faut aller dans le footer pour trouver "A propos". Pour un produit qui demande un paiement, c'est un manque de transparence.
-
-### 5 plus gros freins a la conversion
-1. **Aucune video de demonstration** — le produit vend des videos mais n'en montre aucune
-2. **"Credits" non expliques dans le hero/CTA** — "10 credits offerts" ne veut rien dire pour un novice
-3. **Temoignages peu credibles** — pas de photos, pas de noms complets, pas de liens
-4. **Pas de lien "A propos" dans la navbar** — l'utilisateur ne sait pas qui est derriere
-5. **Sections repetitives sur la homepage** — Features, SocialProof/"Pourquoi choisir", HowItWorks disent des choses similaires, la page est trop longue
-
-### 5 priorites absolues
-1. Ajouter une explication concrete des credits dans le hero ("10 credits offerts = 1 clip complet")
-2. Supprimer ou remplacer le placeholder "Demo video bientot disponible" — il nuit a la credibilite
-3. Rendre les temoignages plus credibles (ajouter des avatars, meme generiques)
-4. Ajouter "A propos" dans la navbar
-5. Simplifier la homepage — fusionner les sections redundantes
+Transformer la landing page actuelle en une plateforme full-stack de generation de clips video et courts metrages, avec authentification, pipeline de generation IA multi-providers, systeme de credits/billing Stripe, et dashboard admin.
 
 ---
 
-## 2. TABLEAU D'AUDIT COMPLET
+## Phase 1 : Infrastructure Backend (Supabase)
 
-| Priorite | Page / Zone | Probleme | Ressenti novice | Impact | Recommandation | Faisable ? |
-|----------|------------|----------|-----------------|--------|----------------|------------|
-| P0 | Hero | "10 credits offerts" sans explication de ce que ca represente | "C'est combien de videos, 10 credits ?" | Confusion, abandon | Ajouter "(= 1 clip complet)" apres "10 credits offerts" | Oui |
-| P0 | Gallery | Placeholder "Demo video bientot disponible" | "Ils n'ont meme pas de demo ? Le produit est-il reel ?" | Perte de confiance majeure | Supprimer le placeholder, garder uniquement les images | Oui |
-| P0 | SocialProof | Temoignages sans photos, noms tronques | "Ces gens existent-ils vraiment ?" | Credibilite | Ajouter des avatars (initiales colorees), ajouter "Utilisateur beta" | Oui |
-| P1 | SocialProof | Compteurs "10" / "13" / "5 min" sont des chiffres trop petits pour impressionner | "10 credits ? 13 styles ? C'est tout ?" | Anti-social-proof | Reformuler : "10 credits offerts" → supprimer les compteurs, garder uniquement les highlights | Oui |
-| P1 | Navbar | Pas de lien "A propos" visible | "Qui fait ce site ?" | Manque de confiance | Ajouter un lien dans le footer ET dans la navbar pour les pages non-landing | Oui |
-| P1 | Homepage | Sections trop nombreuses et repetitives (Features + "Pourquoi choisir" + HowItWorks) | "Ca repete la meme chose" | Fatigue de lecture, scroll excessif | Fusionner "Pourquoi choisir" dans Features ou le supprimer | Oui |
-| P1 | Pricing | "1 credit ≈ 1 scene generee" — un novice ne sait pas ce qu'est une scene | "C'est quoi une scene ?" | Confusion pricing | Reformuler : "1 clip de 2 min ≈ 15-25 credits" plus visiblement | Oui |
-| P1 | CTA final | Repete quasi-mot pour mot le hero | "J'ai deja lu ca" | Inutile | Varier le message : mettre l'accent sur "gratuit, sans engagement, 1 clip complet offert" | Oui |
-| P2 | Auth | Titre "Content de vous revoir" pour un premier visiteur qui n'a jamais eu de compte | "Je ne suis jamais venu ici" | Legere confusion | Mettre le mode signup par defaut quand venant du CTA "Essai gratuit" | Oui |
-| P2 | Dashboard vide | "Creez votre premiere video propulsee par l'IA" — pas d'explication clip vs film | "C'est quoi la difference ?" | Hesitation | Ajouter une phrase sous chaque bouton | Deja fait partiellement |
-| P2 | CreateClip | "Moteur IA" dans les options avancees — Runway Gen-4, Luma, Google Veo | "C'est quoi tout ca ? Je veux juste ma video" | Surcharge technique | OK car cache dans "Options avancees", mais le label devrait etre plus clair | Oui |
-| P2 | Cookies | Banner dit "cookies essentiels" mais propose "Refuser" — si essentiels, pourquoi refuser ? | Confusion | Legere incoherence | Reformuler : "Accepter" uniquement, ou clarifier | Oui |
-| P2 | Footer | "Contact" renvoie vers /about — pas evident | "Ou est la page contact ?" | Friction | OK car formulaire est dans About, mais le label pourrait etre "Nous contacter" | Oui |
-| P3 | Homepage | ClientLogos section nommee "ClientLogos" mais ne contient aucun logo — ce sont des reassurances | Pas visible par l'utilisateur | Cosmetique | Renommer internement seulement | Non prioritaire |
-| P3 | Gallery images | 3 images statiques avec "Exemple" badge — correct mais pourrait montrer plus de variete | "C'est tout ?" | Leger | Acceptable en l'etat | Non urgent |
-| P3 | Mobile | Homepage est longue a scroller — sections nombreuses | Scroll fatigue | Mineur | Acceptable mais ideal serait de reduire | Lie a P1 |
+### 1.1 Activer Lovable Cloud / Supabase
+- Connecter le projet a Supabase (Cloud)
+- Configurer l'authentification (email + OAuth Google/GitHub)
+
+### 1.2 Schema de base de donnees (migrations SQL)
+
+**Tables a creer :**
+
+| Table | Description |
+|-------|-------------|
+| `profiles` | Infos utilisateur (display_name, avatar_url) |
+| `user_roles` | Roles (admin, moderator, user) avec enum `app_role` |
+| `credit_wallets` | Solde de credits par utilisateur |
+| `credit_ledger` | Historique des transactions credits |
+| `projects` | Projets (clip ou film) avec metadonnees |
+| `audio_analysis` | Resultat analyse audio (BPM, sections, beats) |
+| `plans` | Style bible, character bible, shotlist JSON |
+| `shots` | Shots individuels generes par l'IA |
+| `renders` | Fichiers finaux (16:9, 9:16, teaser) |
+| `moderation_flags` | Signalements pour moderation |
+| `provider_configs` | Configuration providers par defaut (admin) |
+
+**Securite :**
+- RLS sur toutes les tables utilisateur
+- Fonction `has_role()` security definer pour eviter la recursion
+- Storage buckets : `audio-uploads`, `face-references`, `shot-outputs`, `renders` avec policies par user
+
+### 1.3 Edge Functions
+
+| Fonction | Role |
+|----------|------|
+| `create-project` | Creer un projet clip ou film |
+| `analyze-audio` | Analyser l'audio (BPM, beats, sections) via Lovable AI |
+| `plan-project` | Generer style_bible + character_bible + shotlist via Lovable AI |
+| `generate-shots` | Appeler le provider video (Sora 2 / Runway / Luma / Veo) |
+| `check-shot-status` | Polling du statut des shots en cours |
+| `stitch-render` | Lancer l'assemblage final (FFmpeg via endpoint externe) |
+| `project-status` | Statut global du pipeline |
+| `estimate-cost` | Calculer le cout en credits avant generation |
+| `admin-actions` | Moderation, refunds, stats (protege par role admin) |
 
 ---
 
-## 3. AMELIORATIONS PRIORITAIRES A IMPLEMENTER
+## Phase 2 : Provider Abstraction Layer
 
-### Textes a reecrire
-1. **Hero badge** : "🎁 10 credits offerts — Aucune carte bancaire requise" → "🎁 Votre premier clip offert — Aucune carte bancaire requise"
-2. **Hero sub-features** : "Jusqu'a 4K selon le plan" est technique → "Qualite HD et 4K"
-3. **CTA final** : Varier le titre → "Pret a creer votre clip ?" au lieu de repeter le hero
+### Interface TypeScript commune
 
-### Sections a modifier
-1. **Supprimer le placeholder "Demo video bientot disponible"** de la galerie — il nuit plus qu'il n'aide
-2. **Supprimer les compteurs SocialProof** (10, 13, 5 min) — ces chiffres sont trop petits pour impressionner, ils ont l'effet inverse
-3. **Ajouter des avatars aux temoignages** — meme de simples initiales dans des cercles colores
+```text
+Provider Interface:
+  - generateVideo(prompt, duration, style, seed) -> job_id
+  - checkStatus(job_id) -> status + output_url
+  - getCapabilities() -> max_duration, formats, features
+```
 
-### CTA a renommer
-- "Essai gratuit — Creer ma video" est bien mais long. Alternative : "Creer mon premier clip gratuitement"
+### Providers implementes
 
-### Elements de confiance a ajouter
-- Ajouter le lien "A propos" dans le footer de la navbar sur les pages non-landing (deja present dans le footer, mais plus visible dans la nav)
+| Provider | Duree max | Notes |
+|----------|-----------|-------|
+| OpenAI Sora 2 | Variable | Provider par defaut, audio sync |
+| Runway Gen-4 | 5-10s | Shots courts |
+| Luma Dream Machine | Variable | Support references image |
+| Google Veo 3.1 | 8s | Alternative |
+
+Chaque provider est active/desactive via variables d'environnement (secrets Supabase). Si la cle manque, le provider est masque dans l'UI.
 
 ---
 
-## 4. PLAN D'IMPLEMENTATION
+## Phase 3 : Frontend - Pages et composants
 
-Les modifications suivantes seront implementees :
+### 3.1 Navigation et layout
+- Navbar sticky avec logo CineClip AI, liens, bouton connexion/credits
+- Layout principal avec sidebar pour projets
+- Footer mis a jour
 
-1. **Hero.tsx** : Remplacer "10 credits offerts" par "Votre premier clip offert" dans le badge. Simplifier les sub-features.
-2. **Gallery.tsx** : Supprimer le bloc placeholder "Demo video bientot disponible".
-3. **SocialProof.tsx** : Supprimer la section compteurs. Ajouter des avatars (initiales colorees) aux temoignages.
-4. **CTA.tsx** : Varier le titre et le message par rapport au hero.
-5. **Navbar.tsx** : Ajouter "A propos" dans les landingLinks.
-6. **Auth.tsx** : Passer le mode signup par defaut quand l'utilisateur arrive depuis un CTA "Essai gratuit".
+### 3.2 Pages
+
+| Route | Description |
+|-------|-------------|
+| `/` | Landing page (existante, mise a jour) |
+| `/auth` | Login / Signup |
+| `/dashboard` | Liste des projets, stats rapides |
+| `/create/clip` | Formulaire creation clip (upload audio, mode, style, duree) |
+| `/create/film` | Formulaire creation film (titre, synopsis, style, duree) |
+| `/project/:id` | Vue projet : pipeline live, timeline, preview |
+| `/project/:id/result` | Page resultat : download, exports, logs |
+| `/pricing` | Plans Stripe + credit packs |
+| `/admin` | Dashboard admin (protege par role) |
+| `/settings` | Parametres compte, provider prefere |
+
+### 3.3 Composants cles
+
+- **ProjectCreationWizard** : Multi-step form (audio upload -> mode -> style -> estimation -> confirmation)
+- **PipelineProgress** : Timeline visuelle en temps reel (Analyze -> Plan -> Generate -> QA -> Stitch -> Export)
+- **ShotGrid** : Grille de tous les shots generes avec statut
+- **VideoPlayer** : Lecteur video integre pour preview
+- **CreditDisplay** : Badge credits dans la navbar
+- **CostEstimator** : Estimation dynamique du cout avant generation
+- **StylePresetPicker** : Selecteur visuel de styles (Cinematic, Anime, Noir, Hyperpop, Afrofuturism, etc.)
+- **AdminProjectTable** : Table de moderation avec filtres
+
+---
+
+## Phase 4 : Pipeline de generation
+
+### Flux complet (Clip)
+
+```text
+1. Upload audio -> Supabase Storage
+2. analyze-audio -> Extract BPM, beats, sections, energy
+3. plan-project -> Director Agent via Lovable AI
+   -> style_bible + character_bible + shotlist (20-60 shots)
+4. generate-shots -> Pour chaque shot :
+   - Appel provider API
+   - Polling statut
+   - QA basique (echec -> regen, deviation style -> regen contrainte)
+   - Stockage output dans Storage
+5. stitch-render -> FFmpeg :
+   - Aligner cuts sur beat grid
+   - Transitions entre shots
+   - Export 16:9 master + 9:16 crop + teaser 15s
+6. Notification utilisateur -> Projet pret
+```
+
+### Job Queue (sans service externe)
+- Table `job_queue` dans Supabase
+- Edge function worker pollee via pg_cron (toutes les 30s)
+- Chaque etape du pipeline est un job avec statut et retry logic
+
+---
+
+## Phase 5 : Billing (Stripe)
+
+- Activer l'integration Stripe Lovable
+- Plans d'abonnement : Free (10 credits/mois), Pro (100 credits), Studio (500 credits)
+- Credit packs additionnels : 50 credits, 200 credits, 500 credits
+- Formule de cout : `credits = base_cost + (nb_shots x shot_cost x resolution_multiplier)`
+- Verification du solde avant chaque generation
+- Webhook Stripe pour mise a jour automatique du wallet
+
+---
+
+## Phase 6 : Admin Dashboard
+
+- Vue liste de tous les projets avec filtres (statut, user, date, flags)
+- Detail projet : prompts, outputs, shots, logs
+- Actions : desactiver utilisateur, rembourser credits, supprimer contenu
+- Stats : usage par provider, credits consommes, projets par jour
+
+---
+
+## Ordre d'implementation
+
+1. Activer Supabase / Lovable Cloud
+2. Migrations SQL (schema complet + RLS + fonctions)
+3. Auth (login/signup) + profil utilisateur
+4. Dashboard utilisateur (liste projets vide)
+5. Formulaire creation clip + creation film
+6. Edge functions pipeline (create -> analyze -> plan -> generate -> stitch)
+7. Provider abstraction + secrets API
+8. Pipeline progress UI en temps reel
+9. Page resultat avec exports
+10. Activer Stripe + pricing page + credit system
+11. Admin dashboard
+12. Polish : animations, responsive, error handling
+
+---
+
+## Details techniques
+
+- **Stack** : React + Vite + TypeScript + Tailwind (pas de Next.js)
+- **Backend** : Supabase Edge Functions (Deno) pour toute la logique serveur
+- **Storage** : Supabase Storage pour audio, references, shots, renders
+- **Auth** : Supabase Auth avec profils + roles
+- **State** : TanStack Query pour le data fetching + polling pipeline
+- **Routing** : React Router v6 avec routes protegees
+- **FFmpeg** : L'assemblage final necessitera soit un endpoint FFmpeg externe, soit un service tiers (limitation Edge Functions pour le traitement video lourd) - on preparera l'architecture et on pourra integrer un service comme Shotstack ou un serveur FFmpeg dedie plus tard
+- **Providers video** : Les cles API seront stockees en secrets Supabase, les appels se font uniquement depuis les Edge Functions
 

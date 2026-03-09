@@ -22,7 +22,7 @@ const Hero = () => {
   const contentOpacity = useTransform(scrollYProgress, [0, 0.6], [1, 0]);
 
   const handleGetStarted = () => {
-    navigate(user ? "/create/clip" : "/auth");
+    navigate(user ? "/create/clip" : "/auth?signup");
   };
 
   return (
@@ -61,7 +61,7 @@ const Hero = () => {
         >
           <Sparkles className="w-4 h-4 text-primary" />
           <span className="text-sm text-muted-foreground">
-            🎁 10 crédits offerts — Aucune carte bancaire requise
+            🎁 Votre premier clip offert — Aucune carte bancaire requise
           </span>
         </motion.div>
 
@@ -109,7 +109,7 @@ const Hero = () => {
           transition={{ duration: 0.8, delay: 0.7 }}
           className="mt-16 flex flex-wrap justify-center gap-8 text-sm text-muted-foreground"
         >
-          {["Jusqu'à 4K selon le plan", "13 styles visuels au choix", "Vidéo prête en ~10 min"].map((t) => (
+          {["Qualité HD et 4K", "13 styles visuels au choix", "Vidéo prête en ~10 min"].map((t) => (
             <div key={t} className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
               <span>{t}</span>

@@ -1,38 +1,10 @@
-import { motion, useMotionValue, useTransform, animate, useScroll } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { useRef } from "react";
 import AnimatedSection from "./AnimatedSection";
 import { Star } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-function Counter({ target, suffix = "" }: { target: number; suffix?: string }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const [hasAnimated, setHasAnimated] = useState(false);
-  const count = useMotionValue(0);
-  const rounded = useTransform(count, (v) => Math.floor(v).toLocaleString("fr-FR"));
-
-  useEffect(() => {
-    if (!hasAnimated) return;
-    const controls = animate(count, target, { duration: 2, ease: "easeOut" });
-    return controls.stop;
-  }, [hasAnimated, target, count]);
-
-  return (
-    <motion.span
-      ref={ref}
-      onViewportEnter={() => setHasAnimated(true)}
-      className="text-4xl md:text-5xl font-bold"
-      style={{ fontFamily: "var(--font-display)" }}
-    >
-      <motion.span>{rounded}</motion.span>
-      {suffix}
-    </motion.span>
-  );
-}
-
-const stats = [
-  { value: 10, suffix: "", label: "Crédits offerts à l'inscription" },
-  { value: 13, suffix: "", label: "Styles visuels disponibles" },
-  { value: 5, suffix: " min", label: "De vidéo générée d'un seul coup" },
-];
+const avatarColors = ["bg-primary/80", "bg-accent/80", "bg-destructive/60"];
 
 const testimonials = [
   {
@@ -82,7 +54,6 @@ export default function SocialProof() {
 
   const glowY = useTransform(scrollYProgress, [0, 1], ["40px", "-60px"]);
   const glowScale = useTransform(scrollYProgress, [0, 0.5, 1], [0.8, 1.2, 0.9]);
-  const countersY = useTransform(scrollYProgress, [0, 1], ["30px", "-20px"]);
   const cardsY = useTransform(scrollYProgress, [0, 1], ["50px", "-30px"]);
 
   return (
@@ -94,22 +65,6 @@ export default function SocialProof() {
       />
 
       <div className="container mx-auto relative z-10">
-        {/* Counters */}
-        <motion.div style={{ y: countersY }}>
-          <AnimatedSection>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
-              {stats.map((stat) => (
-                <div key={stat.label} className="text-center space-y-2">
-                  <div className="text-primary">
-                    <Counter target={stat.value} suffix={stat.suffix} />
-                  </div>
-                  <p className="text-muted-foreground text-lg">{stat.label}</p>
-                </div>
-              ))}
-            </div>
-          </AnimatedSection>
-        </motion.div>
-
         {/* Testimonials */}
         <AnimatedSection delay={0.1}>
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
@@ -137,9 +92,16 @@ export default function SocialProof() {
                   ))}
                 </div>
                 <p className="text-foreground leading-relaxed flex-1 mb-4">"{t.text}"</p>
-                <div>
-                  <p className="font-semibold text-sm">{t.name}</p>
-                  <p className="text-xs text-muted-foreground">{t.role}</p>
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className={`${avatarColors[i % avatarColors.length]} text-white text-xs font-bold`}>
+                      {t.name.split(" ").map(n => n[0]).join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-semibold text-sm">{t.name}</p>
+                    <p className="text-xs text-muted-foreground">{t.role} · Utilisateur bêta</p>
+                  </div>
                 </div>
               </motion.div>
             </AnimatedSection>

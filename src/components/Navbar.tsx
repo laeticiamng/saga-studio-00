@@ -13,6 +13,7 @@ const landingLinks = [
   { label: "Galerie", href: "#gallery" },
   { label: "Comment ça marche", href: "#how-it-works" },
   { label: "Tarifs", href: "/pricing" },
+  { label: "À propos", href: "/about" },
 ];
 
 export default function Navbar() {
