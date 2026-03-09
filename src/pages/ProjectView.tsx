@@ -341,7 +341,8 @@ export default function ProjectView() {
 
           {/* Plan Tab */}
           {plan && (
-            <TabsContent value="plan" className="space-y-6">
+            <TabsContent value="plan" forceMount className="space-y-6 data-[state=inactive]:hidden">
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: "easeOut" }} className="space-y-6">
               {styleBible && Object.keys(styleBible).length > 0 && (
                 <Card className="border-border/50 bg-card/60">
                   <CardHeader className="pb-4">
@@ -354,13 +355,19 @@ export default function ProjectView() {
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {Object.entries(styleBible).map(([key, val]) => (
-                        <div key={key} className="rounded-lg bg-secondary/30 p-4">
+                      {Object.entries(styleBible).map(([key, val], i) => (
+                        <motion.div
+                          key={key}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.25, delay: i * 0.05 }}
+                          className="rounded-lg bg-secondary/30 p-4"
+                        >
                           <span className="text-xs font-semibold text-primary uppercase tracking-wider">{key.replace(/_/g, " ")}</span>
                           <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
                             {typeof val === "string" ? val : JSON.stringify(val)}
                           </p>
-                        </div>
+                        </motion.div>
                       ))}
                     </div>
                   </CardContent>
@@ -380,17 +387,24 @@ export default function ProjectView() {
                   <CardContent>
                     <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
                       {shotlistJson.map((shot: any, i: number) => (
-                        <div key={i} className="flex items-start gap-4 rounded-lg bg-secondary/30 p-4 hover:bg-secondary/40 transition-colors">
+                        <motion.div
+                          key={i}
+                          initial={{ opacity: 0, x: -8 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.2, delay: i * 0.03 }}
+                          className="flex items-start gap-4 rounded-lg bg-secondary/30 p-4 hover:bg-secondary/40 transition-colors"
+                        >
                           <span className="text-sm font-bold text-primary shrink-0 w-8 text-right">#{i + 1}</span>
                           <p className="text-sm text-muted-foreground leading-relaxed">
                             {shot.prompt || shot.description || JSON.stringify(shot)}
                           </p>
-                        </div>
+                        </motion.div>
                       ))}
                     </div>
                   </CardContent>
                 </Card>
               )}
+              </motion.div>
             </TabsContent>
           )}
 
