@@ -469,8 +469,10 @@ export default function ProjectView() {
 
           {/* Export Tab */}
           {(render || project.status === "completed") && (
-            <TabsContent value="render">
-              <RenderExportPanel projectId={project.id} render={render} projectStatus={project.status} />
+            <TabsContent value="render" forceMount className="data-[state=inactive]:hidden">
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: "easeOut" }}>
+                <RenderExportPanel projectId={project.id} render={render} projectStatus={project.status} />
+              </motion.div>
             </TabsContent>
           )}
         </Tabs>
