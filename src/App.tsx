@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { GlobalNotifications } from "@/components/GlobalNotifications";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import AdminRoute from "@/components/AdminRoute";
 import CookieBanner from "@/components/CookieBanner";
 import { Loader2 } from "lucide-react";
 
