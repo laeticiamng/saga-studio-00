@@ -97,7 +97,7 @@ const Footer = () => {
 
         <div className="border-t border-border/30 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
           <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} CineClip AI. Tous droits réservés.
+            © {new Date().getFullYear()} EMOTIONSCARE SASU — CineClip AI. Tous droits réservés.
           </p>
         </div>
       </div>
