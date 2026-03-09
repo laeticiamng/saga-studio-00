@@ -1,4 +1,5 @@
 import { Upload, Wand2, Video, Download } from "lucide-react";
+import { motion } from "framer-motion";
 import AnimatedSection from "./AnimatedSection";
 
 const steps = [
@@ -12,7 +13,7 @@ const HowItWorks = () => {
   return (
     <section id="how-it-works" className="page-section">
       <div className="container mx-auto">
-        <AnimatedSection>
+        <AnimatedSection variant="blurIn">
           <div className="page-header">
             <h2>Comment ça marche ?</h2>
             <p>De l'idée à la réalité en 4 étapes simples</p>
@@ -23,7 +24,11 @@ const HowItWorks = () => {
           <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary via-accent to-primary transform -translate-x-1/2" />
 
           {steps.map((step, index) => (
-            <AnimatedSection key={index} delay={0.12 * (index + 1)}>
+            <AnimatedSection
+              key={index}
+              delay={0.12 * (index + 1)}
+              variant={index % 2 === 0 ? "fadeLeft" : "fadeRight"}
+            >
               <div
                 className={`relative flex items-center gap-8 md:gap-12 mb-16 last:mb-0 ${
                   index % 2 === 0 ? "md:flex-row" : "md:flex-row-reverse"
@@ -37,9 +42,15 @@ const HowItWorks = () => {
                   <p className="text-muted-foreground text-sm leading-relaxed max-w-sm mx-auto md:mx-0">{step.description}</p>
                 </div>
 
-                <div className="relative z-10 w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-primary flex items-center justify-center shadow-glow shrink-0">
+                <motion.div
+                  initial={{ scale: 0.6, opacity: 0 }}
+                  whileInView={{ scale: 1, opacity: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: 0.12 * (index + 1) + 0.1, type: "spring", stiffness: 200 }}
+                  className="relative z-10 w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-primary flex items-center justify-center shadow-glow shrink-0"
+                >
                   <step.icon className="w-8 h-8 md:w-10 md:h-10 text-primary-foreground" />
-                </div>
+                </motion.div>
 
                 <div className="flex-1 hidden md:block" />
               </div>
