@@ -4,7 +4,6 @@ import example3 from "@/assets/example-3.jpg";
 import { motion } from "framer-motion";
 import { Play, Film } from "lucide-react";
 import AnimatedSection from "./AnimatedSection";
-import { useState } from "react";
 
 const examples = [
   { image: example1, title: "Clip musical futuriste", style: "Sci-Fi / Cyberpunk", alt: "Exemple de clip musical futuriste généré par CineClip AI dans un style cyberpunk" },
