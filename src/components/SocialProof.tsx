@@ -65,22 +65,6 @@ export default function SocialProof() {
       />
 
       <div className="container mx-auto relative z-10">
-        {/* Counters */}
-        <motion.div style={{ y: countersY }}>
-          <AnimatedSection>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
-              {stats.map((stat) => (
-                <div key={stat.label} className="text-center space-y-2">
-                  <div className="text-primary">
-                    <Counter target={stat.value} suffix={stat.suffix} />
-                  </div>
-                  <p className="text-muted-foreground text-lg">{stat.label}</p>
-                </div>
-              ))}
-            </div>
-          </AnimatedSection>
-        </motion.div>
-
         {/* Testimonials */}
         <AnimatedSection delay={0.1}>
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
