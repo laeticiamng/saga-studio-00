@@ -13,16 +13,12 @@ const examples = [
 
 const Gallery = () => {
   return (
-    <section id="gallery" className="py-24 px-4 bg-gradient-to-b from-background to-secondary/20">
+    <section id="gallery" className="page-section bg-gradient-to-b from-background to-secondary/20">
       <div className="container mx-auto">
         <AnimatedSection>
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">
-              Voyez ce que l'IA peut créer
-            </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Ces images illustrent les styles visuels disponibles sur CineClip AI.
-            </p>
+          <div className="page-header">
+            <h2>Voyez ce que l'IA peut créer</h2>
+            <p>Ces images illustrent les styles visuels disponibles sur CineClip AI.</p>
           </div>
         </AnimatedSection>
 
