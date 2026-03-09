@@ -91,7 +91,7 @@ function ContactForm() {
         {sending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Envoi en cours…</> : <><Send className="h-4 w-4 mr-2" /> Envoyer</>}
       </Button>
       <p className="text-xs text-muted-foreground text-center">
-        Ou écrivez-nous directement à <a href="mailto:contact@cineclip.ai" className="text-primary hover:underline">contact@cineclip.ai</a>
+        Ou écrivez-nous directement à <a href="mailto:contact@emotionscare.com" className="text-primary hover:underline">contact@emotionscare.com</a>
       </p>
     </form>
   );

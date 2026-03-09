@@ -1,126 +1,189 @@
 
+# CineClip AI - Plan de construction complet
 
-# AUDIT TECHNIQUE COMPLET #2 — CineClip AI (post-correctifs)
+## Vue d'ensemble
 
----
-
-## 1. RESUME EXECUTIF
-
-**Etat global** : Les correctifs P0 precedents (AdminRoute, RLS policies sur projects/renders) ont ete appliques. Cependant, un probleme critique P0 persiste : les edge functions `send-contact`, `dispatch-webhooks` et `cleanup` ne sont toujours pas declarees dans `config.toml`, et le `verify_jwt` reste `false` sur toutes les fonctions, y compris `admin-actions`. Les RLS policies sont maintenant PERMISSIVE (confirmé en base), ce qui est correct. La view `projects_public` est bien une VIEW (pas une table), donc l'absence de RLS dessus est normale.
-
-**Verdict go-live** : **NON EN L'ETAT** — 3 P0 restants, 4 P1 restants.
-
-### 5 P0 restants
-
-1. **`send-contact`, `dispatch-webhooks`, `cleanup` absents de `config.toml`** — Non corrigé depuis l'audit precedent. Le formulaire de contact (`/about`) appelle `send-contact` qui peut echouer au deploiement.
-2. **`verify_jwt = false` sur toutes les edge functions** — Non corrigé. `admin-actions` (refund, cancel, stats), `create-project`, `pipeline-worker`, `generate-shots` sont appelables sans JWT. L'auth est faite en code mais le framework Supabase est contourne.
-3. **Leaked Password Protection desactivee** — Scan de securite confirme : les mots de passe compromis ne sont pas verifies a l'inscription. Risque de comptes avec mots de passe fuites.
-
-### 5 P1 restants
-
-1. **Contact email incoherent** : `contact@emotionscare.com` dans Legal/Privacy/Terms mais `contact@cineclip.ai` dans le formulaire de contact (About.tsx ligne 94). Domaine `cineclip.ai` probablement non configure.
-2. **CORS incomplet sur `estimate-cost`** : headers CORS ne incluent pas les nouveaux headers Supabase (`x-supabase-client-platform*`). Peut causer des erreurs CORS en production.
-3. **Rate limiting in-memory inefficace** : Edge functions sont stateless (cold start = reset). Les limites de 5/min sur `create-project` et 30/min sur `estimate-cost` ne fonctionnent pas en production reelle.
-4. **Aucune observabilite** : Pas de Sentry, pas d'analytics, pas de health check. Problemes en prod invisibles.
+Transformer la landing page actuelle en une plateforme full-stack de generation de clips video et courts metrages, avec authentification, pipeline de generation IA multi-providers, systeme de credits/billing Stripe, et dashboard admin.
 
 ---
 
-## 2. TABLEAU D'AUDIT
+## Phase 1 : Infrastructure Backend (Supabase)
 
-| Priorite | Domaine | Page/Route/Fonction | Probleme | Risque | Faisable ? |
-|----------|---------|---------------------|----------|--------|------------|
-| P0 | Config | config.toml | `send-contact`, `dispatch-webhooks`, `cleanup` non declares | Fonctions non deployees | Oui |
-| P0 | Security | config.toml | Toutes EF `verify_jwt = false` | Acces non autorise aux operations critiques | Oui* |
-| P0 | Security | Auth config | Leaked password protection off | Comptes avec mdp compromis | Non (config backend) |
-| P1 | UX | About.tsx | Email `contact@cineclip.ai` vs `contact@emotionscare.com` | Email incoherent, bounces | Oui |
-| P1 | API | estimate-cost | CORS headers incomplets | Erreurs CORS en prod | Oui |
-| P1 | Security | Toutes EF | Rate limiting in-memory inutile en serverless | Abuse possible | Non (architecture) |
-| P1 | Go-live | Global | Zero observabilite | Bugs invisibles | Partiel |
-| P2 | SEO | index.html | Canonical hardcode `saga-studio-00.lovable.app` | SEO dilue si domaine custom | Oui |
-| P2 | UX | ShareView | Footer copyright ne mentionne pas EMOTIONSCARE | Incoherence branding | Oui |
-| P3 | Frontend | Global | Pas de structured data sur les pages internes | SEO basic | Oui |
+### 1.1 Activer Lovable Cloud / Supabase
+- Connecter le projet a Supabase (Cloud)
+- Configurer l'authentification (email + OAuth Google/GitHub)
 
-\* Note sur `verify_jwt` : La documentation Lovable Cloud indique que `verify_jwt = false` est requis avec le systeme signing-keys. Les fonctions font deja la validation JWT en code. Ce n'est donc pas un vrai P0 — reclasse en **P2 (dette technique)**.
+### 1.2 Schema de base de donnees (migrations SQL)
 
----
+**Tables a creer :**
 
-## 3. DETAIL PAR CATEGORIE
+| Table | Description |
+|-------|-------------|
+| `profiles` | Infos utilisateur (display_name, avatar_url) |
+| `user_roles` | Roles (admin, moderator, user) avec enum `app_role` |
+| `credit_wallets` | Solde de credits par utilisateur |
+| `credit_ledger` | Historique des transactions credits |
+| `projects` | Projets (clip ou film) avec metadonnees |
+| `audio_analysis` | Resultat analyse audio (BPM, sections, beats) |
+| `plans` | Style bible, character bible, shotlist JSON |
+| `shots` | Shots individuels generes par l'IA |
+| `renders` | Fichiers finaux (16:9, 9:16, teaser) |
+| `moderation_flags` | Signalements pour moderation |
+| `provider_configs` | Configuration providers par defaut (admin) |
 
-### Frontend & rendu
-**Fonctionne** : Toutes les routes rendent correctement. Code-splitting, ErrorBoundary, 404, loading states, dark mode — tout OK. AdminRoute protege `/admin` avec check role.
-**Cassé** : Rien.
-**Douteux** : Rien.
+**Securite :**
+- RLS sur toutes les tables utilisateur
+- Fonction `has_role()` security definer pour eviter la recursion
+- Storage buckets : `audio-uploads`, `face-references`, `shot-outputs`, `renders` avec policies par user
 
-### QA fonctionnelle
-**Fonctionne** : Auth flow complet. Dashboard, CreateClip, CreateFilm, Settings, Pricing — tous fonctionnels. ShareView gere les cas vides. Contact form sur /about fonctionne (si `send-contact` est deploye).
-**Cassé** : Rien cote UI.
-**Douteux** : Pipeline de generation video depend de providers externes (MockProvider est le fallback). Non confirmable.
+### 1.3 Edge Functions
 
-### Auth & autorisations
-**Fonctionne** : ProtectedRoute, AdminRoute (avec check `has_role`), session persistence, logout, Google OAuth.
-**Cassé** : Rien.
-**Correct** : RLS policies sont toutes PERMISSIVE (confirme en base via `pg_policies`). Le scan de securite avait un faux positif base sur des donnees stales du contexte.
-
-### Database & RLS
-**Fonctionne** : Toutes les policies sont PERMISSIVE et correctement configurees. `projects_public` est une VIEW (pas une table), scoped a `status = 'completed'` avec colonnes limitees (id, title, type, style_preset, status). `has_role`, `debit_credits`, `topup_credits` avec SECURITY DEFINER + search_path fixe.
-**Correct** : La policy `Public can view completed render urls` sur `renders` utilise `projects_public` (view) comme join — correct et securise. Les colonnes exposees (`master_url_*`, `teaser_url`, `status`) sont legitimement publiques pour le partage.
-**Cassé** : Rien.
-
-### Securite
-- `verify_jwt = false` sur toutes les EF — mais la doc Lovable Cloud indique que c'est le pattern recommende avec signing-keys. L'auth est faite en code dans chaque fonction. **Acceptable** mais pas ideal.
-- CORS `*` sur toutes les EF — acceptable pour un SaaS public.
-- Leaked password protection desactivee — necessite activation dans la config backend.
-- `send-contact`, `dispatch-webhooks`, `cleanup` non declares dans config.toml — **P0 reel**.
-
-### Paiement & billing
-**Fonctionne** : Pricing page coherente. Plans alignes. Checkout/portal via edge functions. Subscription check OK. Credit packs OK.
-**Non confirme** : IDs Stripe live vs test.
-
-### Performance
-**Ameliore** : `staleTime: 30000` et `refetchInterval: 60000` sur credit_wallets. Hero image avec `decoding="async"`.
-**Restant** : Hero image toujours en JPG (pas WebP). Code-splitting OK.
-
-### SEO
-**Fonctionne** : `usePageTitle` sur toutes les pages. OG tags dans index.html. Sitemap + robots.txt.
-**Probleme** : Canonical hardcode sur `saga-studio-00.lovable.app`.
-
-### i18n
-Mono-langue (francais). Pas de probleme.
-
-### Observabilite
-Zero. Pas de Sentry, pas d'analytics, pas de health check.
+| Fonction | Role |
+|----------|------|
+| `create-project` | Creer un projet clip ou film |
+| `analyze-audio` | Analyser l'audio (BPM, beats, sections) via Lovable AI |
+| `plan-project` | Generer style_bible + character_bible + shotlist via Lovable AI |
+| `generate-shots` | Appeler le provider video (Sora 2 / Runway / Luma / Veo) |
+| `check-shot-status` | Polling du statut des shots en cours |
+| `stitch-render` | Lancer l'assemblage final (FFmpeg via endpoint externe) |
+| `project-status` | Statut global du pipeline |
+| `estimate-cost` | Calculer le cout en credits avant generation |
+| `admin-actions` | Moderation, refunds, stats (protege par role admin) |
 
 ---
 
-## 4. PLAN D'ACTION
+## Phase 2 : Provider Abstraction Layer
 
-### P0 — Immediat
-1. **Ajouter `send-contact`, `dispatch-webhooks`, `cleanup` dans `config.toml`** avec `verify_jwt = false`.
+### Interface TypeScript commune
 
-### P1 — Rapide
-2. **Corriger l'email dans About.tsx** : remplacer `contact@cineclip.ai` par `contact@emotionscare.com`.
-3. **Corriger les CORS headers dans `estimate-cost`** : ajouter les headers Supabase manquants.
-4. **Corriger le copyright dans ShareView** : utiliser "EMOTIONSCARE SASU — CineClip AI".
+```text
+Provider Interface:
+  - generateVideo(prompt, duration, style, seed) -> job_id
+  - checkStatus(job_id) -> status + output_url
+  - getCapabilities() -> max_duration, formats, features
+```
 
-### P2 — Ameliorations
-5. Activer leaked password protection (necessite config backend).
+### Providers implementes
 
-### P3 — Polish
-6. Ajouter un basic error tracking.
+| Provider | Duree max | Notes |
+|----------|-----------|-------|
+| OpenAI Sora 2 | Variable | Provider par defaut, audio sync |
+| Runway Gen-4 | 5-10s | Shots courts |
+| Luma Dream Machine | Variable | Support references image |
+| Google Veo 3.1 | 8s | Alternative |
+
+Chaque provider est active/desactive via variables d'environnement (secrets Supabase). Si la cle manque, le provider est masque dans l'UI.
 
 ---
 
-## 5. IMPLEMENTATION IMMEDIATE
+## Phase 3 : Frontend - Pages et composants
 
-Les corrections suivantes seront implementees :
+### 3.1 Navigation et layout
+- Navbar sticky avec logo CineClip AI, liens, bouton connexion/credits
+- Layout principal avec sidebar pour projets
+- Footer mis a jour
 
-1. **`supabase/config.toml`** : Ajouter les 3 fonctions manquantes (`send-contact`, `dispatch-webhooks`, `cleanup`).
-2. **`src/pages/About.tsx`** : Corriger `contact@cineclip.ai` → `contact@emotionscare.com`.
-3. **`supabase/functions/estimate-cost/index.ts`** : Mettre a jour les CORS headers.
-4. **`src/pages/ShareView.tsx`** : Mettre a jour le copyright footer.
+### 3.2 Pages
 
-### Ce qui NE SERA PAS implemente :
-- Activation leaked password protection (config backend).
-- Remplacement du rate limiting in-memory (changement architectural).
-- Mise a jour du canonical (necessite decision sur le domaine final).
+| Route | Description |
+|-------|-------------|
+| `/` | Landing page (existante, mise a jour) |
+| `/auth` | Login / Signup |
+| `/dashboard` | Liste des projets, stats rapides |
+| `/create/clip` | Formulaire creation clip (upload audio, mode, style, duree) |
+| `/create/film` | Formulaire creation film (titre, synopsis, style, duree) |
+| `/project/:id` | Vue projet : pipeline live, timeline, preview |
+| `/project/:id/result` | Page resultat : download, exports, logs |
+| `/pricing` | Plans Stripe + credit packs |
+| `/admin` | Dashboard admin (protege par role) |
+| `/settings` | Parametres compte, provider prefere |
+
+### 3.3 Composants cles
+
+- **ProjectCreationWizard** : Multi-step form (audio upload -> mode -> style -> estimation -> confirmation)
+- **PipelineProgress** : Timeline visuelle en temps reel (Analyze -> Plan -> Generate -> QA -> Stitch -> Export)
+- **ShotGrid** : Grille de tous les shots generes avec statut
+- **VideoPlayer** : Lecteur video integre pour preview
+- **CreditDisplay** : Badge credits dans la navbar
+- **CostEstimator** : Estimation dynamique du cout avant generation
+- **StylePresetPicker** : Selecteur visuel de styles (Cinematic, Anime, Noir, Hyperpop, Afrofuturism, etc.)
+- **AdminProjectTable** : Table de moderation avec filtres
+
+---
+
+## Phase 4 : Pipeline de generation
+
+### Flux complet (Clip)
+
+```text
+1. Upload audio -> Supabase Storage
+2. analyze-audio -> Extract BPM, beats, sections, energy
+3. plan-project -> Director Agent via Lovable AI
+   -> style_bible + character_bible + shotlist (20-60 shots)
+4. generate-shots -> Pour chaque shot :
+   - Appel provider API
+   - Polling statut
+   - QA basique (echec -> regen, deviation style -> regen contrainte)
+   - Stockage output dans Storage
+5. stitch-render -> FFmpeg :
+   - Aligner cuts sur beat grid
+   - Transitions entre shots
+   - Export 16:9 master + 9:16 crop + teaser 15s
+6. Notification utilisateur -> Projet pret
+```
+
+### Job Queue (sans service externe)
+- Table `job_queue` dans Supabase
+- Edge function worker pollee via pg_cron (toutes les 30s)
+- Chaque etape du pipeline est un job avec statut et retry logic
+
+---
+
+## Phase 5 : Billing (Stripe)
+
+- Activer l'integration Stripe Lovable
+- Plans d'abonnement : Free (10 credits/mois), Pro (100 credits), Studio (500 credits)
+- Credit packs additionnels : 50 credits, 200 credits, 500 credits
+- Formule de cout : `credits = base_cost + (nb_shots x shot_cost x resolution_multiplier)`
+- Verification du solde avant chaque generation
+- Webhook Stripe pour mise a jour automatique du wallet
+
+---
+
+## Phase 6 : Admin Dashboard
+
+- Vue liste de tous les projets avec filtres (statut, user, date, flags)
+- Detail projet : prompts, outputs, shots, logs
+- Actions : desactiver utilisateur, rembourser credits, supprimer contenu
+- Stats : usage par provider, credits consommes, projets par jour
+
+---
+
+## Ordre d'implementation
+
+1. Activer Supabase / Lovable Cloud
+2. Migrations SQL (schema complet + RLS + fonctions)
+3. Auth (login/signup) + profil utilisateur
+4. Dashboard utilisateur (liste projets vide)
+5. Formulaire creation clip + creation film
+6. Edge functions pipeline (create -> analyze -> plan -> generate -> stitch)
+7. Provider abstraction + secrets API
+8. Pipeline progress UI en temps reel
+9. Page resultat avec exports
+10. Activer Stripe + pricing page + credit system
+11. Admin dashboard
+12. Polish : animations, responsive, error handling
+
+---
+
+## Details techniques
+
+- **Stack** : React + Vite + TypeScript + Tailwind (pas de Next.js)
+- **Backend** : Supabase Edge Functions (Deno) pour toute la logique serveur
+- **Storage** : Supabase Storage pour audio, references, shots, renders
+- **Auth** : Supabase Auth avec profils + roles
+- **State** : TanStack Query pour le data fetching + polling pipeline
+- **Routing** : React Router v6 avec routes protegees
+- **FFmpeg** : L'assemblage final necessitera soit un endpoint FFmpeg externe, soit un service tiers (limitation Edge Functions pour le traitement video lourd) - on preparera l'architecture et on pourra integrer un service comme Shotstack ou un serveur FFmpeg dedie plus tard
+- **Providers video** : Les cles API seront stockees en secrets Supabase, les appels se font uniquement depuis les Edge Functions
 
