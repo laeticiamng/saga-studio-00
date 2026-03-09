@@ -26,7 +26,7 @@ const Hero = () => {
   };
 
   return (
-    <section ref={ref} className="relative min-h-screen flex items-center justify-center overflow-hidden">
+    <section ref={ref} className="relative min-h-screen flex items-center justify-center overflow-hidden" style={{ position: "relative" }}>
       <div className="absolute inset-0 bg-gradient-hero" />
 
       <motion.div
