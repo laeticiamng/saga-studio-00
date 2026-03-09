@@ -14,7 +14,9 @@ import { usePageTitle } from "@/hooks/usePageTitle";
 import Navbar from "@/components/Navbar";
 
 export default function Auth() {
-  const [isLogin, setIsLogin] = useState(true);
+  const location = useLocation();
+  const fromSignup = location.search?.includes("signup");
+  const [isLogin, setIsLogin] = useState(!fromSignup);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
