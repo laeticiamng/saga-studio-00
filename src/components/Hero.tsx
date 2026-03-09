@@ -61,7 +61,7 @@ const Hero = () => {
         >
           <Sparkles className="w-4 h-4 text-primary" />
           <span className="text-sm text-muted-foreground">
-            🎁 10 crédits offerts — Aucune carte bancaire requise
+            🎁 Votre premier clip offert — Aucune carte bancaire requise
           </span>
         </motion.div>
 
