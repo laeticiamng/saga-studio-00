@@ -57,7 +57,7 @@ export default function SocialProof() {
   const cardsY = useTransform(scrollYProgress, [0, 1], ["50px", "-30px"]);
 
   return (
-    <section ref={sectionRef} id="proof" className="py-24 px-4 relative overflow-hidden">
+    <section ref={sectionRef} id="proof" className="page-section relative overflow-hidden">
       {/* Parallax glow */}
       <motion.div
         style={{ y: glowY, scale: glowScale }}

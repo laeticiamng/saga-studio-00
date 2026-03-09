@@ -4,7 +4,6 @@ import example3 from "@/assets/example-3.jpg";
 import { motion } from "framer-motion";
 import { Play, Film } from "lucide-react";
 import AnimatedSection from "./AnimatedSection";
-import { useState } from "react";
 
 const examples = [
   { image: example1, title: "Clip musical futuriste", style: "Sci-Fi / Cyberpunk", alt: "Exemple de clip musical futuriste généré par CineClip AI dans un style cyberpunk" },
@@ -14,16 +13,12 @@ const examples = [
 
 const Gallery = () => {
   return (
-    <section id="gallery" className="py-24 px-4 bg-gradient-to-b from-background to-secondary/20">
+    <section id="gallery" className="page-section bg-gradient-to-b from-background to-secondary/20">
       <div className="container mx-auto">
         <AnimatedSection>
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">
-              Voyez ce que l'IA peut créer
-            </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Ces images illustrent les styles visuels disponibles sur CineClip AI.
-            </p>
+          <div className="page-header">
+            <h2>Voyez ce que l'IA peut créer</h2>
+            <p>Ces images illustrent les styles visuels disponibles sur CineClip AI.</p>
           </div>
         </AnimatedSection>
 

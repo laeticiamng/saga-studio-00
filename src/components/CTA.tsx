@@ -10,7 +10,7 @@ const CTA = () => {
   const { user } = useAuth();
 
   return (
-    <section className="py-24 px-4 relative overflow-hidden">
+    <section className="page-section relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10" />
       <motion.div
         animate={{ scale: [1, 1.2, 1], opacity: [0.15, 0.3, 0.15] }}

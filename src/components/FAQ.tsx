@@ -35,16 +35,12 @@ const faqs = [
 
 export default function FAQ() {
   return (
-    <section id="faq" className="py-24 px-4">
+    <section id="faq" className="page-section">
       <div className="container mx-auto max-w-3xl">
         <AnimatedSection>
-          <div className="text-center mb-12">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">
-              Questions fréquentes
-            </h2>
-            <p className="text-xl text-muted-foreground">
-              Tout ce que vous devez savoir pour démarrer
-            </p>
+          <div className="page-header">
+            <h2>Questions fréquentes</h2>
+            <p>Tout ce que vous devez savoir pour démarrer</p>
           </div>
         </AnimatedSection>
 
@@ -56,10 +52,10 @@ export default function FAQ() {
                 value={`faq-${i}`}
                 className="rounded-xl border border-border/50 bg-card/60 backdrop-blur-sm px-6"
               >
-                <AccordionTrigger className="text-left text-base font-medium hover:no-underline">
+                <AccordionTrigger className="text-left text-[15px] font-medium hover:no-underline py-5">
                   {faq.q}
                 </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground leading-relaxed">
+                <AccordionContent className="text-muted-foreground text-sm leading-relaxed pb-5">
                   {faq.a}
                 </AccordionContent>
               </AccordionItem>

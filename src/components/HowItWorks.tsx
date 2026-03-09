@@ -5,19 +5,17 @@ const steps = [
   { icon: Upload, number: "01", title: "Décrivez votre vision", description: "Expliquez votre histoire, uploadez votre visage et votre musique, définissez le style artistique." },
   { icon: Wand2, number: "02", title: "L'IA crée votre vidéo", description: "L'intelligence artificielle génère chaque scène de votre clip avec un style visuel uniforme du début à la fin." },
   { icon: Video, number: "03", title: "Prévisualisez et ajustez", description: "Visionnez votre création et affinez les détails si nécessaire avant l'export final." },
-  { icon: Download, number: "04", title: "Exportez et partagez", description: "Téléchargez votre vidéo finale en haute définition (jusqu'à 4K selon votre plan), prête à être publiée." },
+  { icon: Download, number: "04", title: "Exportez et partagez", description: "Téléchargez votre vidéo finale en haute définition, prête à être publiée partout." },
 ];
 
 const HowItWorks = () => {
   return (
-    <section id="how-it-works" className="py-24 px-4">
+    <section id="how-it-works" className="page-section">
       <div className="container mx-auto">
         <AnimatedSection>
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">Comment ça marche ?</h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              De l'idée à la réalité en quelques étapes simples
-            </p>
+          <div className="page-header">
+            <h2>Comment ça marche ?</h2>
+            <p>De l'idée à la réalité en 4 étapes simples</p>
           </div>
         </AnimatedSection>
 
@@ -27,7 +25,7 @@ const HowItWorks = () => {
           {steps.map((step, index) => (
             <AnimatedSection key={index} delay={0.12 * (index + 1)}>
               <div
-                className={`relative flex items-center gap-8 mb-16 last:mb-0 ${
+                className={`relative flex items-center gap-8 md:gap-12 mb-16 last:mb-0 ${
                   index % 2 === 0 ? "md:flex-row" : "md:flex-row-reverse"
                 } flex-col`}
               >
@@ -35,12 +33,12 @@ const HowItWorks = () => {
                   <div className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-3">
                     Étape {step.number}
                   </div>
-                  <h3 className="text-2xl font-bold mb-2">{step.title}</h3>
-                  <p className="text-muted-foreground">{step.description}</p>
+                  <h3 className="text-xl font-bold mb-2">{step.title}</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed max-w-sm mx-auto md:mx-0">{step.description}</p>
                 </div>
 
-                <div className="relative z-10 w-20 h-20 rounded-full bg-gradient-primary flex items-center justify-center shadow-glow">
-                  <step.icon className="w-10 h-10 text-primary-foreground" />
+                <div className="relative z-10 w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-primary flex items-center justify-center shadow-glow shrink-0">
+                  <step.icon className="w-8 h-8 md:w-10 md:h-10 text-primary-foreground" />
                 </div>
 
                 <div className="flex-1 hidden md:block" />

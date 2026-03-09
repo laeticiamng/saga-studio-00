@@ -14,47 +14,36 @@ const features = [
 
 const Features = () => {
   return (
-    <section id="features" className="py-24 px-4 relative">
+    <section id="features" className="page-section relative">
       <div className="container mx-auto">
         <AnimatedSection>
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">
-              Tout ce dont vous avez besoin pour créer
-            </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Des outils simples pour des vidéos de qualité professionnelle
-            </p>
+          <div className="page-header">
+            <h2>Tout ce dont vous avez besoin pour créer</h2>
+            <p>Des outils simples pour des vidéos de qualité professionnelle</p>
           </div>
         </AnimatedSection>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
           {features.map((feature, index) => (
             <AnimatedSection key={index} delay={0.08 * (index + 1)}>
               <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
                 <Card className="relative p-6 bg-card/60 backdrop-blur-sm border-border/50 hover:border-primary/40 hover:shadow-[0_0_30px_-5px_hsl(35_100%_55%/0.15)] transition-all duration-500 group h-full overflow-hidden">
-                  {/* Gradient border glow on hover */}
                   <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
                     style={{ background: "linear-gradient(135deg, hsl(35 100% 55% / 0.08), transparent, hsl(25 95% 53% / 0.08))" }}
                   />
 
-                  {/* Badges */}
                   {feature.popular && (
                     <span className="absolute top-4 right-4 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/20">
                       Populaire
                     </span>
                   )}
-                  {(feature as any).isNew && (
-                    <span className="absolute top-4 right-4 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/20">
-                      Nouveau
-                    </span>
-                  )}
 
                   <div className="relative z-10">
-                    <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
+                    <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300`}>
                       <feature.icon className="w-6 h-6 text-white" />
                     </div>
-                    <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-                    <p className="text-muted-foreground">{feature.description}</p>
+                    <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
+                    <p className="text-muted-foreground text-sm leading-relaxed">{feature.description}</p>
                   </div>
                 </Card>
               </motion.div>
