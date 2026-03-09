@@ -33,13 +33,12 @@ const Hero = () => {
         style={{ y: bgY }}
         className="absolute inset-0 opacity-20"
       >
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage: `url(${heroImage})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
+        <img
+          src={heroImage}
+          alt=""
+          loading="eager"
+          decoding="async"
+          className="absolute inset-0 w-full h-full object-cover"
         />
       </motion.div>
 
