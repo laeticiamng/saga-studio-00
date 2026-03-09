@@ -196,8 +196,8 @@ export default function Auth() {
                   </button>
                 )}
               </div>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} />
-              {!isLogin && <p className="text-xs text-muted-foreground">Minimum 6 caractères</p>}
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} aria-describedby={!isLogin ? "password-hint" : undefined} />
+              {!isLogin && <p id="password-hint" className="text-xs text-muted-foreground">Minimum 6 caractères</p>}
             </div>
             <Button type="submit" variant="hero" className="w-full" disabled={loading}>
               {loading ? "Chargement..." : isLogin ? "Se connecter" : "Créer mon compte"}
