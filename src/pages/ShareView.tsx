@@ -113,7 +113,7 @@ export default function ShareView() {
         </p>
       </div>
       <footer className="border-t border-border/50 py-6 text-center text-xs text-muted-foreground mt-12">
-        © {new Date().getFullYear()} CineClip AI. Tous droits réservés.
+        © {new Date().getFullYear()} EMOTIONSCARE SASU — CineClip AI. Tous droits réservés.
       </footer>
     </div>
   );
