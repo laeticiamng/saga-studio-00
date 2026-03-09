@@ -56,7 +56,7 @@ export default function Navbar() {
       <nav className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-6">
-            <Link to="/" className="flex items-center gap-2">
+            <Link to="/" className="flex items-center gap-2 shrink-0">
               <Film className="h-6 w-6 text-primary" />
               <span className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent" style={{ fontFamily: "var(--font-display)" }}>
                 CineClip AI
@@ -64,12 +64,12 @@ export default function Navbar() {
             </Link>
 
             {sectionLinks.length > 0 && (
-              <div className="hidden md:flex items-center gap-1">
+              <div className="hidden lg:flex items-center gap-1">
                 {sectionLinks.map((l) => (
                   <button
                     key={l.href}
                     onClick={() => scrollTo(l.href)}
-                    className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted/50"
+                    className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted/50 whitespace-nowrap"
                   >
                     {l.label}
                   </button>
@@ -98,21 +98,21 @@ export default function Navbar() {
 
             <ThemeToggle />
 
-            <div className="hidden md:flex items-center gap-2">
+            <div className="hidden lg:flex items-center gap-2">
               {user ? (
                 <>
                   <CreditDisplay />
                   <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="gap-2">
                     <LayoutDashboard className="h-4 w-4" />
-                    <span className="hidden lg:inline">Mes projets</span>
+                    <span className="hidden xl:inline">Mes projets</span>
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => navigate("/pricing")} className="gap-2">
                     <CreditCard className="h-4 w-4" />
-                    <span className="hidden lg:inline">Tarifs</span>
+                    <span className="hidden xl:inline">Tarifs</span>
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => navigate("/settings")} className="gap-2">
                     <User className="h-4 w-4" />
-                    <span className="hidden lg:inline">Mon compte</span>
+                    <span className="hidden xl:inline">Mon compte</span>
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => signOut()} className="gap-2 text-muted-foreground">
                     <LogOut className="h-4 w-4" />
@@ -136,7 +136,7 @@ export default function Navbar() {
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden h-9 w-9"
+              className="lg:hidden h-9 w-9"
               onClick={() => setMobileOpen((o) => !o)}
               aria-label="Menu"
             >
@@ -154,7 +154,7 @@ export default function Navbar() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-40 bg-background/60 backdrop-blur-sm md:hidden"
+              className="fixed inset-0 z-40 bg-background/60 backdrop-blur-sm lg:hidden"
               onClick={() => setMobileOpen(false)}
             />
             <motion.div
@@ -162,7 +162,7 @@ export default function Navbar() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed top-16 right-0 bottom-0 z-50 w-72 bg-card border-l border-border shadow-2xl md:hidden overflow-y-auto"
+              className="fixed top-16 right-0 bottom-0 z-50 w-72 bg-card border-l border-border shadow-2xl lg:hidden overflow-y-auto"
             >
               <div className="flex flex-col p-6 gap-2">
                 {sectionLinks.map((l, i) => (
