@@ -4,36 +4,7 @@ import AnimatedSection from "./AnimatedSection";
 import { Star } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-function Counter({ target, suffix = "" }: { target: number; suffix?: string }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const [hasAnimated, setHasAnimated] = useState(false);
-  const count = useMotionValue(0);
-  const rounded = useTransform(count, (v) => Math.floor(v).toLocaleString("fr-FR"));
-
-  useEffect(() => {
-    if (!hasAnimated) return;
-    const controls = animate(count, target, { duration: 2, ease: "easeOut" });
-    return controls.stop;
-  }, [hasAnimated, target, count]);
-
-  return (
-    <motion.span
-      ref={ref}
-      onViewportEnter={() => setHasAnimated(true)}
-      className="text-4xl md:text-5xl font-bold"
-      style={{ fontFamily: "var(--font-display)" }}
-    >
-      <motion.span>{rounded}</motion.span>
-      {suffix}
-    </motion.span>
-  );
-}
-
-const stats = [
-  { value: 10, suffix: "", label: "Crédits offerts à l'inscription" },
-  { value: 13, suffix: "", label: "Styles visuels disponibles" },
-  { value: 5, suffix: " min", label: "De vidéo générée d'un seul coup" },
-];
+const avatarColors = ["bg-primary/80", "bg-accent/80", "bg-destructive/60"];
 
 const testimonials = [
   {
