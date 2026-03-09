@@ -9,19 +9,25 @@ import { ShotGrid } from "@/components/ShotGrid";
 import { ShotPreviewPlayer } from "@/components/ShotPreviewPlayer";
 import { RenderExportPanel } from "@/components/RenderExportPanel";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Play, Film, RefreshCw, Music, Palette, List, Share2, Eye, ArrowLeft } from "lucide-react";
+import { Loader2, Play, Film, RefreshCw, Music, Palette, List, Share2, Eye, ArrowLeft, Clock, Clapperboard, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useCallback, useEffect } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 const statusLabels: Record<string, string> = {
   draft: "Brouillon", analyzing: "Analyse…", planning: "Planification…",
   generating: "Génération…", stitching: "Assemblage…", completed: "Terminé",
   failed: "Échoué", cancelled: "Annulé",
 };
-const typeLabels: Record<string, string> = { clip: "Clip", film: "Film" };
+const statusVariants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  draft: "outline", analyzing: "secondary", planning: "secondary",
+  generating: "secondary", stitching: "secondary", completed: "default",
+  failed: "destructive", cancelled: "outline",
+};
+const typeLabels: Record<string, string> = { clip: "Clip vidéo", film: "Court-métrage" };
 const styleLabels: Record<string, string> = {
   cinematic: "Cinématique", anime: "Anime", watercolor: "Aquarelle",
   "3d_render": "Rendu 3D", noir: "Noir", vintage: "Vintage", neon: "Néon", realistic: "Réaliste",
@@ -49,6 +55,8 @@ export default function ProjectView() {
     },
     enabled: !!id,
   });
+
+  usePageTitle(project?.title ? `${project.title} — Projet` : "Projet");
 
   const { data: shots } = useQuery({
     queryKey: ["shots", id],
@@ -146,7 +154,10 @@ export default function ProjectView() {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+        <div className="flex flex-col items-center justify-center py-32 gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Chargement du projet…</p>
+        </div>
       </div>
     );
   }
@@ -155,9 +166,12 @@ export default function ProjectView() {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="flex flex-col items-center py-20 text-muted-foreground">
-          <Film className="h-16 w-16 mb-4" />
-          <p>Projet introuvable</p>
+        <div className="flex flex-col items-center py-32 text-muted-foreground gap-4">
+          <Film className="h-16 w-16 opacity-30" />
+          <p className="text-lg font-medium">Projet introuvable</p>
+          <Button variant="outline" onClick={() => navigate("/dashboard")} className="gap-2">
+            <ArrowLeft className="h-4 w-4" /> Retour au tableau de bord
+          </Button>
         </div>
       </div>
     );
@@ -174,83 +188,173 @@ export default function ProjectView() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto max-w-5xl px-4 py-8 md:py-12">
+        {/* Breadcrumb */}
         <button
           onClick={() => navigate("/dashboard")}
-          className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors group"
         >
-          <ArrowLeft className="h-4 w-4" /> Retour au tableau de bord
+          <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" /> Retour au tableau de bord
         </button>
-        <div className="mb-6 flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">{project.title}</h1>
-            <div className="mt-2 flex items-center gap-3 flex-wrap">
-              <Badge variant="outline">{typeLabels[project.type] || project.type}</Badge>
-              <Badge variant="secondary">{styleLabels[project.style_preset || ""] || project.style_preset}</Badge>
-              <Badge variant={project.status === "failed" ? "destructive" : "secondary"}>{statusLabels[project.status] || project.status}</Badge>
-              {project.mode && <Badge variant="outline">{modeLabels[project.mode] || project.mode}</Badge>}
-              {project.provider_default && <Badge variant="outline" className="capitalize">{project.provider_default}</Badge>}
+
+        {/* Project Header */}
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div className="space-y-3 min-w-0 flex-1">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold truncate">{project.title}</h1>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant={statusVariants[project.status] || "secondary"}>
+                  {isActive && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
+                  {statusLabels[project.status] || project.status}
+                </Badge>
+                <Badge variant="outline">{typeLabels[project.type] || project.type}</Badge>
+                {project.style_preset && (
+                  <Badge variant="outline" className="text-muted-foreground">
+                    {styleLabels[project.style_preset] || project.style_preset}
+                  </Badge>
+                )}
+                {project.mode && (
+                  <Badge variant="outline" className="text-muted-foreground">
+                    {modeLabels[project.mode] || project.mode}
+                  </Badge>
+                )}
+              </div>
+              {project.synopsis && (
+                <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl line-clamp-3">{project.synopsis}</p>
+              )}
             </div>
-            {project.synopsis && <p className="mt-3 text-sm text-muted-foreground max-w-2xl">{project.synopsis}</p>}
+
+            <div className="flex gap-2 shrink-0">
+              {project.status === "completed" && (
+                <Button variant="glass" size="sm" onClick={handleShare} className="gap-2">
+                  <Share2 className="h-4 w-4" /> Partager
+                </Button>
+              )}
+              {project.status === "draft" && (
+                <Button variant="hero" onClick={startPipeline} disabled={pipelineRunning} className="gap-2">
+                  {pipelineRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                  {pipelineRunning ? "En cours…" : "Lancer le pipeline"}
+                </Button>
+              )}
+              {project.status === "failed" && (
+                <Button variant="hero" onClick={startPipeline} disabled={pipelineRunning} className="gap-2">
+                  <RefreshCw className="h-4 w-4" /> Réessayer
+                </Button>
+              )}
+            </div>
           </div>
-          <div className="flex gap-2">
-            {project.status === "completed" && (
-              <Button variant="glass" size="sm" onClick={handleShare} className="gap-2">
-                <Share2 className="h-4 w-4" /> Partager
-              </Button>
-            )}
-            {project.status === "draft" && (
-              <Button variant="hero" onClick={startPipeline} disabled={pipelineRunning} className="gap-2">
-                {pipelineRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-                {pipelineRunning ? "En cours…" : "Lancer le pipeline"}
-              </Button>
-            )}
-            {project.status === "failed" && (
-              <Button variant="hero" onClick={startPipeline} disabled={pipelineRunning} className="gap-2">
-                <RefreshCw className="h-4 w-4" /> Réessayer
-              </Button>
-            )}
-          </div>
+
+          {/* Quick Info Bar */}
+          {(project.duration_sec || project.aspect_ratio || project.provider_default) && (
+            <div className="mt-4 flex items-center gap-4 flex-wrap text-xs text-muted-foreground">
+              {project.duration_sec && (
+                <span className="flex items-center gap-1">
+                  <Clock className="h-3.5 w-3.5" /> {Math.floor(project.duration_sec / 60)} min {project.duration_sec % 60 > 0 ? `${project.duration_sec % 60}s` : ""}
+                </span>
+              )}
+              {project.aspect_ratio && (
+                <span className="flex items-center gap-1">
+                  <Clapperboard className="h-3.5 w-3.5" /> {project.aspect_ratio}
+                </span>
+              )}
+              {project.provider_default && (
+                <span className="flex items-center gap-1 capitalize">
+                  <Info className="h-3.5 w-3.5" /> {project.provider_default}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
-        <PipelineProgress status={project.status} completedShots={completedShots} totalShots={totalShots} />
+        {/* Pipeline Progress */}
+        <div className="mb-8">
+          <PipelineProgress status={project.status} completedShots={completedShots} totalShots={totalShots} />
+        </div>
 
-        <Tabs defaultValue={hasCompletedShots ? "preview" : "shots"} className="mt-8">
-          <TabsList>
-            {hasCompletedShots && <TabsTrigger value="preview"><Eye className="h-3.5 w-3.5 mr-1.5" />Aperçu</TabsTrigger>}
-            <TabsTrigger value="shots">Plans ({totalShots})</TabsTrigger>
-            {plan && <TabsTrigger value="plan">Plan</TabsTrigger>}
-            {audioAnalysis && <TabsTrigger value="audio">Audio</TabsTrigger>}
-            {(render || project.status === "completed") && <TabsTrigger value="render">Export</TabsTrigger>}
+        {/* Content Tabs */}
+        <Tabs defaultValue={hasCompletedShots ? "preview" : "shots"} className="space-y-6">
+          <TabsList className="h-auto flex-wrap gap-1 bg-secondary/40 p-1.5 rounded-xl">
+            {hasCompletedShots && (
+              <TabsTrigger value="preview" className="gap-1.5 text-xs sm:text-sm rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">
+                <Eye className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Aperçu</span>
+              </TabsTrigger>
+            )}
+            <TabsTrigger value="shots" className="gap-1.5 text-xs sm:text-sm rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">
+              <Clapperboard className="h-3.5 w-3.5" />
+              <span>Plans</span>
+              {totalShots > 0 && <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0">{completedShots}/{totalShots}</Badge>}
+            </TabsTrigger>
+            {plan && (
+              <TabsTrigger value="plan" className="gap-1.5 text-xs sm:text-sm rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">
+                <Palette className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Plan</span>
+              </TabsTrigger>
+            )}
+            {audioAnalysis && (
+              <TabsTrigger value="audio" className="gap-1.5 text-xs sm:text-sm rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">
+                <Music className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Audio</span>
+              </TabsTrigger>
+            )}
+            {(render || project.status === "completed") && (
+              <TabsTrigger value="render" className="gap-1.5 text-xs sm:text-sm rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">
+                <Film className="h-3.5 w-3.5" />
+                <span>Export</span>
+              </TabsTrigger>
+            )}
           </TabsList>
 
+          {/* Preview Tab */}
           {hasCompletedShots && (
-            <TabsContent value="preview" className="mt-4">
+            <TabsContent value="preview">
               <ShotPreviewPlayer shots={shots || []} audioUrl={project.audio_url} bpm={audioAnalysis?.bpm} />
             </TabsContent>
           )}
 
-          <TabsContent value="shots" className="mt-4">
+          {/* Shots Tab */}
+          <TabsContent value="shots">
             {shots && shots.length > 0 ? (
               <ShotGrid shots={shots} />
             ) : (
-              <p className="text-muted-foreground text-sm py-8 text-center">Aucun plan généré. Lancez le pipeline pour commencer.</p>
+              <Card className="border-border/50 bg-card/40">
+                <CardContent className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+                  <Clapperboard className="h-12 w-12 text-muted-foreground/30" />
+                  <p className="text-muted-foreground font-medium">Aucun plan généré</p>
+                  <p className="text-xs text-muted-foreground max-w-sm">
+                    Les plans seront créés automatiquement lors de l'étape de génération du pipeline.
+                  </p>
+                  {project.status === "draft" && (
+                    <Button variant="hero" size="sm" onClick={startPipeline} disabled={pipelineRunning} className="mt-2 gap-2">
+                      <Play className="h-4 w-4" /> Lancer le pipeline
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
             )}
           </TabsContent>
 
+          {/* Plan Tab */}
           {plan && (
-            <TabsContent value="plan" className="mt-4 space-y-4">
+            <TabsContent value="plan" className="space-y-6">
               {styleBible && Object.keys(styleBible).length > 0 && (
                 <Card className="border-border/50 bg-card/60">
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2"><Palette className="h-4 w-4 text-primary" /> Bible de style</CardTitle>
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Palette className="h-4 w-4 text-primary" /> Bible de style
+                    </CardTitle>
+                    <CardDescription className="text-sm">
+                      Directives visuelles générées par l'IA pour assurer la cohérence de chaque plan.
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {Object.entries(styleBible).map(([key, val]) => (
-                        <div key={key} className="rounded-lg bg-secondary/30 p-3">
-                          <span className="text-xs font-medium text-primary capitalize">{key.replace(/_/g, " ")}</span>
-                          <p className="text-xs text-muted-foreground mt-0.5">{typeof val === "string" ? val : JSON.stringify(val)}</p>
+                        <div key={key} className="rounded-lg bg-secondary/30 p-4">
+                          <span className="text-xs font-semibold text-primary uppercase tracking-wider">{key.replace(/_/g, " ")}</span>
+                          <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
+                            {typeof val === "string" ? val : JSON.stringify(val)}
+                          </p>
                         </div>
                       ))}
                     </div>
@@ -259,15 +363,23 @@ export default function ProjectView() {
               )}
               {shotlistJson && shotlistJson.length > 0 && (
                 <Card className="border-border/50 bg-card/60">
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2"><List className="h-4 w-4 text-primary" /> Liste des plans ({shotlistJson.length})</CardTitle>
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <List className="h-4 w-4 text-primary" /> Liste des plans
+                      <Badge variant="secondary" className="text-xs">{shotlistJson.length}</Badge>
+                    </CardTitle>
+                    <CardDescription className="text-sm">
+                      Découpage scène par scène prévu par le réalisateur IA.
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2 max-h-96 overflow-auto">
+                    <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
                       {shotlistJson.map((shot: any, i: number) => (
-                        <div key={i} className="flex items-start gap-3 rounded-lg bg-secondary/30 p-3">
-                          <span className="text-xs font-bold text-primary shrink-0">#{i + 1}</span>
-                          <p className="text-xs text-muted-foreground">{shot.prompt || shot.description || JSON.stringify(shot)}</p>
+                        <div key={i} className="flex items-start gap-4 rounded-lg bg-secondary/30 p-4 hover:bg-secondary/40 transition-colors">
+                          <span className="text-sm font-bold text-primary shrink-0 w-8 text-right">#{i + 1}</span>
+                          <p className="text-sm text-muted-foreground leading-relaxed">
+                            {shot.prompt || shot.description || JSON.stringify(shot)}
+                          </p>
                         </div>
                       ))}
                     </div>
@@ -277,27 +389,46 @@ export default function ProjectView() {
             </TabsContent>
           )}
 
+          {/* Audio Tab */}
           {audioAnalysis && (
-            <TabsContent value="audio" className="mt-4">
+            <TabsContent value="audio">
               <Card className="border-border/50 bg-card/60">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2"><Music className="h-4 w-4 text-primary" /> Analyse audio</CardTitle>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Music className="h-4 w-4 text-primary" /> Analyse audio
+                  </CardTitle>
+                  <CardDescription className="text-sm">
+                    Résultats de l'analyse de votre piste audio : tempo, énergie et structure.
+                  </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-6">
                   {audioAnalysis.bpm && (
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm text-muted-foreground">BPM</span>
-                      <span className="text-2xl font-bold text-primary">{Math.round(audioAnalysis.bpm)}</span>
+                    <div className="flex items-center gap-6 p-4 rounded-xl bg-secondary/30">
+                      <div>
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">BPM</span>
+                        <p className="text-3xl font-bold text-primary mt-1">{Math.round(audioAnalysis.bpm)}</p>
+                      </div>
+                      <div className="h-12 w-px bg-border" />
+                      <div>
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tempo</span>
+                        <p className="text-sm text-foreground mt-1">
+                          {audioAnalysis.bpm < 90 ? "Lent" : audioAnalysis.bpm < 120 ? "Modéré" : audioAnalysis.bpm < 150 ? "Rapide" : "Très rapide"}
+                        </p>
+                      </div>
                     </div>
                   )}
                   {sectionsJson && sectionsJson.length > 0 && (
                     <div>
-                      <h4 className="text-sm font-medium mb-2">Sections</h4>
+                      <h4 className="text-sm font-medium mb-3">Structure du morceau</h4>
                       <div className="flex gap-2 flex-wrap">
                         {sectionsJson.map((sec: any, i: number) => (
-                          <Badge key={i} variant="outline" className="text-xs">
+                          <Badge key={i} variant="outline" className="text-xs py-1.5 px-3">
                             {sec.label || sec.type || `Section ${i + 1}`}
-                            {sec.start != null && ` (${Math.round(sec.start)}s)`}
+                            {sec.start != null && (
+                              <span className="ml-1.5 text-muted-foreground">
+                                {Math.floor(sec.start / 60)}:{String(Math.round(sec.start % 60)).padStart(2, "0")}
+                              </span>
+                            )}
                           </Badge>
                         ))}
                       </div>
@@ -308,8 +439,9 @@ export default function ProjectView() {
             </TabsContent>
           )}
 
+          {/* Export Tab */}
           {(render || project.status === "completed") && (
-            <TabsContent value="render" className="mt-4">
+            <TabsContent value="render">
               <RenderExportPanel projectId={project.id} render={render} projectStatus={project.status} />
             </TabsContent>
           )}

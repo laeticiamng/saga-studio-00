@@ -1,8 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Download, Film, Monitor, Smartphone, Square, Loader2 } from "lucide-react";
+import { Download, Film, Monitor, Smartphone, Square, Loader2, CheckCircle } from "lucide-react";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -14,8 +14,8 @@ interface RenderExportPanelProps {
 }
 
 const FORMAT_OPTIONS = [
-  { key: "master_16_9", label: "16:9 Paysage", icon: Monitor, description: "HD standard (1920×1080)" },
-  { key: "master_9_16", label: "9:16 Vertical", icon: Smartphone, description: "TikTok / Reels (1080×1920)" },
+  { key: "master_16_9", label: "16:9 Paysage", icon: Monitor, description: "HD standard — YouTube, Vimeo (1920×1080)" },
+  { key: "master_9_16", label: "9:16 Vertical", icon: Smartphone, description: "TikTok, Reels, Shorts (1080×1920)" },
   { key: "teaser", label: "Teaser 15s", icon: Film, description: "Extrait des meilleurs moments" },
   { key: "square", label: "1:1 Carré", icon: Square, description: "Feed Instagram (1080×1080)" },
 ];
@@ -51,45 +51,64 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
 
   const renderLogs = render?.logs ? (() => { try { return JSON.parse(render.logs); } catch { return null; } })() : null;
 
+  const downloadLinks = [
+    { url: render?.master_url_16_9, label: "Master 16:9", icon: Monitor },
+    { url: render?.master_url_9_16, label: "Vertical 9:16", icon: Smartphone },
+    { url: render?.teaser_url, label: "Teaser 15s", icon: Film },
+  ].filter(l => l.url);
+
   return (
-    <Card className="border-primary/30 bg-card/60">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Download className="h-5 w-5 text-primary" /> Export & Téléchargements
+    <Card className="border-primary/20 bg-card/60">
+      <CardHeader className="pb-4">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Download className="h-5 w-5 text-primary" /> Export & Téléchargements
+          </CardTitle>
           {render && (
-            <Badge variant={render.status === "completed" ? "secondary" : "outline"} className="ml-2">
+            <Badge variant={render.status === "completed" ? "default" : render.status === "failed" ? "destructive" : "secondary"}>
+              {render.status === "completed" && <CheckCircle className="h-3 w-3 mr-1" />}
+              {render.status === "processing" && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
               {{ completed: "Terminé", pending: "En attente", processing: "En cours", failed: "Échoué" }[render.status as string] || render.status}
             </Badge>
           )}
-        </CardTitle>
+        </div>
+        <CardDescription className="text-sm">
+          Choisissez les formats souhaités et lancez l'export. Vous pourrez télécharger chaque version ci-dessous.
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-2">
-          {FORMAT_OPTIONS.map(fmt => (
-            <label
-              key={fmt.key}
-              className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${
-                selectedFormats.includes(fmt.key)
-                  ? "border-primary bg-primary/5"
-                  : "border-border/50 bg-secondary/20 hover:bg-secondary/30"
-              }`}
-            >
-              <Checkbox
-                checked={selectedFormats.includes(fmt.key)}
-                onCheckedChange={() => toggleFormat(fmt.key)}
-              />
-              <fmt.icon className="h-4 w-4 text-muted-foreground shrink-0" />
-              <div className="min-w-0">
-                <p className="text-sm font-medium">{fmt.label}</p>
-                <p className="text-xs text-muted-foreground">{fmt.description}</p>
-              </div>
-            </label>
-          ))}
+      <CardContent className="space-y-6">
+        {/* Format Selection */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {FORMAT_OPTIONS.map(fmt => {
+            const isSelected = selectedFormats.includes(fmt.key);
+            return (
+              <label
+                key={fmt.key}
+                className={`flex items-center gap-3 rounded-xl border p-4 cursor-pointer transition-all duration-200 ${
+                  isSelected
+                    ? "border-primary/50 bg-primary/5 shadow-sm"
+                    : "border-border/50 bg-secondary/20 hover:bg-secondary/30 hover:border-border"
+                }`}
+              >
+                <Checkbox
+                  checked={isSelected}
+                  onCheckedChange={() => toggleFormat(fmt.key)}
+                />
+                <fmt.icon className={`h-5 w-5 shrink-0 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{fmt.label}</p>
+                  <p className="text-xs text-muted-foreground">{fmt.description}</p>
+                </div>
+              </label>
+            );
+          })}
         </div>
 
+        {/* Export Button */}
         {projectStatus === "completed" && (
           <Button
             variant="hero"
+            size="lg"
             className="w-full gap-2"
             onClick={handleReRender}
             disabled={reRendering || selectedFormats.length === 0}
@@ -99,44 +118,44 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
           </Button>
         )}
 
-        {render?.status === "completed" && (
+        {/* Download Links */}
+        {render?.status === "completed" && downloadLinks.length > 0 && (
           <div className="space-y-2">
-            {render.master_url_16_9 && (
-              <a href={render.master_url_16_9} target="_blank" rel="noopener noreferrer">
-                <Button variant="glass" className="w-full justify-start gap-2">
-                  <Download className="h-4 w-4" /> Télécharger Master 16:9
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Fichiers prêts</p>
+            {downloadLinks.map((link) => (
+              <a key={link.label} href={link.url} target="_blank" rel="noopener noreferrer" className="block">
+                <Button variant="glass" className="w-full justify-between gap-2 h-12">
+                  <span className="flex items-center gap-2">
+                    <link.icon className="h-4 w-4 text-primary" />
+                    {link.label}
+                  </span>
+                  <Download className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </a>
-            )}
-            {render.master_url_9_16 && (
-              <a href={render.master_url_9_16} target="_blank" rel="noopener noreferrer">
-                <Button variant="glass" className="w-full justify-start gap-2">
-                  <Download className="h-4 w-4" /> Télécharger Vertical 9:16
-                </Button>
-              </a>
-            )}
-            {render.teaser_url && (
-              <a href={render.teaser_url} target="_blank" rel="noopener noreferrer">
-                <Button variant="glass" className="w-full justify-start gap-2">
-                  <Download className="h-4 w-4" /> Télécharger Teaser 15s
-                </Button>
-              </a>
-            )}
+            ))}
           </div>
         )}
 
+        {/* Beat Sync Info */}
         {renderLogs?.beat_sync_enabled && (
-          <div className="rounded-lg bg-secondary/30 p-3 text-xs text-muted-foreground space-y-1">
-            <p className="font-medium text-foreground">🎵 Export synchronisé au rythme</p>
-            <p>BPM : {renderLogs.bpm} · {renderLogs.cuts_count} coupes alignées sur les beats</p>
-            <p>Transitions : {renderLogs.transitions?.join(", ")}</p>
+          <div className="rounded-xl bg-primary/5 border border-primary/10 p-4 space-y-1.5">
+            <p className="text-sm font-medium flex items-center gap-2">🎵 Export synchronisé au rythme</p>
+            <p className="text-xs text-muted-foreground">
+              BPM : {renderLogs.bpm} · {renderLogs.cuts_count} coupes alignées sur les beats
+            </p>
+            {renderLogs.transitions && (
+              <p className="text-xs text-muted-foreground">Transitions : {renderLogs.transitions.join(", ")}</p>
+            )}
           </div>
         )}
 
+        {/* Logs */}
         {render?.logs && (
-          <details className="mt-2">
-            <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">Voir les logs</summary>
-            <pre className="text-xs text-muted-foreground whitespace-pre-wrap bg-secondary/30 rounded-lg p-3 mt-2 max-h-48 overflow-auto">
+          <details className="group">
+            <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors py-1">
+              Voir les logs techniques
+            </summary>
+            <pre className="text-xs text-muted-foreground whitespace-pre-wrap bg-secondary/30 rounded-lg p-4 mt-2 max-h-48 overflow-auto leading-relaxed">
               {typeof render.logs === "string" ? render.logs : JSON.stringify(render.logs, null, 2)}
             </pre>
           </details>
