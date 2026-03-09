@@ -46,7 +46,7 @@ const CTA = () => {
                 variant="hero"
                 size="lg"
                 className="group"
-                onClick={() => navigate(user ? "/create/clip" : "/auth")}
+                onClick={() => navigate(user ? "/create/clip" : "/auth?signup")}
               >
                 <Video className="w-5 h-5 group-hover:scale-110 transition-transform" />
                 Essai gratuit — Créer ma vidéo
