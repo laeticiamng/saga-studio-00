@@ -162,7 +162,7 @@ export default function Navbar() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed top-16 right-0 bottom-0 z-50 w-72 bg-card border-l border-border shadow-2xl lg:hidden overflow-y-auto"
+              className="fixed top-16 right-0 bottom-0 z-50 w-72 max-w-[85vw] bg-card border-l border-border shadow-2xl lg:hidden overflow-y-auto pb-safe"
             >
               <div className="flex flex-col p-6 gap-2">
                 {sectionLinks.map((l, i) => (
@@ -172,7 +172,7 @@ export default function Navbar() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.05 * i }}
                     onClick={() => scrollTo(l.href)}
-                    className="text-left px-4 py-3 rounded-lg text-foreground hover:bg-muted/50 transition-colors font-medium"
+                    className="text-left px-4 py-3.5 rounded-lg text-foreground hover:bg-muted/50 active:bg-muted/70 transition-colors font-medium min-h-[44px]"
                   >
                     {l.label}
                   </motion.button>
@@ -185,25 +185,25 @@ export default function Navbar() {
                     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }}>
                       <CreditDisplay />
                     </motion.div>
-                    <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} onClick={() => mobileNav("/dashboard")} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted/50 transition-colors">
+                    <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} onClick={() => mobileNav("/dashboard")} className="flex items-center gap-3 px-4 py-3.5 rounded-lg hover:bg-muted/50 active:bg-muted/70 transition-colors min-h-[44px]">
                       <LayoutDashboard className="h-4 w-4 text-primary" /> Mes projets
                     </motion.button>
-                    <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.25 }} onClick={() => mobileNav("/pricing")} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted/50 transition-colors">
+                    <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.25 }} onClick={() => mobileNav("/pricing")} className="flex items-center gap-3 px-4 py-3.5 rounded-lg hover:bg-muted/50 active:bg-muted/70 transition-colors min-h-[44px]">
                       <CreditCard className="h-4 w-4 text-primary" /> Tarifs
                     </motion.button>
-                    <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} onClick={() => mobileNav("/settings")} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted/50 transition-colors">
+                    <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} onClick={() => mobileNav("/settings")} className="flex items-center gap-3 px-4 py-3.5 rounded-lg hover:bg-muted/50 active:bg-muted/70 transition-colors min-h-[44px]">
                       <User className="h-4 w-4 text-primary" /> Mon compte
                     </motion.button>
-                    <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.35 }} onClick={() => { setMobileOpen(false); signOut(); }} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground">
+                    <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.35 }} onClick={() => { setMobileOpen(false); signOut(); }} className="flex items-center gap-3 px-4 py-3.5 rounded-lg hover:bg-muted/50 active:bg-muted/70 transition-colors text-muted-foreground min-h-[44px]">
                       <LogOut className="h-4 w-4" /> Déconnexion
                     </motion.button>
                   </>
                 ) : (
                   <>
-                    <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }} onClick={() => mobileNav("/pricing")} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted/50 transition-colors font-medium">
+                    <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }} onClick={() => mobileNav("/pricing")} className="flex items-center gap-3 px-4 py-3.5 rounded-lg hover:bg-muted/50 active:bg-muted/70 transition-colors font-medium min-h-[44px]">
                       <CreditCard className="h-4 w-4 text-primary" /> Tarifs
                     </motion.button>
-                    <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.18 }} onClick={() => mobileNav("/auth")} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted/50 transition-colors">
+                    <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.18 }} onClick={() => mobileNav("/auth")} className="flex items-center gap-3 px-4 py-3.5 rounded-lg hover:bg-muted/50 active:bg-muted/70 transition-colors min-h-[44px]">
                       Se connecter
                     </motion.button>
                     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.22 }}>

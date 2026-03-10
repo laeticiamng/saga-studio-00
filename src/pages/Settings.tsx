@@ -260,10 +260,10 @@ export default function Settings() {
         {/* Credit history */}
         <Card className="border-border/50 bg-card/60">
           <CardHeader>
-            <CardTitle className="flex items-center justify-between text-lg">
+            <CardTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-lg">
               Historique des crédits
               {wallet && (
-                <Badge variant="secondary" className="text-sm font-medium">
+                <Badge variant="secondary" className="text-sm font-medium w-fit">
                   Solde : {wallet.balance} crédits
                 </Badge>
               )}
@@ -275,6 +275,7 @@ export default function Settings() {
             ) : !ledger?.length ? (
               <p className="text-sm text-muted-foreground text-center py-8">Aucune transaction pour le moment</p>
             ) : (
+              <div className="table-responsive">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -286,7 +287,7 @@ export default function Settings() {
                 <TableBody>
                   {ledger.map((entry) => (
                     <TableRow key={entry.id}>
-                      <TableCell className="text-muted-foreground text-xs">
+                      <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
                         {new Date(entry.created_at).toLocaleDateString("fr-FR")}
                       </TableCell>
                       <TableCell className="text-sm capitalize">{entry.reason.replace(/_/g, " ")}</TableCell>
@@ -300,6 +301,7 @@ export default function Settings() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             )}
           </CardContent>
         </Card>

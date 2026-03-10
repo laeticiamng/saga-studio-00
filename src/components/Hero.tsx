@@ -26,7 +26,7 @@ const Hero = () => {
   };
 
   return (
-    <section ref={ref} className="relative min-h-screen flex items-center justify-center overflow-hidden" style={{ position: "relative" }}>
+    <section ref={ref} className="relative min-h-[100dvh] flex items-center justify-center overflow-hidden py-20 sm:py-0" style={{ position: "relative" }}>
       <div className="absolute inset-0 bg-gradient-hero" />
 
       <motion.div
@@ -46,7 +46,7 @@ const Hero = () => {
         style={{ y: glowY }}
         animate={{ scale: [1, 1.15, 1], opacity: [0.2, 0.35, 0.2] }}
         transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-primary/20 rounded-full blur-3xl"
+        className="absolute top-1/4 left-1/2 -translate-x-1/2 w-64 sm:w-96 h-64 sm:h-96 bg-primary/20 rounded-full blur-3xl"
       />
 
       <motion.div
@@ -57,7 +57,7 @@ const Hero = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card/40 backdrop-blur-sm border border-border/50 mb-8"
+          className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full bg-card/40 backdrop-blur-sm border border-border/50 mb-6 sm:mb-8 max-w-[90vw]"
         >
           <Sparkles className="w-4 h-4 text-primary" />
           <span className="text-sm text-muted-foreground">
@@ -69,7 +69,7 @@ const Hero = () => {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.15 }}
-          className="text-4xl sm:text-5xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent"
+          className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold mb-4 sm:mb-6 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent"
         >
           Transformez votre musique
           <br />
@@ -80,7 +80,7 @@ const Hero = () => {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.3 }}
-          className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-12"
+          className="text-base sm:text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-8 sm:mb-12 px-2"
         >
           Uploadez votre musique, choisissez un style visuel, et recevez une vidéo complète de 1 à 5 minutes.
           <br className="hidden md:block" />
@@ -107,7 +107,7 @@ const Hero = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.7 }}
-          className="mt-16 flex flex-wrap justify-center gap-8 text-sm text-muted-foreground"
+          className="mt-10 sm:mt-16 flex flex-wrap justify-center gap-4 sm:gap-8 text-xs sm:text-sm text-muted-foreground"
         >
           {["Qualité HD et 4K", "13 styles visuels au choix", "Vidéo prête en ~10 min"].map((t) => (
             <div key={t} className="flex items-center gap-2">

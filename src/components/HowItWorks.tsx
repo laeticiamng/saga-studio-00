@@ -30,7 +30,7 @@ const HowItWorks = () => {
               variant={index % 2 === 0 ? "fadeLeft" : "fadeRight"}
             >
               <div
-                className={`relative flex items-center gap-8 md:gap-12 mb-16 last:mb-0 ${
+                className={`relative flex items-center gap-5 sm:gap-8 md:gap-12 mb-10 sm:mb-16 last:mb-0 ${
                   index % 2 === 0 ? "md:flex-row" : "md:flex-row-reverse"
                 } flex-col`}
               >

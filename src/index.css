@@ -112,33 +112,57 @@
                 stroke 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
+  html {
+    @apply bg-background;
+    /* Use dvh for true mobile viewport height */
+    min-height: 100dvh;
+  }
+
   body {
     font-family: var(--font-body);
     @apply bg-background text-foreground antialiased;
     font-size: 16px;
     line-height: 1.6;
+    /* Prevent horizontal overflow */
+    overflow-x: hidden;
+    /* iOS text size adjust */
+    -webkit-text-size-adjust: 100%;
   }
 
   h1, h2, h3 {
     font-family: var(--font-display);
     @apply tracking-tight;
     line-height: 1.15;
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
 
   h1 {
-    @apply text-4xl md:text-5xl font-bold;
+    @apply text-3xl sm:text-4xl md:text-5xl font-bold;
   }
 
   h2 {
-    @apply text-3xl md:text-4xl font-bold;
+    @apply text-2xl sm:text-3xl md:text-4xl font-bold;
   }
 
   h3 {
-    @apply text-xl md:text-2xl font-semibold;
+    @apply text-lg sm:text-xl md:text-2xl font-semibold;
   }
 
   p {
     @apply leading-relaxed;
+  }
+
+  /* iOS: prevent zoom on input focus (16px minimum) */
+  input, select, textarea {
+    font-size: 16px;
+  }
+
+  /* Smooth scrolling — respect reduced motion */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
   }
 }
 
@@ -160,14 +184,39 @@
     @apply text-primary hover:underline;
   }
 
-  /* Page wrapper utility */
+  /* Page wrapper utility — optimized for mobile */
   .page-section {
-    @apply py-20 md:py-28 px-4;
+    @apply py-14 sm:py-20 md:py-28 px-4;
   }
   .page-header {
-    @apply text-center mb-14 md:mb-16;
+    @apply text-center mb-10 sm:mb-14 md:mb-16;
   }
   .page-header p {
-    @apply text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mt-4;
+    @apply text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mt-3 sm:mt-4;
+  }
+
+  /* Mobile-friendly table wrapper */
+  .table-responsive {
+    @apply w-full overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Touch-friendly minimum target size */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Safe area utilities */
+@layer utilities {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .mb-safe {
+    margin-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
