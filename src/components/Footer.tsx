@@ -41,10 +41,10 @@ const Footer = () => {
   };
 
   return (
-    <footer className="border-t border-border/50 pt-14 pb-8 px-4">
+    <footer className="border-t border-border/50 pt-10 sm:pt-14 pb-8 px-4 pb-safe">
       <div className="container mx-auto">
         <AnimatedSection>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-10 mb-10 sm:mb-12">
             <div className="col-span-2 md:col-span-1">
               <Link to="/" className="flex items-center gap-2.5 mb-4">
                 <div className="w-9 h-9 rounded-lg bg-gradient-primary flex items-center justify-center">
@@ -62,27 +62,27 @@ const Footer = () => {
             {Object.entries(footerLinks).map(([title, links]) => (
               <div key={title}>
                 <h4 className="text-sm font-semibold text-foreground mb-4 uppercase tracking-wider">{title}</h4>
-                <ul className="space-y-2.5">
+                <ul className="space-y-1 sm:space-y-2.5">
                   {links.map((link) => (
                     <li key={link.label}>
                       {link.href.startsWith("#") ? (
                         <button
                           onClick={() => handleAnchorClick(link.href)}
-                          className="text-sm text-muted-foreground hover:text-foreground transition-colors text-left"
+                          className="text-sm text-muted-foreground hover:text-foreground transition-colors text-left py-1.5 sm:py-0"
                         >
                           {link.label}
                         </button>
                       ) : link.href.startsWith("mailto:") ? (
                         <a
                           href={link.href}
-                          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                          className="text-sm text-muted-foreground hover:text-foreground transition-colors py-1.5 sm:py-0 inline-block"
                         >
                           {link.label}
                         </a>
                       ) : (
                         <Link
                           to={link.href}
-                          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                          className="text-sm text-muted-foreground hover:text-foreground transition-colors py-1.5 sm:py-0 inline-block"
                         >
                           {link.label}
                         </Link>

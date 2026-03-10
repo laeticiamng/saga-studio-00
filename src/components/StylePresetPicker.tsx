@@ -23,22 +23,22 @@ interface Props {
 
 export default function StylePresetPicker({ value, onChange }: Props) {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-3">
       {STYLE_PRESETS.map((preset) => (
         <button
           key={preset.id}
           type="button"
           onClick={() => onChange(preset.id)}
           className={cn(
-            "flex flex-col items-center gap-2 rounded-xl border p-4 transition-all",
-            "hover:scale-105 hover:shadow-lg",
+            "flex flex-col items-center gap-1.5 sm:gap-2 rounded-xl border p-2.5 sm:p-4 transition-all min-h-[72px]",
+            "hover:scale-105 hover:shadow-lg active:scale-95",
             value === preset.id
               ? "border-primary bg-primary/10 shadow-md"
               : "border-border/50 bg-card/40"
           )}
         >
-          <span className="text-2xl">{preset.emoji}</span>
-          <span className="text-sm font-medium">{preset.label}</span>
+          <span className="text-xl sm:text-2xl">{preset.emoji}</span>
+          <span className="text-xs sm:text-sm font-medium text-center leading-tight">{preset.label}</span>
         </button>
       ))}
     </div>

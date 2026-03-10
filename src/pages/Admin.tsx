@@ -233,7 +233,7 @@ export default function Admin() {
         </h1>
 
         {/* KPI Cards */}
-        <div className="grid gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-6 mb-8">
+        <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 mb-8">
           <Card className="border-border/50 bg-card/60">
             <CardContent className="pt-6 text-center">
               <div className="text-2xl font-bold text-primary">{projects?.length || 0}</div>
@@ -325,13 +325,15 @@ export default function Admin() {
 
         {/* Tabs */}
         <Tabs defaultValue="jobs" className="space-y-4">
-          <TabsList className="bg-muted/50">
-            <TabsTrigger value="jobs" className="gap-1"><Activity className="h-4 w-4" /> Jobs</TabsTrigger>
-            <TabsTrigger value="projects" className="gap-1"><Clapperboard className="h-4 w-4" /> Projets</TabsTrigger>
-            <TabsTrigger value="credits" className="gap-1"><CreditCard className="h-4 w-4" /> Crédits</TabsTrigger>
-            <TabsTrigger value="renders" className="gap-1"><Film className="h-4 w-4" /> Rendus</TabsTrigger>
-            <TabsTrigger value="flags" className="gap-1"><AlertTriangle className="h-4 w-4" /> Signalements ({flags?.filter(f => f.status === "pending").length || 0})</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+            <TabsList className="bg-muted/50 w-max sm:w-auto">
+              <TabsTrigger value="jobs" className="gap-1 text-xs sm:text-sm"><Activity className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Jobs</TabsTrigger>
+              <TabsTrigger value="projects" className="gap-1 text-xs sm:text-sm"><Clapperboard className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Projets</TabsTrigger>
+              <TabsTrigger value="credits" className="gap-1 text-xs sm:text-sm"><CreditCard className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Crédits</TabsTrigger>
+              <TabsTrigger value="renders" className="gap-1 text-xs sm:text-sm"><Film className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Rendus</TabsTrigger>
+              <TabsTrigger value="flags" className="gap-1 text-xs sm:text-sm"><AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Signalements</span><span className="sm:hidden">Flags</span> ({flags?.filter(f => f.status === "pending").length || 0})</TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* JOBS TAB */}
           <TabsContent value="jobs">
@@ -343,6 +345,7 @@ export default function Admin() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
+                <div className="table-responsive">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -374,6 +377,7 @@ export default function Admin() {
                     })}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -386,6 +390,7 @@ export default function Admin() {
                 {isLoading ? (
                   <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
                 ) : (
+                  <div className="table-responsive">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -393,8 +398,8 @@ export default function Admin() {
                         <TableHead>Type</TableHead>
                         <TableHead>Statut</TableHead>
                         <TableHead>Style</TableHead>
-                        <TableHead>Fournisseur</TableHead>
-                        <TableHead>Créé le</TableHead>
+                        <TableHead className="hidden sm:table-cell">Fournisseur</TableHead>
+                        <TableHead className="hidden sm:table-cell">Créé le</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -408,8 +413,8 @@ export default function Admin() {
                             <TableCell><Badge variant="outline">{typeLabels[p.type] || p.type}</Badge></TableCell>
                             <TableCell><StatusBadge status={p.status} /></TableCell>
                             <TableCell className="text-xs">{styleLabels[p.style_preset || ""] || p.style_preset || "—"}</TableCell>
-                            <TableCell className="text-xs font-mono">{p.provider_default || "—"}</TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{new Date(p.created_at).toLocaleDateString("fr-FR")}</TableCell>
+                            <TableCell className="text-xs font-mono hidden sm:table-cell">{p.provider_default || "—"}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground hidden sm:table-cell">{new Date(p.created_at).toLocaleDateString("fr-FR")}</TableCell>
                             <TableCell className="text-right space-x-1">
                               {canCancel && (
                                 <Button
@@ -437,6 +442,7 @@ export default function Admin() {
                       })}
                     </TableBody>
                   </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -452,12 +458,13 @@ export default function Admin() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
+                <div className="table-responsive">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Delta</TableHead>
                       <TableHead>Raison</TableHead>
-                      <TableHead>Type</TableHead>
+                      <TableHead className="hidden sm:table-cell">Type</TableHead>
                       <TableHead>Date</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -468,12 +475,13 @@ export default function Admin() {
                           {l.delta > 0 ? "+" : ""}{l.delta}
                         </TableCell>
                         <TableCell className="text-sm">{l.reason}</TableCell>
-                        <TableCell><Badge variant="outline" className="text-xs">{l.ref_type || "—"}</Badge></TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{new Date(l.created_at).toLocaleString("fr-FR")}</TableCell>
+                        <TableCell className="hidden sm:table-cell"><Badge variant="outline" className="text-xs">{l.ref_type || "—"}</Badge></TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{new Date(l.created_at).toLocaleDateString("fr-FR")}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -488,6 +496,7 @@ export default function Admin() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
+                <div className="table-responsive">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -495,7 +504,7 @@ export default function Admin() {
                       <TableHead>Statut</TableHead>
                       <TableHead>URL 16:9</TableHead>
                       <TableHead>URL 9:16</TableHead>
-                      <TableHead>Créé le</TableHead>
+                      <TableHead className="hidden sm:table-cell">Créé le</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -509,11 +518,12 @@ export default function Admin() {
                         <TableCell className="text-xs">
                           {r.master_url_9_16 ? <a href={r.master_url_9_16} target="_blank" rel="noreferrer" className="text-primary underline">Voir</a> : "—"}
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString("fr-FR")}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground hidden sm:table-cell">{new Date(r.created_at).toLocaleString("fr-FR")}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -529,13 +539,14 @@ export default function Admin() {
               </CardHeader>
               <CardContent>
                 {flags && flags.length > 0 ? (
+                  <div className="table-responsive">
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Projet</TableHead>
                         <TableHead>Raison</TableHead>
                         <TableHead>Statut</TableHead>
-                        <TableHead>Créé le</TableHead>
+                        <TableHead className="hidden sm:table-cell">Créé le</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -549,7 +560,7 @@ export default function Admin() {
                             <TableCell className="font-mono text-xs">{f.project_id.slice(0, 8)}…</TableCell>
                             <TableCell className="text-sm">{f.reason}</TableCell>
                             <TableCell><StatusBadge status={f.status} /></TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{new Date(f.created_at).toLocaleString("fr-FR")}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground hidden sm:table-cell">{new Date(f.created_at).toLocaleString("fr-FR")}</TableCell>
                             <TableCell className="text-right space-x-1">
                               {isPending && (
                                 <>
@@ -581,6 +592,7 @@ export default function Admin() {
                       })}
                     </TableBody>
                   </Table>
+                  </div>
                 ) : (
                   <p className="text-muted-foreground text-center py-8">Aucun signalement</p>
                 )}

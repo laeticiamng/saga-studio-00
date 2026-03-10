@@ -72,10 +72,15 @@ export function ShotGrid({ shots }: { shots: Shot[] }) {
                     loop
                     onMouseEnter={(e) => { e.currentTarget.play().catch(() => {}); setPlayingId(shot.id); }}
                     onMouseLeave={(e) => { e.currentTarget.pause(); e.currentTarget.currentTime = 0; setPlayingId(null); }}
+                    onClick={(e) => {
+                      const vid = e.currentTarget;
+                      if (isPlaying) { vid.pause(); vid.currentTime = 0; setPlayingId(null); }
+                      else { vid.play().catch(() => {}); setPlayingId(shot.id); }
+                    }}
                   />
                   {!isPlaying && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Play className="h-8 w-8 text-white/80" />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 sm:opacity-0 sm:group-hover:opacity-100 opacity-100 transition-opacity pointer-events-none">
+                      <Play className="h-6 w-6 sm:h-8 sm:w-8 text-white/80" />
                     </div>
                   )}
                 </>

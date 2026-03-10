@@ -36,7 +36,7 @@ export default function CookieBanner() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="fixed bottom-4 left-4 right-4 z-[60] mx-auto max-w-lg"
+          className="fixed bottom-4 left-4 right-4 z-[60] mx-auto max-w-lg mb-safe"
         >
           <div className="rounded-xl border border-border/50 bg-card/95 backdrop-blur-xl shadow-2xl p-5">
             <div className="flex items-start gap-3">

@@ -139,7 +139,7 @@ export default function Pricing() {
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3 max-w-4xl mx-auto mb-20">
+        <div className="grid gap-5 sm:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 max-w-4xl mx-auto mb-14 sm:mb-20">
           {PLANS.map((plan) => {
             const current = isCurrentPlan(plan);
             return (
@@ -202,7 +202,7 @@ export default function Pricing() {
         <div className="max-w-2xl mx-auto">
           <h2 className="text-2xl font-bold text-center mb-3">Besoin de plus de crédits ?</h2>
           <p className="text-center text-muted-foreground mb-8 text-sm">Achetez des packs ponctuels, sans abonnement. Les crédits n'expirent pas.</p>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
             {PACKS.map((pack) => (
               <Card key={pack.credits} className="border-border/50 bg-card/40">
                 <CardContent className="flex items-center justify-between p-4">

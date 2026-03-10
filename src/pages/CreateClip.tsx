@@ -234,7 +234,7 @@ export default function CreateClip() {
                         <Video className="h-14 w-14 text-muted-foreground p-3" />
                       )}
                       <span className="text-xs max-w-[80px] truncate">{file.name}</span>
-                      <button onClick={() => removeFaceFile(i)} className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => removeFaceFile(i)} className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                         <X className="h-3 w-3" />
                       </button>
                     </div>
@@ -262,7 +262,7 @@ export default function CreateClip() {
                   {refPhotos.map((file, i) => (
                     <div key={i} className="relative group rounded-lg border border-border/50 bg-card/40 overflow-hidden">
                       <img src={refObjectUrls[i]} alt="" className="h-[72px] w-[72px] object-cover" />
-                      <button onClick={() => removeRefPhoto(i)} className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => removeRefPhoto(i)} className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                         <X className="h-3 w-3" />
                       </button>
                     </div>
