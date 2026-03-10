@@ -15,12 +15,12 @@ const CTA = () => {
       <motion.div
         animate={{ scale: [1, 1.2, 1], opacity: [0.15, 0.3, 0.15] }}
         transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-1/2 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl"
+        className="absolute top-1/2 left-1/4 w-64 sm:w-96 h-64 sm:h-96 bg-primary/20 rounded-full blur-3xl"
       />
       <motion.div
         animate={{ scale: [1.2, 1, 1.2], opacity: [0.15, 0.3, 0.15] }}
         transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-        className="absolute top-1/4 right-1/4 w-96 h-96 bg-accent/20 rounded-full blur-3xl"
+        className="absolute top-1/4 right-1/4 w-64 sm:w-96 h-64 sm:h-96 bg-accent/20 rounded-full blur-3xl"
       />
 
       <div className="container mx-auto relative z-10">
@@ -37,13 +37,13 @@ const CTA = () => {
               <span className="text-sm text-muted-foreground">Gratuit, sans engagement, sans carte bancaire</span>
             </motion.div>
 
-            <h2 className="text-4xl md:text-6xl font-bold mb-6">
+            <h2 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-4 sm:mb-6">
               Prêt à créer
               <br />
               <span className="text-primary">votre premier clip ?</span>
             </h2>
 
-            <p className="text-xl text-muted-foreground mb-12">
+            <p className="text-base sm:text-xl text-muted-foreground mb-8 sm:mb-12 px-2">
               Votre premier clip est offert. Uploadez votre musique, choisissez un style, et recevez votre vidéo en quelques minutes.
             </p>
 

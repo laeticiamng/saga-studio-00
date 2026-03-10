@@ -60,7 +60,7 @@ export default function SocialProof() {
       {/* Parallax glow */}
       <motion.div
         style={{ y: glowY, scale: glowScale }}
-        className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/10 rounded-full blur-3xl"
+        className="absolute top-0 left-1/2 -translate-x-1/2 w-[300px] sm:w-[600px] h-[150px] sm:h-[300px] bg-primary/10 rounded-full blur-3xl"
       />
 
       <div className="container mx-auto relative z-10">
@@ -74,7 +74,7 @@ export default function SocialProof() {
           </p>
         </AnimatedSection>
 
-        <StaggerContainer staggerDelay={0.12} className="grid md:grid-cols-3 gap-6 mb-20">
+        <StaggerContainer staggerDelay={0.12} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-14 sm:mb-20">
           {testimonials.map((t, i) => (
             <StaggerItem key={t.name} variant="fadeUp">
               <motion.div
@@ -114,7 +114,7 @@ export default function SocialProof() {
           </h2>
         </AnimatedSection>
 
-        <StaggerContainer staggerDelay={0.12} className="grid md:grid-cols-3 gap-6">
+        <StaggerContainer staggerDelay={0.12} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
           {highlights.map((h) => (
             <StaggerItem key={h.title} variant="scaleIn">
               <motion.div
