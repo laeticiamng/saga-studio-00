@@ -29,6 +29,7 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
   const [clientRendering, setClientRendering] = useState(false);
   const [renderProgress, setRenderProgress] = useState<RenderProgress | null>(null);
   const [renderedBlobUrl, setRenderedBlobUrl] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const toggleFormat = (key: string) => {
     setSelectedFormats(prev =>
