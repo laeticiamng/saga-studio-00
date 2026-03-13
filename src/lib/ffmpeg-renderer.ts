@@ -84,6 +84,10 @@ export async function renderVideo(
     onProgress({ ...partial, elapsedMs: globalTimer.elapsed() });
   };
 
+  const checkAbort = () => {
+    if (signal?.aborted) throw new Error("Assemblage annulé");
+  };
+
   const ff = await getFFmpeg((p) => emit({
     stage: p.stage || "loading",
     percent: p.percent || 0,
