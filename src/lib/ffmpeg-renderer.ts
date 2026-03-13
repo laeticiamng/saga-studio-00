@@ -74,13 +74,18 @@ interface ShotInput {
 export async function renderVideo(
   shots: ShotInput[],
   audioUrl: string | null,
-  onProgress: (p: RenderProgress) => void
+  onProgress: (p: RenderProgress) => void,
+  signal?: AbortSignal
 ): Promise<Blob> {
   const globalTimer = new ETATracker();
   const stageTimer = new ETATracker();
 
   const emit = (partial: Omit<RenderProgress, "elapsedMs">): void => {
     onProgress({ ...partial, elapsedMs: globalTimer.elapsed() });
+  };
+
+  const checkAbort = () => {
+    if (signal?.aborted) throw new Error("Assemblage annulé");
   };
 
   const ff = await getFFmpeg((p) => emit({
@@ -115,6 +120,7 @@ export async function renderVideo(
   stageTimer.reset();
 
   for (let i = 0; i < validShots.length; i++) {
+    checkAbort();
     const shot = validShots[i];
     const fraction = i / totalDownloads;
     const eta = stageTimer.estimate(fraction);
@@ -162,6 +168,7 @@ export async function renderVideo(
   stageTimer.reset();
 
   for (let i = 0; i < validShots.length; i++) {
+    checkAbort();
     const shot = validShots[i];
     const isImage = /\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/i.test(shot.url);
     const ext = isImage ? "png" : "mp4";

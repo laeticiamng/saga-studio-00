@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import { Download, Film, Monitor, Smartphone, Square, Loader2, CheckCircle, Clapperboard } from "lucide-react";
-import { useState, useCallback } from "react";
+import { Download, Film, Monitor, Smartphone, Square, Loader2, CheckCircle, Clapperboard, X } from "lucide-react";
+import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { renderVideo, type RenderProgress } from "@/lib/ffmpeg-renderer";
@@ -29,6 +29,7 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
   const [clientRendering, setClientRendering] = useState(false);
   const [renderProgress, setRenderProgress] = useState<RenderProgress | null>(null);
   const [renderedBlobUrl, setRenderedBlobUrl] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const toggleFormat = (key: string) => {
     setSelectedFormats(prev =>
@@ -55,6 +56,8 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
   };
 
   const handleClientRender = useCallback(async () => {
+    const controller = new AbortController();
+    abortRef.current = controller;
     setClientRendering(true);
     setRenderProgress({ stage: "loading", percent: 0, message: "Initialisation…", etaSeconds: null, elapsedMs: 0 });
     setRenderedBlobUrl(null);
@@ -91,19 +94,29 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
         duration_sec: s.duration_sec || 5,
       }));
 
-      const blob = await renderVideo(shotInputs, audioUrl, setRenderProgress);
+      const blob = await renderVideo(shotInputs, audioUrl, setRenderProgress, controller.signal);
       const url = URL.createObjectURL(blob);
       setRenderedBlobUrl(url);
 
       toast({ title: "Vidéo assemblée !", description: "Cliquez sur Télécharger pour récupérer le MP4" });
     } catch (err: any) {
       console.error("Client render error:", err);
-      setRenderProgress({ stage: "error", percent: 0, message: err.message, etaSeconds: null, elapsedMs: 0 });
-      toast({ title: "Erreur d'assemblage", description: err.message, variant: "destructive" });
+      if (err.message === "Assemblage annulé") {
+        setRenderProgress(null);
+        toast({ title: "Annulé", description: "L'assemblage a été annulé" });
+      } else {
+        setRenderProgress({ stage: "error", percent: 0, message: err.message, etaSeconds: null, elapsedMs: 0 });
+        toast({ title: "Erreur d'assemblage", description: err.message, variant: "destructive" });
+      }
     } finally {
+      abortRef.current = null;
       setClientRendering(false);
     }
   }, [projectId, toast]);
+
+  const handleCancelRender = useCallback(() => {
+    abortRef.current?.abort();
+  }, []);
 
   const handleDownloadBlob = () => {
     if (!renderedBlobUrl) return;
@@ -199,6 +212,18 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
                   {clientRendering ? <Loader2 className="h-4 w-4 animate-spin" /> : <Clapperboard className="h-4 w-4" />}
                   {clientRendering ? "Assemblage en cours…" : "Assembler la vidéo"}
                 </Button>
+
+                {clientRendering && (
+                  <Button
+                    variant="destructive"
+                    size="lg"
+                    className="gap-2"
+                    onClick={handleCancelRender}
+                  >
+                    <X className="h-4 w-4" />
+                    Annuler
+                  </Button>
+                )}
 
                 {renderedBlobUrl && (
                   <Button
