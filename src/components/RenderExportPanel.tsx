@@ -51,11 +51,14 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
 
   const renderLogs = render?.logs ? (() => { try { return JSON.parse(render.logs); } catch { return null; } })() : null;
 
+  const isManifestUrl = (url?: string | null) => !!url && url.includes("manifest.json");
+  const isManifestRender = isManifestUrl(render?.master_url_16_9);
+
   const downloadLinks = [
     { url: render?.master_url_16_9, label: "Master 16:9", icon: Monitor },
     { url: render?.master_url_9_16, label: "Vertical 9:16", icon: Smartphone },
     { url: render?.teaser_url, label: "Teaser 15s", icon: Film },
-  ].filter(l => l.url);
+  ].filter((l) => l.url && !isManifestUrl(l.url));
 
   return (
     <Card className="border-primary/20 bg-card/60">
