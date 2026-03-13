@@ -41,6 +41,7 @@ export default function CreateClip() {
   const [style, setStyle] = useState("cinematic");
   const [provider, setProvider] = useState("auto");
   const [aspectRatio, setAspectRatio] = useState("16:9");
+  const [atmosphere, setAtmosphere] = useState("");
   const [loading, setLoading] = useState(false);
   const [estimate, setEstimate] = useState<{ estimated_shots: number; estimated_credits: number } | null>(null);
   const [estimating, setEstimating] = useState(false);
