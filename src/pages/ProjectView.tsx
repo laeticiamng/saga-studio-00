@@ -274,7 +274,7 @@ export default function ProjectView() {
 
         {/* Pipeline Progress */}
         <div className="mb-8">
-          <PipelineProgress status={project.status} completedShots={completedShots} totalShots={totalShots} />
+          <PipelineProgress projectId={project.id} status={project.status} completedShots={completedShots} totalShots={totalShots} />
         </div>
 
         {/* Content Tabs */}
