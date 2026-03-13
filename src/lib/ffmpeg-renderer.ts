@@ -172,7 +172,8 @@ export async function renderVideo(
   // Read output
   const data = await ff.readFile("output.mp4");
   const uint8 = data instanceof Uint8Array ? data : new TextEncoder().encode(data as string);
-  const blob = new Blob([uint8.buffer], { type: "video/mp4" });
+  const arrayBuffer = uint8.slice().buffer as ArrayBuffer;
+  const blob = new Blob([arrayBuffer], { type: "video/mp4" });
 
   // Cleanup
   for (let i = 0; i < validShots.length; i++) {
