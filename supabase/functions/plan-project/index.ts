@@ -47,69 +47,71 @@ serve(async (req) => {
     const durationSec = project.duration_sec || 180;
     const numShots = Math.max(10, Math.ceil(durationSec / 7));
 
-    const prompt = `You are an elite film director AI applying the **5 Pillars Cinematic Formula** to create a production plan.
+    const prompt = `Tu es un réalisateur IA d'élite appliquant la **Formule Cinématographique des 5 Piliers** pour créer un plan de production.
+IMPORTANT : Tout le contenu généré (prompts, descriptions, bible de style, personnages) doit être rédigé EN FRANÇAIS.
+Les prompts de chaque plan (shot) doivent cependant contenir des termes techniques cinématographiques en anglais entre crochets pour la compatibilité avec les modèles de génération vidéo (ex: [FRAMING] plan large, dolly out).
 
-## 5 PILLARS FORMULA
-Every shot prompt MUST follow this structure:
-1. **[SUBJECT & ACTION]** — Detailed description of who/what and what's happening
-2. **[ARTISTIC STYLE]** — Visual style, artistic movement, texture quality
-3. **[FRAMING & COMPOSITION]** — Camera angle (low angle, bird's eye, dutch angle), shot type (wide/medium/close/detail), rule of thirds, leading lines
-4. **[LIGHTING & ATMOSPHERE]** — Light source, quality (hard/soft), color temperature, shadows, time of day
-5. **[DETAILS & TEXTURES]** — Micro-details, materials, particles, environmental elements
+## FORMULE DES 5 PILIERS
+Chaque prompt de plan DOIT suivre cette structure :
+1. **[SUBJECT & ACTION]** — Description détaillée de qui/quoi et de ce qui se passe
+2. **[ARTISTIC STYLE]** — Style visuel, mouvement artistique, qualité des textures
+3. **[FRAMING & COMPOSITION]** — Angle de caméra (contre-plongée, plongée, dutch angle), type de plan (large/moyen/rapproché/détail), règle des tiers, lignes de fuite
+4. **[LIGHTING & ATMOSPHERE]** — Source lumineuse, qualité (dure/douce), température de couleur, ombres, moment de la journée
+5. **[DETAILS & TEXTURES]** — Micro-détails, matières, particules, éléments environnementaux
 
-## PROJECT DETAILS
-- Title: ${project.title}
-- Type: ${project.type === "clip" ? "Music video clip" : "Short film"}
-- Mode: ${project.mode || "story"} (story = narrative arc, performance = live performance, abstract = visual art)
-- Style preset: ${project.style_preset || "cinematic"}
-- Duration: ${durationSec} seconds
-- Synopsis: ${project.synopsis || "No synopsis provided"}
-- Audio BPM: ${analysis?.bpm || 120}
-- Audio sections: ${JSON.stringify(sections)}
-- Energy curve: ${JSON.stringify(energyData)}
-- Number of shots needed: ${numShots}
+## DÉTAILS DU PROJET
+- Titre : ${project.title}
+- Type : ${project.type === "clip" ? "Clip vidéo musical" : "Court-métrage"}
+- Mode : ${project.mode || "story"} (story = arc narratif, performance = performance live, abstract = art visuel)
+- Style visuel : ${project.style_preset || "cinematic"}
+- Durée : ${durationSec} secondes
+- Synopsis : ${project.synopsis || "Aucun synopsis fourni"}
+- BPM audio : ${analysis?.bpm || 120}
+- Sections audio : ${JSON.stringify(sections)}
+- Courbe d'énergie : ${JSON.stringify(energyData)}
+- Nombre de plans nécessaires : ${numShots}
 
-## CHARACTER BIBLE RULES
-For each character, define the 3 narrative pillars:
-- **Want** (conscious desire): What the character believes they want
-- **Need** (unconscious need): What they truly need for growth
-- **Flaw** (fatal flaw): What prevents them from getting what they want
-- **Visual description**: Extremely detailed physical description for consistent AI generation across all shots
+## RÈGLES DE LA BIBLE DES PERSONNAGES
+Pour chaque personnage, définis les 3 piliers narratifs :
+- **Want** (désir conscient) : Ce que le personnage croit vouloir
+- **Need** (besoin inconscient) : Ce dont il a vraiment besoin pour évoluer
+- **Flaw** (défaut fatal) : Ce qui l'empêche d'obtenir ce qu'il veut
+- **Description visuelle** : Description physique extrêmement détaillée pour une génération IA cohérente à travers tous les plans
 
-## CAMERA MOVEMENT GUIDELINES
-- Opening shots (first 15%): Establishing shots — slow dolly, crane, or static wide
-- High energy sections (chorus): Dynamic tracking, whip pans, fast cuts, handheld
-- Low energy sections (verse/intro): Slow movements, contemplative wide shots, long takes
-- Emotional moments: Close-ups with slow push-in or static intimate framing
-- Climax (last 15%): Most dynamic camera work, climactic angles
+## DIRECTIVES DE MOUVEMENT DE CAMÉRA
+- Plans d'ouverture (premiers 15%) : Plans d'établissement — dolly lent, grue, ou plan large statique
+- Sections haute énergie (refrain) : Travelling dynamique, panoramiques rapides, coupes rapides, caméra épaule
+- Sections basse énergie (couplet/intro) : Mouvements lents, plans larges contemplatifs, plans-séquences
+- Moments émotionnels : Gros plans avec push-in lent ou cadrage intime statique
+- Climax (derniers 15%) : Mouvements de caméra les plus dynamiques, angles dramatiques
 
-## STYLE BIBLE REQUIREMENTS
-Include:
-- visual_rules: Comprehensive description of the visual language
-- palette: Array of 5 specific colors (hex or descriptive)
-- camera_rules: Default camera behavior and movement patterns
-- lighting: Detailed lighting setup (key, fill, rim, practicals)
-- mood: Emotional tone and atmosphere
-- texture_guidelines: Film grain, lens effects, post-processing look
+## EXIGENCES DE LA BIBLE DE STYLE
+Inclure :
+- regles_visuelles : Description complète du langage visuel
+- palette : Tableau de 5 couleurs spécifiques (hex ou descriptif)
+- regles_camera : Comportement par défaut de la caméra et motifs de mouvement
+- eclairage : Configuration détaillée de l'éclairage (principal, d'appoint, contour, lumières d'ambiance)
+- ambiance : Ton émotionnel et atmosphère
+- directives_texture : Grain de film, effets de lentille, look de post-production
 
-Generate a JSON response with this exact structure:
+Génère une réponse JSON avec cette structure exacte :
 {
   "style_bible": {
-    "visual_rules": "comprehensive visual style description applying the 5 pillars",
-    "palette": ["color1", "color2", "color3", "color4", "color5"],
-    "camera_rules": "detailed camera movement and framing guidelines",
-    "lighting": "detailed lighting style with key/fill/rim descriptions",
-    "mood": "emotional tone and atmosphere",
-    "texture_guidelines": "film grain, lens effects, post-processing"
+    "regles_visuelles": "description complète du style visuel appliquant les 5 piliers",
+    "palette": ["couleur1", "couleur2", "couleur3", "couleur4", "couleur5"],
+    "regles_camera": "directives détaillées de mouvement et cadrage de caméra",
+    "eclairage": "style d'éclairage détaillé avec descriptions principal/d'appoint/contour",
+    "ambiance": "ton émotionnel et atmosphère",
+    "directives_texture": "grain de film, effets de lentille, post-production"
   },
   "character_bible": [
     {
-      "name": "Character name",
-      "description": "Extremely detailed visual description for consistent AI generation",
-      "role": "protagonist/antagonist/supporting",
-      "want": "conscious desire",
-      "need": "unconscious need",
-      "flaw": "fatal flaw"
+      "name": "Nom du personnage",
+      "description": "Description visuelle extrêmement détaillée pour la génération IA cohérente",
+      "role": "protagoniste/antagoniste/secondaire",
+      "want": "désir conscient",
+      "need": "besoin inconscient",
+      "flaw": "défaut fatal"
     }
   ],
   "shotlist": [
@@ -119,24 +121,23 @@ Generate a JSON response with this exact structure:
       "end_sec": 7,
       "duration_sec": 7,
       "shot_type": "wide/medium/close/detail",
-      "camera_movement": "specific camera movement for this shot",
-      "prompt": "[SUBJECT & ACTION] detailed action. [STYLE] ${project.style_preset} aesthetic. [FRAMING] specific angle and composition. [LIGHTING] specific lighting setup. [DETAILS] textures, particles, environmental details.",
-      "negative_prompt": "blurry, low quality, distorted, watermark, text overlay, inconsistent style, generic, stock footage look",
-      "section": "intro/verse/chorus/bridge/outro",
+      "camera_movement": "mouvement de caméra spécifique pour ce plan",
+      "prompt": "[SUBJECT & ACTION] action détaillée en français. [STYLE] esthétique ${project.style_preset}. [FRAMING] angle et composition spécifiques. [LIGHTING] configuration d'éclairage spécifique. [DETAILS] textures, particules, détails environnementaux.",
+      "negative_prompt": "flou, basse qualité, déformé, filigrane, texte incrusté, style incohérent, générique, aspect vidéo stock",
+      "section": "intro/couplet/refrain/pont/outro",
       "energy_level": "low/medium/high"
     }
   ]
 }
 
-CRITICAL RULES:
-- Make exactly ${numShots} shots covering the full ${durationSec} seconds
-- Each shot 5-10 seconds
-- EVERY prompt must explicitly include all 5 pillars
-- Match energy: high-energy sections get dynamic/fast shots, low-energy get slower/wider
-- Character descriptions must be reused verbatim across shots for consistency
-- Negative prompts must be specific and relevant
-- Respond ONLY with valid JSON`;
-
+RÈGLES CRITIQUES :
+- Fais exactement ${numShots} plans couvrant les ${durationSec} secondes complètes
+- Chaque plan entre 5 et 10 secondes
+- CHAQUE prompt doit explicitement inclure les 5 piliers
+- Adapte l'énergie : les sections haute énergie ont des plans dynamiques/rapides, basse énergie des plans plus lents/larges
+- Les descriptions de personnages doivent être réutilisées mot pour mot entre les plans pour la cohérence
+- Les prompts négatifs doivent être spécifiques et pertinents
+- Réponds UNIQUEMENT avec du JSON valide`;
     let plan: any;
     try {
       const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
