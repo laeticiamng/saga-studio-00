@@ -83,6 +83,8 @@ class RunwayProvider implements VideoProvider {
       body: JSON.stringify({
         model: "gen4.5",
         promptText: prompt.slice(0, 1000),
+        ratio: "1280:720",
+        duration: duration <= 5 ? 5 : 10,
       }),
     });
     const data = await res.json();
