@@ -323,6 +323,9 @@ serve(async (req) => {
     const shotlistJson = (plan?.shotlist_json as any[]) || [];
 
     const providerChain = buildProviderChain(project.provider_default || undefined);
+    if (providerChain.length === 0) {
+      throw new Error("No generation provider configured. Add at least one valid provider API key.");
+    }
 
     // Get pending shots
     const { data: pendingShots } = await supabase
