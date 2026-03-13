@@ -182,10 +182,6 @@ function buildProviderChain(preferredProvider?: string): VideoProvider[] {
     const key = keys[name];
     if (!key) return;
 
-    if (name === "veo" && !ALLOW_PLACEHOLDER_PROVIDERS) {
-      return;
-    }
-
     chain.push(factories[name](key));
     seen.add(name);
   };
@@ -195,7 +191,6 @@ function buildProviderChain(preferredProvider?: string): VideoProvider[] {
   for (const name of PROVIDER_PRIORITY) addProvider(name);
 
   if (ALLOW_PLACEHOLDER_PROVIDERS) {
-    addProvider("veo");
     addProvider("mock");
   }
 
