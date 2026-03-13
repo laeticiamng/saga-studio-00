@@ -312,22 +312,30 @@ serve(async (req) => {
     const results = [];
     let creditsUsed = 0;
 
-    // Pre-check credits
-    const totalEstimatedCredits = pendingShots.length * 2;
-    const { data: wallet } = await supabase
-      .from("credit_wallets")
-      .select("balance")
-      .eq("id", project.user_id)
-      .single();
+    // Check if user is admin (bypass credit check)
+    const { data: isAdmin } = await supabase.rpc("has_role", {
+      _user_id: project.user_id,
+      _role: "admin",
+    });
 
-    if (!wallet || wallet.balance < totalEstimatedCredits) {
-      await supabase.from("projects").update({ status: "failed" }).eq("id", project_id);
-      return jsonResponse({
-        success: false,
-        error: "Insufficient credits",
-        required: totalEstimatedCredits,
-        available: wallet?.balance || 0,
-      });
+    // Pre-check credits (skip for admins)
+    const totalEstimatedCredits = pendingShots.length * 2;
+    if (!isAdmin) {
+      const { data: wallet } = await supabase
+        .from("credit_wallets")
+        .select("balance")
+        .eq("id", project.user_id)
+        .single();
+
+      if (!wallet || wallet.balance < totalEstimatedCredits) {
+        await supabase.from("projects").update({ status: "failed" }).eq("id", project_id);
+        return jsonResponse({
+          success: false,
+          error: "Insufficient credits",
+          required: totalEstimatedCredits,
+          available: wallet?.balance || 0,
+        });
+      }
     }
 
     for (const shot of pendingShots) {
