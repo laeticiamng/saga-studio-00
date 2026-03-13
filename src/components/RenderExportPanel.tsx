@@ -123,8 +123,18 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
           </Button>
         )}
 
+        {/* Manifest notice */}
+        {render?.status === "completed" && isManifestRender && (
+          <div className="rounded-xl border border-border/60 bg-secondary/20 p-4">
+            <p className="text-sm font-medium">Rendu interactif disponible</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Le lien précédent ouvrait un fichier JSON (manifest) car le rendu vidéo MP4 n'a pas encore été produit par un service d'assemblage externe.
+            </p>
+          </div>
+        )}
+
         {/* Download Links */}
-        {render?.status === "completed" && downloadLinks.length > 0 && (
+        {render?.status === "completed" && !isManifestRender && downloadLinks.length > 0 && (
           <div className="space-y-2">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Fichiers prêts</p>
             {downloadLinks.map((link) => (
