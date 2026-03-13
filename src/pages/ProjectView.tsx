@@ -51,6 +51,7 @@ export default function ProjectView() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [pipelineRunning, setPipelineRunning] = useState(false);
+  const [enriching, setEnriching] = useState(false);
 
   const { data: project, isLoading } = useQuery({
     queryKey: ["project", id],
