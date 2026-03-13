@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Play, Film, RefreshCw, Music, Palette, List, Share2, Eye, ArrowLeft, Clock, Clapperboard, Info } from "lucide-react";
+import { Loader2, Play, Film, RefreshCw, Music, Palette, List, Share2, Eye, ArrowLeft, Clock, Clapperboard, Info, Wand2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -51,6 +51,7 @@ export default function ProjectView() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [pipelineRunning, setPipelineRunning] = useState(false);
+  const [enriching, setEnriching] = useState(false);
 
   const { data: project, isLoading } = useQuery({
     queryKey: ["project", id],
@@ -156,6 +157,30 @@ export default function ProjectView() {
     toast({ title: "Lien copié !", description: "Le lien de partage a été copié dans le presse-papier" });
   };
 
+  const handleEnrichSynopsis = async () => {
+    if (!project || !session || enriching) return;
+    setEnriching(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("enhance-synopsis", {
+        body: { project_id: project.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.synopsis) {
+        queryClient.invalidateQueries({ queryKey: ["project", id] });
+        toast({
+          title: "✨ Synopsis enrichi",
+          description: data.changes_summary || "Le synopsis a été amélioré par l'IA.",
+        });
+      }
+    } catch (err: any) {
+      console.error("[enhance-synopsis]", err);
+      toast({ title: "Erreur IA", description: err.message, variant: "destructive" });
+    } finally {
+      setEnriching(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -226,7 +251,22 @@ export default function ProjectView() {
                 )}
               </div>
               {project.synopsis && (
-                <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl line-clamp-3">{project.synopsis}</p>
+                <div className="flex items-start gap-2 max-w-2xl">
+                  <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3 flex-1">{project.synopsis}</p>
+                  {session && (project.status === "draft" || project.status === "completed") && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleEnrichSynopsis}
+                      disabled={enriching}
+                      className="shrink-0 gap-1.5 text-xs h-7"
+                      title="Enrichir le synopsis avec l'IA"
+                    >
+                      {enriching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+                      {enriching ? "Enrichissement…" : "Enrichir"}
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
 
