@@ -114,7 +114,10 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
     }
   }, [projectId, toast]);
 
-  const handleDownloadBlob = () => {
+  const handleCancelRender = useCallback(() => {
+    abortRef.current?.abort();
+  }, []);
+
     if (!renderedBlobUrl) return;
     const a = document.createElement("a");
     a.href = renderedBlobUrl;
