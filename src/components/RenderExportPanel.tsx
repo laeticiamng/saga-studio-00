@@ -76,7 +76,9 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
           )}
         </div>
         <CardDescription className="text-sm">
-          Choisissez les formats souhaités et lancez l'export. Vous pourrez télécharger chaque version ci-dessous.
+          {isManifestRender
+            ? "Le rendu actuel est en mode lecteur interactif (manifest JSON). Aucun fichier MP4 n'est disponible au téléchargement pour le moment."
+            : "Choisissez les formats souhaités et lancez l'export. Vous pourrez télécharger chaque version ci-dessous."}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
