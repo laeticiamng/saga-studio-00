@@ -60,7 +60,7 @@ class RunwayProvider implements VideoProvider {
     const res = await fetch("https://api.dev.runwayml.com/v1/text_to_video", {
       method: "POST",
       headers: { "Authorization": `Bearer ${this.apiKey}`, "Content-Type": "application/json", "X-Runway-Version": "2024-11-06" },
-      body: JSON.stringify({ model: "gen4_turbo", promptText: prompt.slice(0, 2000), duration: runwayDuration, ratio: "1280:768" }),
+      body: JSON.stringify({ model: "gen4_turbo", promptText: prompt.slice(0, 1000), duration: runwayDuration, ratio: "1280:720" }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || data.message || JSON.stringify(data));
