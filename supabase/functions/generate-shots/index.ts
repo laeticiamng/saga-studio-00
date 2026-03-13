@@ -14,6 +14,13 @@ interface VideoProvider {
   checkStatus(job_id: string): Promise<{ status: "pending" | "completed" | "failed"; url?: string; error?: string }>;
 }
 
+const ALLOW_PLACEHOLDER_PROVIDERS = Deno.env.get("ALLOW_PLACEHOLDER_PROVIDERS") === "true";
+
+function isPlaceholderUrl(url?: string | null): boolean {
+  if (!url) return true;
+  return url.includes("placehold.co") || url.includes("placeholder") || url.startsWith("data:");
+}
+
 class MockProvider implements VideoProvider {
   name = "mock";
   async generateVideo() {
@@ -112,7 +119,15 @@ class VeoProvider implements VideoProvider {
 
 // ─── Provider Fallback Chain ────────────────────────────────────────────────
 
-const PROVIDER_PRIORITY = ["sora", "runway", "luma", "veo"] as const;
+const PROVIDER_PRIORITY = ["sora", "runway", "luma"] as const;
+
+function normalizeProviderName(provider?: string | null): string | undefined {
+  if (!provider) return undefined;
+  if (provider === "sora2") return "sora";
+  if (provider === "openai") return "sora";
+  if (provider === "google_veo") return "veo";
+  return provider;
+}
 
 function buildProviderChain(preferredProvider?: string): VideoProvider[] {
   const keys: Record<string, string | undefined> = {
@@ -129,15 +144,38 @@ function buildProviderChain(preferredProvider?: string): VideoProvider[] {
   };
 
   const chain: VideoProvider[] = [];
-  if (preferredProvider && keys[preferredProvider]) {
-    chain.push(factories[preferredProvider](keys[preferredProvider]!));
-  }
-  for (const name of PROVIDER_PRIORITY) {
-    if (name !== preferredProvider && keys[name]) {
-      chain.push(factories[name](keys[name]!));
+  const seen = new Set<string>();
+
+  const addProvider = (name?: string) => {
+    if (!name || seen.has(name)) return;
+    if (name === "mock") {
+      if (ALLOW_PLACEHOLDER_PROVIDERS) {
+        chain.push(new MockProvider());
+        seen.add(name);
+      }
+      return;
     }
+
+    const key = keys[name];
+    if (!key) return;
+
+    if (name === "veo" && !ALLOW_PLACEHOLDER_PROVIDERS) {
+      return;
+    }
+
+    chain.push(factories[name](key));
+    seen.add(name);
+  };
+
+  addProvider(normalizeProviderName(preferredProvider));
+
+  for (const name of PROVIDER_PRIORITY) addProvider(name);
+
+  if (ALLOW_PLACEHOLDER_PROVIDERS) {
+    addProvider("veo");
+    addProvider("mock");
   }
-  chain.push(new MockProvider());
+
   return chain;
 }
 
@@ -152,10 +190,10 @@ async function generateWithFallback(
   const attempts: { provider: string; error?: string }[] = [];
   for (const provider of chain) {
     try {
-      // Wrap each provider call with a 5s timeout (fail fast, move to next)
+      // Wrap each provider call with a 45s timeout (APIs like image generation often exceed 5s)
       const result = await Promise.race([
         provider.generateVideo(prompt, duration, style, seed),
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Provider timeout (5s)")), 5000)),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Provider timeout (45s)")), 45000)),
       ]);
       attempts.push({ provider: provider.name });
       return { provider, job_id: result.job_id, attempts };
@@ -285,6 +323,9 @@ serve(async (req) => {
     const shotlistJson = (plan?.shotlist_json as any[]) || [];
 
     const providerChain = buildProviderChain(project.provider_default || undefined);
+    if (providerChain.length === 0) {
+      throw new Error("No generation provider configured. Add at least one valid provider API key.");
+    }
 
     // Get pending shots
     const { data: pendingShots } = await supabase
@@ -376,21 +417,43 @@ serve(async (req) => {
 
         await supabase.from("shots").update({ provider: usedProvider.name }).eq("id", shot.id);
 
-        // For sync/placeholder providers, immediately check and complete
-        const syncProviders = ["mock", "veo", "sora"];
-        if (syncProviders.includes(usedProvider.name) || job_id.startsWith("http")) {
+        const isSynchronousProvider = usedProvider.name === "sora" || job_id.startsWith("http");
+
+        if (isSynchronousProvider) {
           const result = await usedProvider.checkStatus(job_id);
+
+          if (result.status === "failed") {
+            throw new Error(result.error || `${usedProvider.name} generation failed`);
+          }
+
           if (result.status === "completed") {
+            if (!result.url) {
+              throw new Error(`${usedProvider.name} completed without output URL`);
+            }
+
+            if (!ALLOW_PLACEHOLDER_PROVIDERS && isPlaceholderUrl(result.url)) {
+              throw new Error(`${usedProvider.name} returned placeholder media. Enable a real provider.`);
+            }
+
             await supabase.from("shots").update({
               status: "completed",
-              output_url: result.url || `https://placehold.co/1920x1080/1a1a1a/ff8c00?text=Shot+${shot.idx + 1}`,
+              output_url: result.url,
               cost_credits: 2,
+              error_message: null,
             }).eq("id", shot.id);
             creditsUsed += 2;
+            results.push({ shot_id: shot.id, job_id, provider: usedProvider.name, attempts, status: "completed" });
+            continue;
           }
         }
 
-        results.push({ shot_id: shot.id, job_id, provider: usedProvider.name, attempts, status: "started" });
+        await supabase.from("shots").update({
+          status: "generating",
+          output_url: `job:${usedProvider.name}:${job_id}`,
+          error_message: null,
+        }).eq("id", shot.id);
+
+        results.push({ shot_id: shot.id, job_id, provider: usedProvider.name, attempts, status: "generating" });
       } catch (err: any) {
         await supabase.from("shots").update({
           status: "failed",
@@ -406,7 +469,7 @@ serve(async (req) => {
       const { data: debited } = await supabase.rpc("debit_credits", {
         p_user_id: project.user_id,
         p_amount: creditsUsed,
-        p_reason: `Shot generation (${results.filter(r => r.status === "started").length} shots)`,
+        p_reason: `Shot generation (${results.filter((r: any) => r.status === "completed" || r.status === "generating").length} shots)`,
         p_ref_id: batchRef,
         p_ref_type: "shot_generation",
       });
