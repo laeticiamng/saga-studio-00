@@ -469,7 +469,7 @@ serve(async (req) => {
       const { data: debited } = await supabase.rpc("debit_credits", {
         p_user_id: project.user_id,
         p_amount: creditsUsed,
-        p_reason: `Shot generation (${results.filter(r => r.status === "started").length} shots)`,
+        p_reason: `Shot generation (${results.filter((r: any) => r.status === "completed" || r.status === "generating").length} shots)`,
         p_ref_id: batchRef,
         p_ref_type: "shot_generation",
       });
