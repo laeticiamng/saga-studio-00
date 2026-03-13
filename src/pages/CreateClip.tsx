@@ -278,6 +278,24 @@ export default function CreateClip() {
                 </div>
               </div>
 
+              {/* Ambiance / Atmosphère */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2 text-sm font-medium">
+                  <Palette className="h-4 w-4 text-primary" /> Ambiance souhaitée
+                  <span className="text-xs font-normal text-muted-foreground ml-1">(optionnel)</span>
+                </Label>
+                <Textarea
+                  value={atmosphere}
+                  onChange={(e) => setAtmosphere(e.target.value)}
+                  placeholder="Ex: Ambiance nocturne urbaine, néons roses et bleus, pluie sur l'asphalte, feeling mélancolique et rêveur…"
+                  rows={3}
+                  className="resize-none text-sm"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Décrivez l'atmosphère, le décor ou l'émotion souhaitée. L'IA intégrera ces éléments dans chaque scène.
+                </p>
+              </div>
+
               <Button variant="hero" size="lg" className="w-full" onClick={() => setStep(1)} disabled={!audioFile}>
                 Suivant <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
