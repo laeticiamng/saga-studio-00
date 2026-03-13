@@ -98,7 +98,7 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
       toast({ title: "Vidéo assemblée !", description: "Cliquez sur Télécharger pour récupérer le MP4" });
     } catch (err: any) {
       console.error("Client render error:", err);
-      setRenderProgress({ stage: "error", percent: 0, message: err.message });
+      setRenderProgress({ stage: "error", percent: 0, message: err.message, etaSeconds: null, elapsedMs: 0 });
       toast({ title: "Erreur d'assemblage", description: err.message, variant: "destructive" });
     } finally {
       setClientRendering(false);
