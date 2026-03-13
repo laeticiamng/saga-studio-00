@@ -147,22 +147,21 @@ async function generateWithFallback(
   duration: number,
   style: string,
   seed: number,
-  maxRetries = 2
+  maxRetries = 0  // No retries by default - fail fast and move to next provider
 ): Promise<{ provider: VideoProvider; job_id: string; attempts: { provider: string; error?: string }[] }> {
   const attempts: { provider: string; error?: string }[] = [];
   for (const provider of chain) {
-    for (let retry = 0; retry <= maxRetries; retry++) {
-      try {
-        if (retry > 0) await new Promise(r => setTimeout(r, Math.min(1000 * Math.pow(2, retry), 8000)));
-        const { job_id } = await provider.generateVideo(prompt, duration, style, seed);
-        attempts.push({ provider: provider.name });
-        return { provider, job_id, attempts };
-      } catch (err: any) {
-        attempts.push({ provider: provider.name, error: err.message });
-        console.warn(`[generate-shots] ${provider.name} attempt ${retry + 1} failed: ${err.message}`);
-        const isTransient = /rate|timeout|503|429|500/i.test(err.message);
-        if (!isTransient) break;
-      }
+    try {
+      // Wrap each provider call with a 15s timeout
+      const result = await Promise.race([
+        provider.generateVideo(prompt, duration, style, seed),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Provider timeout (15s)")), 15000)),
+      ]);
+      attempts.push({ provider: provider.name });
+      return { provider, job_id: result.job_id, attempts };
+    } catch (err: any) {
+      attempts.push({ provider: provider.name, error: err.message });
+      console.warn(`[generate-shots] ${provider.name} failed: ${err.message}`);
     }
   }
   throw new Error(`All providers failed: ${attempts.map(a => `${a.provider}:${a.error}`).join(", ")}`);
