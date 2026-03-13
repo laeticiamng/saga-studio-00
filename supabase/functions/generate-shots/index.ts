@@ -377,13 +377,14 @@ serve(async (req) => {
 
         await supabase.from("shots").update({ provider: usedProvider.name }).eq("id", shot.id);
 
-        // For mock provider, immediately complete
-        if (usedProvider.name === "mock") {
+        // For sync/placeholder providers, immediately check and complete
+        const syncProviders = ["mock", "veo", "sora"];
+        if (syncProviders.includes(usedProvider.name) || job_id.startsWith("http")) {
           const result = await usedProvider.checkStatus(job_id);
-          if (result.status === "completed" && result.url) {
+          if (result.status === "completed") {
             await supabase.from("shots").update({
               status: "completed",
-              output_url: result.url,
+              output_url: result.url || `https://placehold.co/1920x1080/1a1a1a/ff8c00?text=Shot+${shot.idx + 1}`,
               cost_credits: 2,
             }).eq("id", shot.id);
             creditsUsed += 2;
