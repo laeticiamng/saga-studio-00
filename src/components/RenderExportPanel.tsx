@@ -51,11 +51,14 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
 
   const renderLogs = render?.logs ? (() => { try { return JSON.parse(render.logs); } catch { return null; } })() : null;
 
+  const isManifestUrl = (url?: string | null) => !!url && url.includes("manifest.json");
+  const isManifestRender = isManifestUrl(render?.master_url_16_9);
+
   const downloadLinks = [
     { url: render?.master_url_16_9, label: "Master 16:9", icon: Monitor },
     { url: render?.master_url_9_16, label: "Vertical 9:16", icon: Smartphone },
     { url: render?.teaser_url, label: "Teaser 15s", icon: Film },
-  ].filter(l => l.url);
+  ].filter((l) => l.url && !isManifestUrl(l.url));
 
   return (
     <Card className="border-primary/20 bg-card/60">
@@ -73,7 +76,9 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
           )}
         </div>
         <CardDescription className="text-sm">
-          Choisissez les formats souhaités et lancez l'export. Vous pourrez télécharger chaque version ci-dessous.
+          {isManifestRender
+            ? "Le rendu actuel est en mode lecteur interactif (manifest JSON). Aucun fichier MP4 n'est disponible au téléchargement pour le moment."
+            : "Choisissez les formats souhaités et lancez l'export. Vous pourrez télécharger chaque version ci-dessous."}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -118,8 +123,18 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
           </Button>
         )}
 
+        {/* Manifest notice */}
+        {render?.status === "completed" && isManifestRender && (
+          <div className="rounded-xl border border-border/60 bg-secondary/20 p-4">
+            <p className="text-sm font-medium">Rendu interactif disponible</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Le lien précédent ouvrait un fichier JSON (manifest) car le rendu vidéo MP4 n'a pas encore été produit par un service d'assemblage externe.
+            </p>
+          </div>
+        )}
+
         {/* Download Links */}
-        {render?.status === "completed" && downloadLinks.length > 0 && (
+        {render?.status === "completed" && !isManifestRender && downloadLinks.length > 0 && (
           <div className="space-y-2">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Fichiers prêts</p>
             {downloadLinks.map((link) => (
