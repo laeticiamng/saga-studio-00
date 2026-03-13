@@ -2,10 +2,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Download, Film, Monitor, Smartphone, Square, Loader2, CheckCircle } from "lucide-react";
-import { useState } from "react";
+import { Progress } from "@/components/ui/progress";
+import { Download, Film, Monitor, Smartphone, Square, Loader2, CheckCircle, Clapperboard } from "lucide-react";
+import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { renderVideo, type RenderProgress } from "@/lib/ffmpeg-renderer";
 
 interface RenderExportPanelProps {
   projectId: string;
@@ -24,6 +26,9 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
   const { toast } = useToast();
   const [selectedFormats, setSelectedFormats] = useState<string[]>(["master_16_9", "master_9_16", "teaser"]);
   const [reRendering, setReRendering] = useState(false);
+  const [clientRendering, setClientRendering] = useState(false);
+  const [renderProgress, setRenderProgress] = useState<RenderProgress | null>(null);
+  const [renderedBlobUrl, setRenderedBlobUrl] = useState<string | null>(null);
 
   const toggleFormat = (key: string) => {
     setSelectedFormats(prev =>
@@ -47,6 +52,67 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
     } finally {
       setReRendering(false);
     }
+  };
+
+  const handleClientRender = useCallback(async () => {
+    setClientRendering(true);
+    setRenderProgress({ stage: "loading", percent: 0, message: "Initialisation…" });
+    setRenderedBlobUrl(null);
+
+    try {
+      // Fetch shots and manifest data
+      const { data: shots } = await supabase
+        .from("shots")
+        .select("idx, output_url, duration_sec, status")
+        .eq("project_id", projectId)
+        .eq("status", "completed")
+        .order("idx");
+
+      const { data: project } = await supabase
+        .from("projects")
+        .select("audio_url")
+        .eq("id", projectId)
+        .single();
+
+      if (!shots || shots.length === 0) {
+        throw new Error("Aucun shot terminé trouvé");
+      }
+
+      // Resolve audio URL
+      let audioUrl = project?.audio_url || null;
+      if (audioUrl && !audioUrl.startsWith("http")) {
+        const { data: urlData } = supabase.storage.from("audio-uploads").getPublicUrl(audioUrl);
+        audioUrl = urlData?.publicUrl || null;
+      }
+
+      const shotInputs = shots.map(s => ({
+        idx: s.idx,
+        url: s.output_url || "",
+        duration_sec: s.duration_sec || 5,
+      }));
+
+      const blob = await renderVideo(shotInputs, audioUrl, setRenderProgress);
+      const url = URL.createObjectURL(blob);
+      setRenderedBlobUrl(url);
+
+      toast({ title: "Vidéo assemblée !", description: "Cliquez sur Télécharger pour récupérer le MP4" });
+    } catch (err: any) {
+      console.error("Client render error:", err);
+      setRenderProgress({ stage: "error", percent: 0, message: err.message });
+      toast({ title: "Erreur d'assemblage", description: err.message, variant: "destructive" });
+    } finally {
+      setClientRendering(false);
+    }
+  }, [projectId, toast]);
+
+  const handleDownloadBlob = () => {
+    if (!renderedBlobUrl) return;
+    const a = document.createElement("a");
+    a.href = renderedBlobUrl;
+    a.download = `cineclip-export-${projectId.slice(0, 8)}.mp4`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   const renderLogs = render?.logs ? (() => { try { return JSON.parse(render.logs); } catch { return null; } })() : null;
@@ -76,67 +142,118 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
           )}
         </div>
         <CardDescription className="text-sm">
-          {isManifestRender
-            ? "Le rendu actuel est en mode lecteur interactif (manifest JSON). Aucun fichier MP4 n'est disponible au téléchargement pour le moment."
-            : "Choisissez les formats souhaités et lancez l'export. Vous pourrez télécharger chaque version ci-dessous."}
+          Assemblez vos shots en une vidéo MP4 directement dans votre navigateur grâce à FFmpeg.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Format Selection */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {FORMAT_OPTIONS.map(fmt => {
-            const isSelected = selectedFormats.includes(fmt.key);
-            return (
-              <label
-                key={fmt.key}
-                className={`flex items-center gap-3 rounded-xl border p-4 cursor-pointer transition-all duration-200 ${
-                  isSelected
-                    ? "border-primary/50 bg-primary/5 shadow-sm"
-                    : "border-border/50 bg-secondary/20 hover:bg-secondary/30 hover:border-border"
-                }`}
-              >
-                <Checkbox
-                  checked={isSelected}
-                  onCheckedChange={() => toggleFormat(fmt.key)}
-                />
-                <fmt.icon className={`h-5 w-5 shrink-0 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">{fmt.label}</p>
-                  <p className="text-xs text-muted-foreground">{fmt.description}</p>
-                </div>
-              </label>
-            );
-          })}
-        </div>
-
-        {/* Export Button */}
+        {/* Client-side FFmpeg Render */}
         {projectStatus === "completed" && (
-          <Button
-            variant="hero"
-            size="lg"
-            className="w-full gap-2"
-            onClick={handleReRender}
-            disabled={reRendering || selectedFormats.length === 0}
-          >
-            {reRendering ? <Loader2 className="h-4 w-4 animate-spin" /> : <Film className="h-4 w-4" />}
-            {reRendering ? "Rendu en cours…" : `Exporter ${selectedFormats.length} format(s)`}
-          </Button>
-        )}
+          <div className="space-y-4">
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Clapperboard className="h-5 w-5 text-primary" />
+                <p className="text-sm font-semibold">Assemblage vidéo intégré</p>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Assemble tous les shots terminés avec l'audio en une vidéo MP4 — directement dans votre navigateur, sans serveur externe.
+              </p>
 
-        {/* Manifest notice */}
-        {render?.status === "completed" && isManifestRender && (
-          <div className="rounded-xl border border-border/60 bg-secondary/20 p-4">
-            <p className="text-sm font-medium">Rendu interactif disponible</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Le lien précédent ouvrait un fichier JSON (manifest) car le rendu vidéo MP4 n'a pas encore été produit par un service d'assemblage externe.
-            </p>
+              {renderProgress && clientRendering && (
+                <div className="space-y-2">
+                  <Progress value={renderProgress.percent} className="h-2" />
+                  <p className="text-xs text-muted-foreground">{renderProgress.message}</p>
+                </div>
+              )}
+
+              {renderProgress?.stage === "error" && (
+                <p className="text-xs text-destructive">{renderProgress.message}</p>
+              )}
+
+              <div className="flex gap-2">
+                <Button
+                  variant="hero"
+                  size="lg"
+                  className="flex-1 gap-2"
+                  onClick={handleClientRender}
+                  disabled={clientRendering}
+                >
+                  {clientRendering ? <Loader2 className="h-4 w-4 animate-spin" /> : <Clapperboard className="h-4 w-4" />}
+                  {clientRendering ? "Assemblage en cours…" : "Assembler la vidéo"}
+                </Button>
+
+                {renderedBlobUrl && (
+                  <Button
+                    variant="default"
+                    size="lg"
+                    className="gap-2"
+                    onClick={handleDownloadBlob}
+                  >
+                    <Download className="h-4 w-4" />
+                    Télécharger MP4
+                  </Button>
+                )}
+              </div>
+
+              {renderedBlobUrl && (
+                <div className="mt-3">
+                  <p className="text-xs text-muted-foreground mb-2">Aperçu :</p>
+                  <video
+                    src={renderedBlobUrl}
+                    controls
+                    className="w-full rounded-lg border border-border/50"
+                    style={{ maxHeight: 300 }}
+                  />
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {/* Download Links */}
+        {/* Format Selection for server-side re-render */}
+        <details className="group">
+          <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors py-1">
+            Options avancées (re-render serveur)
+          </summary>
+          <div className="mt-3 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {FORMAT_OPTIONS.map(fmt => {
+                const isSelected = selectedFormats.includes(fmt.key);
+                return (
+                  <label
+                    key={fmt.key}
+                    className={`flex items-center gap-3 rounded-xl border p-4 cursor-pointer transition-all duration-200 ${
+                      isSelected
+                        ? "border-primary/50 bg-primary/5 shadow-sm"
+                        : "border-border/50 bg-secondary/20 hover:bg-secondary/30 hover:border-border"
+                    }`}
+                  >
+                    <Checkbox checked={isSelected} onCheckedChange={() => toggleFormat(fmt.key)} />
+                    <fmt.icon className={`h-5 w-5 shrink-0 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">{fmt.label}</p>
+                      <p className="text-xs text-muted-foreground">{fmt.description}</p>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full gap-2"
+              onClick={handleReRender}
+              disabled={reRendering || selectedFormats.length === 0}
+            >
+              {reRendering ? <Loader2 className="h-4 w-4 animate-spin" /> : <Film className="h-4 w-4" />}
+              {reRendering ? "Rendu en cours…" : `Re-render serveur (${selectedFormats.length} format(s))`}
+            </Button>
+          </div>
+        </details>
+
+        {/* Download Links (from server render) */}
         {render?.status === "completed" && !isManifestRender && downloadLinks.length > 0 && (
           <div className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Fichiers prêts</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Fichiers serveur</p>
             {downloadLinks.map((link) => (
               <a key={link.label} href={link.url} target="_blank" rel="noopener noreferrer" className="block">
                 <Button variant="glass" className="w-full justify-between gap-2 h-12">
@@ -158,9 +275,6 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
             <p className="text-xs text-muted-foreground">
               BPM : {renderLogs.bpm} · {renderLogs.cuts_count} coupes alignées sur les beats
             </p>
-            {renderLogs.transitions && (
-              <p className="text-xs text-muted-foreground">Transitions : {renderLogs.transitions.join(", ")}</p>
-            )}
           </div>
         )}
 
