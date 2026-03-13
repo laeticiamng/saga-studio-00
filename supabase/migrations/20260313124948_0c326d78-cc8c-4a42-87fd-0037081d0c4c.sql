@@ -1,0 +1,3 @@
+UPDATE shots SET status = 'pending', output_url = NULL, error_message = NULL, provider = NULL WHERE project_id = 'add0c44a-98a7-4475-80e4-8ff131cf9907';
+UPDATE projects SET status = 'generating' WHERE id = 'add0c44a-98a7-4475-80e4-8ff131cf9907';
+UPDATE renders SET status = 'pending', master_url_16_9 = NULL, master_url_9_16 = NULL, teaser_url = NULL, logs = NULL WHERE project_id = 'add0c44a-98a7-4475-80e4-8ff131cf9907';

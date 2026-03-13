@@ -39,22 +39,31 @@ class SoraProvider implements VideoProvider {
   private apiKey: string;
   constructor(apiKey: string) { this.apiKey = apiKey; }
   async generateVideo(prompt: string, duration: number, style: string) {
+    // Use DALL-E 3 for image generation (returns URL directly)
     const res = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
       headers: { "Authorization": `Bearer ${this.apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "gpt-image-1", prompt: `${style} style cinematic video frame. ${prompt}`, n: 1, size: "1536x1024" }),
+      body: JSON.stringify({
+        model: "dall-e-3",
+        prompt: `${style} style cinematic video frame, film still. ${prompt}`.slice(0, 4000),
+        n: 1,
+        size: "1792x1024",
+        response_format: "url",
+      }),
     });
     const data = await res.json();
+    console.log("[sora] response status:", res.status, "has url:", !!data.data?.[0]?.url);
     if (!res.ok) throw new Error(data.error?.message || "OpenAI API error");
-    // Return image URL as placeholder since Sora video API may not be available
-    return { job_id: data.data?.[0]?.url || `sora-${crypto.randomUUID()}` };
+    const url = data.data?.[0]?.url;
+    if (!url) throw new Error("OpenAI returned no image URL");
+    // Return URL as job_id — checkStatus will detect it as completed
+    return { job_id: url };
   }
   async checkStatus(job_id: string) {
-    // If job_id is a URL, it's already completed (image generation is sync)
     if (job_id.startsWith("http")) {
       return { status: "completed" as const, url: job_id };
     }
-    return { status: "pending" as const, url: undefined, error: undefined };
+    return { status: "failed" as const, url: undefined, error: "Invalid Sora job reference" };
   }
 }
 
@@ -63,9 +72,8 @@ class RunwayProvider implements VideoProvider {
   private apiKey: string;
   constructor(apiKey: string) { this.apiKey = apiKey; }
   async generateVideo(prompt: string, duration: number) {
-    // Gen-4 text-to-video uses /v1/image_to_video without promptImage
-    const runwayDuration = duration <= 5 ? 5 : 10;
-    const res = await fetch("https://api.dev.runwayml.com/v1/image_to_video", {
+    // Use /v1/text_to_video endpoint (supports gen4.5 without promptImage)
+    const res = await fetch("https://api.dev.runwayml.com/v1/text_to_video", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${this.apiKey}`,
@@ -73,15 +81,14 @@ class RunwayProvider implements VideoProvider {
         "X-Runway-Version": "2024-11-06",
       },
       body: JSON.stringify({
-        model: "gen4_turbo",
+        model: "gen4.5",
         promptText: prompt.slice(0, 1000),
-        duration: runwayDuration,
         ratio: "1280:720",
-        // No promptImage = text-to-video mode
+        duration: duration <= 5 ? 5 : 10,
       }),
     });
     const data = await res.json();
-    console.log("[runway] create response:", JSON.stringify(data));
+    console.log("[runway] text_to_video response:", res.status, JSON.stringify(data));
     if (!res.ok) throw new Error(data.error || data.message || JSON.stringify(data));
     return { job_id: data.id };
   }
