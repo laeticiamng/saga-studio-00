@@ -1,0 +1,1 @@
+UPDATE shots SET status = 'pending', output_url = NULL, error_message = NULL, provider = NULL WHERE project_id = 'add0c44a-98a7-4475-80e4-8ff131cf9907' AND status IN ('generating', 'failed');

@@ -72,9 +72,8 @@ class RunwayProvider implements VideoProvider {
   private apiKey: string;
   constructor(apiKey: string) { this.apiKey = apiKey; }
   async generateVideo(prompt: string, duration: number) {
-    // Gen-4 text-to-video uses /v1/image_to_video without promptImage
-    const runwayDuration = duration <= 5 ? 5 : 10;
-    const res = await fetch("https://api.dev.runwayml.com/v1/image_to_video", {
+    // Use /v1/text_to_video endpoint (supports gen4.5 without promptImage)
+    const res = await fetch("https://api.dev.runwayml.com/v1/text_to_video", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${this.apiKey}`,
@@ -84,13 +83,10 @@ class RunwayProvider implements VideoProvider {
       body: JSON.stringify({
         model: "gen4.5",
         promptText: prompt.slice(0, 1000),
-        duration: runwayDuration,
-        ratio: "1280:720",
-        // gen4.5 supports text-to-video without promptImage
       }),
     });
     const data = await res.json();
-    console.log("[runway] create response:", JSON.stringify(data));
+    console.log("[runway] text_to_video response:", res.status, JSON.stringify(data));
     if (!res.ok) throw new Error(data.error || data.message || JSON.stringify(data));
     return { job_id: data.id };
   }
