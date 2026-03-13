@@ -180,21 +180,21 @@ RÈGLES CRITIQUES :
 
       plan = {
         style_bible: {
-          visual_rules: `${project.style_preset} style with consistent visual language. Apply the 5 pillars: detailed subjects, strong artistic direction, intentional framing, motivated lighting, rich textures.`,
-          palette: ["deep midnight blue", "warm amber gold", "soft ivory white", "muted charcoal", "accent crimson"],
-          camera_rules: "Smooth dolly movements for wide shots, intimate handheld for close-ups, dynamic tracking for action sequences. Always motivated camera movement.",
-          lighting: "Cinematic three-point lighting: warm key light at 45°, cool fill from opposite side, rim light for depth separation. Practical lights for atmosphere.",
-          mood: project.mode === "abstract" ? "ethereal, surreal, hypnotic" : "compelling, emotional, immersive",
-          texture_guidelines: "Subtle film grain, slight lens vignette, organic color grading with lifted blacks. Avoid digital sharpness.",
+          regles_visuelles: `Style ${project.style_preset} avec un langage visuel cohérent. Application des 5 piliers : sujets détaillés, direction artistique forte, cadrage intentionnel, éclairage motivé, textures riches.`,
+          palette: ["bleu nuit profond", "ambre doré chaud", "ivoire doux", "charbon mat", "accent cramoisi"],
+          regles_camera: "Mouvements de dolly fluides pour les plans larges, caméra épaule intime pour les gros plans, travelling dynamique pour les séquences d'action. Toujours un mouvement de caméra motivé.",
+          eclairage: "Éclairage cinématique trois points : lumière principale chaude à 45°, lumière d'appoint froide du côté opposé, contour pour la séparation des plans. Lumières d'ambiance pour l'atmosphère.",
+          ambiance: project.mode === "abstract" ? "éthéré, surréaliste, hypnotique" : "captivant, émotionnel, immersif",
+          directives_texture: "Grain de film subtil, léger vignettage de lentille, étalonnage organique avec noirs relevés. Éviter la netteté numérique.",
         },
         character_bible: project.mode === "abstract" ? [] : [
           {
-            name: "Main Character",
-            description: `A compelling figure in ${project.style_preset} visual style. Medium build, expressive eyes, distinctive silhouette. Consistent wardrobe: dark layered clothing with one accent color piece. Visible in all narrative shots.`,
-            role: "protagonist",
-            want: "To find connection in a disconnected world",
-            need: "To accept vulnerability as strength",
-            flaw: "Emotional walls built from past wounds",
+            name: "Personnage principal",
+            description: `Une figure captivante dans le style visuel ${project.style_preset}. Carrure moyenne, regard expressif, silhouette distinctive. Garde-robe cohérente : vêtements sombres superposés avec une pièce de couleur d'accent. Visible dans tous les plans narratifs.`,
+            role: "protagoniste",
+            want: "Trouver une connexion dans un monde déconnecté",
+            need: "Accepter la vulnérabilité comme une force",
+            flaw: "Des murs émotionnels construits par les blessures passées",
           },
         ],
         shotlist: Array.from({ length: numShots }, (_, i) => {
@@ -204,12 +204,12 @@ RÈGLES CRITIQUES :
             Math.floor(i / Math.max(1, numShots / Math.max(1, sectionsList.length))),
             sectionsList.length - 1
           );
-          const section = sectionsList[sectionIdx]?.type || "verse";
-          const isHighEnergy = section.includes("chorus");
+          const section = sectionsList[sectionIdx]?.type || "couplet";
+          const isHighEnergy = section.includes("chorus") || section.includes("refrain");
           const shotType = shotTypes[i % 4];
           const cameraOptions = CAMERA_MOVEMENTS[shotType];
           const cameraMove = cameraOptions[i % cameraOptions.length];
-          const energyLevel = isHighEnergy ? "high" : (section.includes("bridge") ? "medium" : "low");
+          const energyLevel = isHighEnergy ? "high" : (section.includes("bridge") || section.includes("pont") ? "medium" : "low");
 
           return {
             idx: i,
@@ -218,8 +218,8 @@ RÈGLES CRITIQUES :
             duration_sec: Math.round(shotDuration * 10) / 10,
             shot_type: shotType,
             camera_movement: cameraMove,
-            prompt: `[SUBJECT] ${isHighEnergy ? "Dynamic action sequence" : "Contemplative moment"}, shot ${i + 1} of ${numShots}. [STYLE] ${project.style_preset} aesthetic, cohesive visual language. [FRAMING] ${shotType} shot, ${cameraMove}. [LIGHTING] ${isHighEnergy ? "High contrast dramatic lighting with sharp shadows" : "Soft diffused lighting with gentle gradients"}. [DETAILS] Rich textures, atmospheric particles, ${section} section energy.`,
-            negative_prompt: "blurry, low quality, distorted, watermark, text overlay, inconsistent style, generic stock footage, AI artifacts",
+            prompt: `[SUBJECT] ${isHighEnergy ? "Séquence d'action dynamique" : "Moment contemplatif"}, plan ${i + 1} sur ${numShots}. [STYLE] Esthétique ${project.style_preset}, langage visuel cohérent. [FRAMING] Plan ${shotType === "wide" ? "large" : shotType === "medium" ? "moyen" : shotType === "close" ? "rapproché" : "détail"}, ${cameraMove}. [LIGHTING] ${isHighEnergy ? "Éclairage dramatique à fort contraste avec ombres marquées" : "Éclairage doux et diffus avec dégradés subtils"}. [DETAILS] Textures riches, particules atmosphériques, énergie de section ${section}.`,
+            negative_prompt: "flou, basse qualité, déformé, filigrane, texte incrusté, style incohérent, aspect vidéo stock générique, artefacts IA",
             section,
             energy_level: energyLevel,
           };
