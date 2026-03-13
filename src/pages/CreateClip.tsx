@@ -118,6 +118,7 @@ export default function CreateClip() {
           mode, style_preset: style, audio_url: filePath,
           duration_sec: Math.min(270, Math.max(30, Math.round(audioFile.size / 16000))),
           aspect_ratio: aspectRatio, face_urls: faceUrls, ref_photo_urls: refUrls,
+          synopsis: atmosphere || undefined,
         },
       });
 
