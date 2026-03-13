@@ -4,8 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Film, Download, Loader2 } from "lucide-react";
+import { Film, Download, Loader2, Play } from "lucide-react";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { ShotPreviewPlayer } from "@/components/ShotPreviewPlayer";
 
 const typeLabels: Record<string, string> = { clip: "Clip", film: "Film" };
 const styleLabels: Record<string, string> = {
@@ -14,6 +15,10 @@ const styleLabels: Record<string, string> = {
   hyperpop: "Hyperpop", afrofuturism: "Afrofuturisme", synthwave: "Synthwave",
   documentary: "Documentaire", fantasy: "Fantaisie",
 };
+
+function isManifestUrl(url: string | null): boolean {
+  return !!url && url.includes("manifest.json");
+}
 
 export default function ShareView() {
   const { id } = useParams<{ id: string }>();
@@ -35,6 +40,37 @@ export default function ShareView() {
       return data as unknown as { title: string; type: string; style_preset: string | null; status: string } | null;
     },
     enabled: !!id,
+  });
+
+  // For manifest-based renders, load shots for the player
+  const isManifest = isManifestUrl(render?.master_url_16_9 ?? null);
+
+  const { data: shots } = useQuery({
+    queryKey: ["share-shots", id],
+    queryFn: async () => {
+      const { data } = await supabase.from("shots").select("id, idx, status, output_url, duration_sec, prompt").eq("project_id", id!).eq("status", "completed").order("idx");
+      return data || [];
+    },
+    enabled: !!id && isManifest,
+  });
+
+  const { data: audioAnalysis } = useQuery({
+    queryKey: ["share-audio", id],
+    queryFn: async () => {
+      const { data } = await supabase.from("audio_analysis").select("bpm").eq("project_id", id!).maybeSingle();
+      return data;
+    },
+    enabled: !!id && isManifest,
+  });
+
+  // Get manifest data for audio URL
+  const { data: manifestData } = useQuery({
+    queryKey: ["share-manifest", render?.master_url_16_9],
+    queryFn: async () => {
+      const res = await fetch(render!.master_url_16_9!);
+      return res.json();
+    },
+    enabled: !!render?.master_url_16_9 && isManifest,
   });
 
   if (isLoading) {
@@ -73,40 +109,57 @@ export default function ShareView() {
           </div>
         </div>
 
-        {render.master_url_16_9 && (
+        {/* Manifest-based render: use the interactive player */}
+        {isManifest && shots && shots.length > 0 ? (
+          <div className="mb-6">
+            <ShotPreviewPlayer
+              shots={shots}
+              audioUrl={manifestData?.audio_url}
+              bpm={audioAnalysis?.bpm || manifestData?.bpm}
+            />
+            <div className="mt-3 text-center">
+              <Badge variant="secondary" className="gap-1">
+                <Play className="h-3 w-3" /> Lecteur interactif — {shots.length} plans synchronisés
+              </Badge>
+            </div>
+          </div>
+        ) : render.master_url_16_9 && !isManifest ? (
           <div className="rounded-xl overflow-hidden bg-secondary/30 mb-6">
             <video src={render.master_url_16_9} controls className="w-full aspect-video" />
           </div>
-        )}
+        ) : null}
 
-        <Card className="border-border/50 bg-card/60">
-          <CardHeader>
-            <CardTitle className="text-lg">Télécharger</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {render.master_url_16_9 && (
-              <a href={render.master_url_16_9} target="_blank" rel="noopener noreferrer">
-                <Button variant="glass" className="w-full justify-start gap-2">
-                  <Download className="h-4 w-4" /> Master 16:9
-                </Button>
-              </a>
-            )}
-            {render.master_url_9_16 && (
-              <a href={render.master_url_9_16} target="_blank" rel="noopener noreferrer">
-                <Button variant="glass" className="w-full justify-start gap-2 mt-2">
-                  <Download className="h-4 w-4" /> Vertical 9:16
-                </Button>
-              </a>
-            )}
-            {render.teaser_url && (
-              <a href={render.teaser_url} target="_blank" rel="noopener noreferrer">
-                <Button variant="glass" className="w-full justify-start gap-2 mt-2">
-                  <Download className="h-4 w-4" /> Teaser 15s
-                </Button>
-              </a>
-            )}
-          </CardContent>
-        </Card>
+        {/* Download section - only for non-manifest renders */}
+        {!isManifest && (
+          <Card className="border-border/50 bg-card/60">
+            <CardHeader>
+              <CardTitle className="text-lg">Télécharger</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {render.master_url_16_9 && (
+                <a href={render.master_url_16_9} target="_blank" rel="noopener noreferrer">
+                  <Button variant="glass" className="w-full justify-start gap-2">
+                    <Download className="h-4 w-4" /> Master 16:9
+                  </Button>
+                </a>
+              )}
+              {render.master_url_9_16 && render.master_url_9_16 !== render.master_url_16_9 && (
+                <a href={render.master_url_9_16} target="_blank" rel="noopener noreferrer">
+                  <Button variant="glass" className="w-full justify-start gap-2 mt-2">
+                    <Download className="h-4 w-4" /> Vertical 9:16
+                  </Button>
+                </a>
+              )}
+              {render.teaser_url && (
+                <a href={render.teaser_url} target="_blank" rel="noopener noreferrer">
+                  <Button variant="glass" className="w-full justify-start gap-2 mt-2">
+                    <Download className="h-4 w-4" /> Teaser 15s
+                  </Button>
+                </a>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <p className="text-center text-xs text-muted-foreground mt-8">
           Créé avec <Link to="/" className="text-primary hover:underline">CineClip AI</Link>
