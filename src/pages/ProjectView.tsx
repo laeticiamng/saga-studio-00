@@ -363,7 +363,7 @@ export default function ProjectView() {
                           transition={{ duration: 0.25, delay: i * 0.05 }}
                           className="rounded-lg bg-secondary/30 p-4"
                         >
-                          <span className="text-xs font-semibold text-primary uppercase tracking-wider">{key.replace(/_/g, " ")}</span>
+                          <span className="text-xs font-semibold text-primary uppercase tracking-wider">{styleBibleKeyLabels[key] || key.replace(/_/g, " ")}</span>
                           <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
                             {typeof val === "string" ? val : JSON.stringify(val)}
                           </p>
