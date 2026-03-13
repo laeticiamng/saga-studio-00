@@ -168,6 +168,7 @@ export async function renderVideo(
   stageTimer.reset();
 
   for (let i = 0; i < validShots.length; i++) {
+    checkAbort();
     const shot = validShots[i];
     const isImage = /\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/i.test(shot.url);
     const ext = isImage ? "png" : "mp4";
