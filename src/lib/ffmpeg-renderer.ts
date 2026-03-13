@@ -3,29 +3,55 @@ import { toBlobURL, fetchFile } from "@ffmpeg/util";
 
 let ffmpeg: FFmpeg | null = null;
 
+export type RenderStage = "loading" | "downloading" | "encoding_segments" | "concat" | "done" | "error";
+
 export type RenderProgress = {
-  stage: "loading" | "downloading" | "encoding" | "done" | "error";
+  stage: RenderStage;
   percent: number;
   message: string;
+  /** Estimated time remaining in seconds, null if unknown */
+  etaSeconds: number | null;
+  /** Current step index (e.g. shot 3 of 10) */
+  stepIndex?: number;
+  /** Total steps in current stage */
+  stepTotal?: number;
+  /** Elapsed time in ms since render started */
+  elapsedMs: number;
 };
 
-async function getFFmpeg(onProgress: (p: RenderProgress) => void): Promise<FFmpeg> {
+/** Simple timer helper to compute ETA from step progress */
+class ETATracker {
+  private startTime: number;
+  constructor() { this.startTime = Date.now(); }
+  reset() { this.startTime = Date.now(); }
+  elapsed() { return Date.now() - this.startTime; }
+  /** Estimate remaining seconds given fraction done (0–1) */
+  estimate(fractionDone: number): number | null {
+    if (fractionDone <= 0.01) return null;
+    const elapsed = this.elapsed() / 1000;
+    const total = elapsed / fractionDone;
+    return Math.max(0, Math.round(total - elapsed));
+  }
+}
+
+function formatETA(seconds: number | null): string {
+  if (seconds === null) return "";
+  if (seconds < 5) return " — quelques secondes";
+  if (seconds < 60) return ` — ~${seconds}s restantes`;
+  const min = Math.floor(seconds / 60);
+  const sec = seconds % 60;
+  return ` — ~${min}min ${sec}s restantes`;
+}
+
+async function getFFmpeg(onProgress: (p: Partial<RenderProgress>) => void): Promise<FFmpeg> {
   if (ffmpeg && ffmpeg.loaded) return ffmpeg;
 
-  onProgress({ stage: "loading", percent: 0, message: "Chargement de FFmpeg…" });
+  onProgress({ stage: "loading", percent: 0, message: "Chargement de FFmpeg (≈30 Mo)…" });
 
   ffmpeg = new FFmpeg();
 
   ffmpeg.on("log", ({ message }) => {
     console.log("[ffmpeg]", message);
-  });
-
-  ffmpeg.on("progress", ({ progress }) => {
-    onProgress({
-      stage: "encoding",
-      percent: Math.round(progress * 100),
-      message: `Encodage : ${Math.round(progress * 100)}%`,
-    });
   });
 
   const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm";
@@ -50,20 +76,55 @@ export async function renderVideo(
   audioUrl: string | null,
   onProgress: (p: RenderProgress) => void
 ): Promise<Blob> {
-  const ff = await getFFmpeg(onProgress);
+  const globalTimer = new ETATracker();
+  const stageTimer = new ETATracker();
 
-  // Download all shot media files
+  const emit = (partial: Omit<RenderProgress, "elapsedMs">): void => {
+    onProgress({ ...partial, elapsedMs: globalTimer.elapsed() });
+  };
+
+  const ff = await getFFmpeg((p) => emit({
+    stage: p.stage || "loading",
+    percent: p.percent || 0,
+    message: p.message || "",
+    etaSeconds: null,
+  }));
+
+  // Register FFmpeg progress for concat stage
+  let concatActive = false;
+  ff.on("progress", ({ progress }) => {
+    if (concatActive) {
+      const pct = Math.round(progress * 100);
+      const eta = stageTimer.estimate(progress);
+      emit({
+        stage: "concat",
+        percent: pct,
+        message: `Assemblage final : ${pct}%${formatETA(eta)}`,
+        etaSeconds: eta,
+      });
+    }
+  });
+
+  // ── STAGE 1: Download ──
   const validShots = shots.filter(s => s.url && !s.url.includes("placehold.co"));
   if (validShots.length === 0) {
     throw new Error("Aucun shot vidéo valide à assembler");
   }
 
+  const totalDownloads = validShots.length + (audioUrl ? 1 : 0);
+  stageTimer.reset();
+
   for (let i = 0; i < validShots.length; i++) {
     const shot = validShots[i];
-    onProgress({
+    const fraction = i / totalDownloads;
+    const eta = stageTimer.estimate(fraction);
+    emit({
       stage: "downloading",
-      percent: Math.round((i / validShots.length) * 100),
-      message: `Téléchargement shot ${i + 1}/${validShots.length}…`,
+      percent: Math.round(fraction * 100),
+      message: `Téléchargement shot ${i + 1}/${validShots.length}${formatETA(eta)}`,
+      etaSeconds: eta,
+      stepIndex: i + 1,
+      stepTotal: validShots.length,
     });
 
     const isImage = /\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/i.test(shot.url);
@@ -78,9 +139,16 @@ export async function renderVideo(
     }
   }
 
-  // Download audio if available
   if (audioUrl) {
-    onProgress({ stage: "downloading", percent: 95, message: "Téléchargement audio…" });
+    const eta = stageTimer.estimate(validShots.length / totalDownloads);
+    emit({
+      stage: "downloading",
+      percent: 95,
+      message: `Téléchargement audio…${formatETA(eta)}`,
+      etaSeconds: eta,
+      stepIndex: totalDownloads,
+      stepTotal: totalDownloads,
+    });
     try {
       const audioData = await fetchFile(audioUrl);
       await ff.writeFile("audio.mp3", audioData);
@@ -89,22 +157,29 @@ export async function renderVideo(
     }
   }
 
-  // Build concat file for FFmpeg
+  // ── STAGE 2: Encode segments ──
   let concatContent = "";
+  stageTimer.reset();
+
   for (let i = 0; i < validShots.length; i++) {
     const shot = validShots[i];
     const isImage = /\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/i.test(shot.url);
     const ext = isImage ? "png" : "mp4";
     const filename = `shot_${i}.${ext}`;
     const duration = shot.duration_sec || 5;
+    const fraction = i / validShots.length;
+    const eta = stageTimer.estimate(fraction);
+
+    emit({
+      stage: "encoding_segments",
+      percent: Math.round(fraction * 100),
+      message: `${isImage ? "Conversion image" : "Normalisation"} ${i + 1}/${validShots.length}${formatETA(eta)}`,
+      etaSeconds: eta,
+      stepIndex: i + 1,
+      stepTotal: validShots.length,
+    });
 
     if (isImage) {
-      // For images, we need to create a video from the image
-      onProgress({
-        stage: "encoding",
-        percent: Math.round((i / validShots.length) * 30),
-        message: `Conversion image ${i + 1} en vidéo…`,
-      });
       await ff.exec([
         "-loop", "1",
         "-i", filename,
@@ -115,14 +190,7 @@ export async function renderVideo(
         "-r", "24",
         `segment_${i}.mp4`,
       ]);
-      concatContent += `file 'segment_${i}.mp4'\n`;
     } else {
-      // Re-encode video to ensure compatible format
-      onProgress({
-        stage: "encoding",
-        percent: Math.round((i / validShots.length) * 30),
-        message: `Normalisation shot ${i + 1}…`,
-      });
       await ff.exec([
         "-i", filename,
         "-c:v", "libx264",
@@ -133,41 +201,42 @@ export async function renderVideo(
         "-an",
         `segment_${i}.mp4`,
       ]);
-      concatContent += `file 'segment_${i}.mp4'\n`;
     }
+    concatContent += `file 'segment_${i}.mp4'\n`;
   }
 
-  // Write concat file
+  // ── STAGE 3: Concat ──
   const encoder = new TextEncoder();
   await ff.writeFile("concat.txt", encoder.encode(concatContent));
 
-  onProgress({ stage: "encoding", percent: 50, message: "Assemblage des segments…" });
+  stageTimer.reset();
+  concatActive = true;
 
-  // Concat all segments
+  emit({
+    stage: "concat",
+    percent: 0,
+    message: "Assemblage final des segments…",
+    etaSeconds: null,
+  });
+
   if (audioUrl) {
     await ff.exec([
-      "-f", "concat",
-      "-safe", "0",
-      "-i", "concat.txt",
+      "-f", "concat", "-safe", "0", "-i", "concat.txt",
       "-i", "audio.mp3",
-      "-c:v", "libx264",
-      "-c:a", "aac",
-      "-shortest",
-      "-pix_fmt", "yuv420p",
+      "-c:v", "libx264", "-c:a", "aac", "-shortest", "-pix_fmt", "yuv420p",
       "output.mp4",
     ]);
   } else {
     await ff.exec([
-      "-f", "concat",
-      "-safe", "0",
-      "-i", "concat.txt",
-      "-c:v", "libx264",
-      "-pix_fmt", "yuv420p",
+      "-f", "concat", "-safe", "0", "-i", "concat.txt",
+      "-c:v", "libx264", "-pix_fmt", "yuv420p",
       "output.mp4",
     ]);
   }
 
-  onProgress({ stage: "encoding", percent: 95, message: "Finalisation…" });
+  concatActive = false;
+
+  emit({ stage: "concat", percent: 100, message: "Finalisation…", etaSeconds: 0 });
 
   // Read output
   const data = await ff.readFile("output.mp4");
@@ -187,6 +256,7 @@ export async function renderVideo(
   try { await ff.deleteFile("audio.mp3"); } catch {}
   try { await ff.deleteFile("output.mp4"); } catch {}
 
-  onProgress({ stage: "done", percent: 100, message: "Vidéo prête !" });
+  const totalSeconds = Math.round(globalTimer.elapsed() / 1000);
+  emit({ stage: "done", percent: 100, message: `Vidéo prête ! (${totalSeconds}s)`, etaSeconds: 0 });
   return blob;
 }

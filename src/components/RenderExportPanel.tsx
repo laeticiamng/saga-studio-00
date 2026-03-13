@@ -56,7 +56,7 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
 
   const handleClientRender = useCallback(async () => {
     setClientRendering(true);
-    setRenderProgress({ stage: "loading", percent: 0, message: "Initialisation…" });
+    setRenderProgress({ stage: "loading", percent: 0, message: "Initialisation…", etaSeconds: null, elapsedMs: 0 });
     setRenderedBlobUrl(null);
 
     try {
@@ -98,7 +98,7 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
       toast({ title: "Vidéo assemblée !", description: "Cliquez sur Télécharger pour récupérer le MP4" });
     } catch (err: any) {
       console.error("Client render error:", err);
-      setRenderProgress({ stage: "error", percent: 0, message: err.message });
+      setRenderProgress({ stage: "error", percent: 0, message: err.message, etaSeconds: null, elapsedMs: 0 });
       toast({ title: "Erreur d'assemblage", description: err.message, variant: "destructive" });
     } finally {
       setClientRendering(false);
@@ -161,7 +161,26 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
               {renderProgress && clientRendering && (
                 <div className="space-y-2">
                   <Progress value={renderProgress.percent} className="h-2" />
-                  <p className="text-xs text-muted-foreground">{renderProgress.message}</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground">{renderProgress.message}</p>
+                    {renderProgress.elapsedMs > 0 && (
+                      <p className="text-xs text-muted-foreground tabular-nums">
+                        {Math.round(renderProgress.elapsedMs / 1000)}s
+                      </p>
+                    )}
+                  </div>
+                  {renderProgress.stepIndex != null && renderProgress.stepTotal != null && (
+                    <div className="flex gap-1">
+                      {Array.from({ length: renderProgress.stepTotal }, (_, i) => (
+                        <div
+                          key={i}
+                          className={`h-1 flex-1 rounded-full transition-colors ${
+                            i < renderProgress.stepIndex! ? "bg-primary" : i === renderProgress.stepIndex! ? "bg-primary/50 animate-pulse" : "bg-muted"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
