@@ -73,11 +73,11 @@ class RunwayProvider implements VideoProvider {
         "X-Runway-Version": "2024-11-06",
       },
       body: JSON.stringify({
-        model: "gen4_turbo",
+        model: "gen4.5",
         promptText: prompt.slice(0, 1000),
         duration: runwayDuration,
         ratio: "1280:720",
-        // No promptImage = text-to-video mode
+        // gen4.5 supports text-to-video without promptImage
       }),
     });
     const data = await res.json();
