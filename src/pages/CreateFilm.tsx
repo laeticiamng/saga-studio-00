@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Film, Coins, Loader2, Cpu, Sparkles } from "lucide-react";
+import { Film, Coins, Loader2, Cpu, Sparkles, Wand2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
@@ -32,6 +32,8 @@ export default function CreateFilm() {
   const [provider, setProvider] = useState("auto");
   const [aspectRatio, setAspectRatio] = useState("16:9");
   const [loading, setLoading] = useState(false);
+  const [enriching, setEnriching] = useState(false);
+  const [enrichedData, setEnrichedData] = useState<any>(null);
   const [estimate, setEstimate] = useState<{ estimated_shots: number; estimated_credits: number } | null>(null);
   const [estimating, setEstimating] = useState(false);
 
@@ -55,6 +57,33 @@ export default function CreateFilm() {
   const durationSec = parseInt(duration);
   const estimatedShots = estimate?.estimated_shots ?? Math.ceil(durationSec / 7);
   const estimatedCredits = estimate?.estimated_credits ?? (10 + estimatedShots * 2);
+
+  const handleEnrichWithAI = async () => {
+    const idea = synopsis.length > 0 ? synopsis : title;
+    if (!idea || idea.length < 3) {
+      toast({ title: "Besoin d'une idée", description: "Écrivez au moins quelques mots dans le titre ou le synopsis pour que l'IA puisse travailler.", variant: "destructive" });
+      return;
+    }
+    setEnriching(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("enhance-synopsis", {
+        body: { idea, type: "film", duration_sec: durationSec, style_preset: style },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      if (data?.synopsis) {
+        setSynopsis(data.synopsis);
+        setEnrichedData(data);
+        if (data.logline && !title) setTitle(data.logline.slice(0, 80));
+        toast({ title: "✨ Synopsis enrichi", description: "L'IA a structuré votre idée en un synopsis cinématographique complet." });
+      }
+    } catch (err: any) {
+      toast({ title: "Erreur IA", description: err.message, variant: "destructive" });
+    } finally {
+      setEnriching(false);
+    }
+  };
 
   const handleOneClickGenerate = async () => {
     if (!user) return;
@@ -120,18 +149,31 @@ export default function CreateFilm() {
 
             {/* Synopsis */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Synopsis</Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Synopsis</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleEnrichWithAI}
+                  disabled={enriching || (!synopsis && !title)}
+                  className="gap-1.5 text-xs h-8"
+                >
+                  {enriching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+                  {enriching ? "Enrichissement…" : "Enrichir avec l'IA"}
+                </Button>
+              </div>
               <Textarea
                 value={synopsis}
                 onChange={(e) => setSynopsis(e.target.value)}
-                placeholder="Dans un monde où la technologie a remplacé les émotions humaines, une jeune ingénieure découvre un ancien appareil capable de restaurer les souvenirs perdus…"
+                placeholder="Décrivez votre idée en quelques mots (ex: 'un robot qui découvre les émotions') puis cliquez sur 'Enrichir avec l'IA' pour obtenir un synopsis complet, ou écrivez directement votre synopsis détaillé…"
                 rows={7}
                 className="resize-none leading-relaxed"
                 required
               />
               <div className="flex justify-between items-center">
                 <p className="text-xs text-muted-foreground">
-                  Décrivez l'histoire en 5 à 8 lignes : personnages, contexte, intrigue et dénouement.
+                  Décrivez l'histoire en 5 à 8 lignes, ou écrivez quelques mots et laissez l'IA enrichir.
                 </p>
                 <span className={`text-xs font-medium ${synopsisValid ? "text-primary" : synopsis.length > 0 ? "text-destructive" : "text-muted-foreground"}`}>
                   {synopsis.length}/50
@@ -141,6 +183,41 @@ export default function CreateFilm() {
                 <p className="text-xs text-destructive">Le synopsis doit contenir au moins 50 caractères.</p>
               )}
             </div>
+
+            {/* AI Enrichment Details */}
+            {enrichedData && (
+              <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 space-y-3 text-sm">
+                <p className="font-medium text-primary flex items-center gap-1.5">
+                  <Sparkles className="h-4 w-4" /> Enrichissement IA
+                </p>
+                {enrichedData.logline && (
+                  <div>
+                    <span className="text-muted-foreground text-xs">Logline :</span>
+                    <p className="text-foreground italic">{enrichedData.logline}</p>
+                  </div>
+                )}
+                {enrichedData.characters?.length > 0 && (
+                  <div>
+                    <span className="text-muted-foreground text-xs">Personnages :</span>
+                    <div className="space-y-1 mt-1">
+                      {enrichedData.characters.map((c: any, i: number) => (
+                        <p key={i} className="text-foreground text-xs">
+                          <span className="font-medium">{c.name}</span> ({c.role}) — {c.want}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {enrichedData.ambiance && (
+                  <div>
+                    <span className="text-muted-foreground text-xs">Ambiance :</span>
+                    <p className="text-foreground text-xs">
+                      {enrichedData.ambiance.mood} · {enrichedData.ambiance.lighting} · Palette : {enrichedData.ambiance.palette?.join(", ")}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Durée */}
             <div className="space-y-2">

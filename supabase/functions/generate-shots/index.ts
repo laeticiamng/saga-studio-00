@@ -124,20 +124,14 @@ function buildProviderChain(preferredProvider?: string): VideoProvider[] {
   };
 
   const chain: VideoProvider[] = [];
-
-  // Put preferred provider first
   if (preferredProvider && keys[preferredProvider]) {
     chain.push(factories[preferredProvider](keys[preferredProvider]!));
   }
-
-  // Add remaining providers in priority order
   for (const name of PROVIDER_PRIORITY) {
     if (name !== preferredProvider && keys[name]) {
       chain.push(factories[name](keys[name]!));
     }
   }
-
-  // Always have mock as last resort
   chain.push(new MockProvider());
   return chain;
 }
@@ -151,73 +145,108 @@ async function generateWithFallback(
   maxRetries = 2
 ): Promise<{ provider: VideoProvider; job_id: string; attempts: { provider: string; error?: string }[] }> {
   const attempts: { provider: string; error?: string }[] = [];
-
   for (const provider of chain) {
     for (let retry = 0; retry <= maxRetries; retry++) {
       try {
-        // Exponential backoff on retry
-        if (retry > 0) {
-          await new Promise(r => setTimeout(r, Math.min(1000 * Math.pow(2, retry), 8000)));
-        }
+        if (retry > 0) await new Promise(r => setTimeout(r, Math.min(1000 * Math.pow(2, retry), 8000)));
         const { job_id } = await provider.generateVideo(prompt, duration, style, seed);
         attempts.push({ provider: provider.name });
         return { provider, job_id, attempts };
       } catch (err: any) {
         attempts.push({ provider: provider.name, error: err.message });
         console.warn(`[generate-shots] ${provider.name} attempt ${retry + 1} failed: ${err.message}`);
-        // Only retry on same provider for transient errors (rate limit, timeout)
         const isTransient = /rate|timeout|503|429|500/i.test(err.message);
-        if (!isTransient) break; // Skip to next provider
+        if (!isTransient) break;
       }
     }
   }
-
   throw new Error(`All providers failed: ${attempts.map(a => `${a.provider}:${a.error}`).join(", ")}`);
 }
 
-// ─── Style Consistency Engine ───────────────────────────────────────────────
+// ─── Enhanced Cinematic Prompt Engine (5 Pillars) ───────────────────────────
+
+const CAMERA_BY_SHOT_TYPE: Record<string, string[]> = {
+  wide: ["slow establishing dolly out", "crane ascending over scene", "panoramic pan left to right", "static wide composition"],
+  medium: ["smooth tracking alongside subject", "steady dolly forward approach", "slow 180° orbit around subject", "handheld follow with stabilization"],
+  close: ["static intimate close-up", "slow deliberate push in", "rack focus revealing expression", "subtle handheld with shallow DOF"],
+  detail: ["macro lens extreme close-up", "slow vertical tilt reveal", "focus pull between textures", "static insert with bokeh background"],
+};
+
+const ENERGY_TO_CAMERA: Record<string, string> = {
+  high: "Fast dynamic cuts, whip pans, energetic handheld, rapid dolly movements, quick cross-cutting",
+  medium: "Balanced tracking shots, moderate pacing, smooth transitions, controlled movements",
+  low: "Slow contemplative drifts, static held compositions, long takes, gentle floating movements",
+};
+
+const LIGHTING_BY_MOOD: Record<string, string> = {
+  opening: "Golden hour warm key light, long shadows, atmospheric haze, silhouette rim lighting",
+  verse: "Soft diffused natural light, subtle fill, gentle gradients, muted color temperature",
+  chorus: "High contrast dramatic lighting, sharp hard shadows, vibrant saturated colors, dynamic light shifts",
+  bridge: "Cool toned ambient lighting, neon practicals, moody blue-purple palette, isolated pools of light",
+  outro: "Fading twilight, desaturated palette, soft backlight, melancholic lens flare",
+};
 
 function buildStyleConsistentPrompt(
   basePrompt: string,
   styleBible: Record<string, any> | null,
-  characterBible: Record<string, any> | null,
+  characterBible: any[] | Record<string, any> | null,
   stylePreset: string,
   shotIdx: number,
-  totalShots: number
+  totalShots: number,
+  shotMeta?: { shot_type?: string; section?: string; energy_level?: string; camera_movement?: string }
 ): string {
   const parts: string[] = [];
 
-  // Global style enforcement
+  // ── PILLAR 2: ARTISTIC STYLE ──
   if (styleBible) {
-    if (styleBible.color_palette) parts.push(`Color palette: ${styleBible.color_palette}`);
-    if (styleBible.lighting) parts.push(`Lighting: ${styleBible.lighting}`);
-    if (styleBible.camera_style) parts.push(`Camera: ${styleBible.camera_style}`);
-    if (styleBible.mood) parts.push(`Mood: ${styleBible.mood}`);
-    if (styleBible.texture) parts.push(`Texture: ${styleBible.texture}`);
-    if (styleBible.aspect_ratio) parts.push(`Aspect ratio: ${styleBible.aspect_ratio}`);
+    if (styleBible.visual_rules) parts.push(`[STYLE] ${styleBible.visual_rules}`);
+    if (styleBible.palette) {
+      const palette = Array.isArray(styleBible.palette) ? styleBible.palette.join(", ") : styleBible.palette;
+      parts.push(`[PALETTE] Color scheme: ${palette}`);
+    }
+    if (styleBible.texture_guidelines) parts.push(`[TEXTURE] ${styleBible.texture_guidelines}`);
+    if (styleBible.mood) parts.push(`[MOOD] ${styleBible.mood}`);
   }
 
-  // Character consistency
-  if (characterBible && Object.keys(characterBible).length > 0) {
-    const charDescs = Object.entries(characterBible)
-      .map(([name, desc]) => `${name}: ${typeof desc === 'string' ? desc : JSON.stringify(desc)}`)
-      .join("; ");
-    parts.push(`Recurring characters: ${charDescs}`);
+  // ── PILLAR 3: FRAMING & COMPOSITION (Camera) ──
+  const shotType = shotMeta?.shot_type || "medium";
+  const cameraOptions = CAMERA_BY_SHOT_TYPE[shotType] || CAMERA_BY_SHOT_TYPE.medium;
+  const selectedCamera = shotMeta?.camera_movement || cameraOptions[shotIdx % cameraOptions.length];
+  parts.push(`[FRAMING] ${shotType} shot, ${selectedCamera}`);
+
+  // Energy-based camera behavior
+  const energyLevel = shotMeta?.energy_level || "medium";
+  parts.push(`[CAMERA ENERGY] ${ENERGY_TO_CAMERA[energyLevel] || ENERGY_TO_CAMERA.medium}`);
+
+  // ── PILLAR 4: LIGHTING & ATMOSPHERE ──
+  const section = shotMeta?.section || "verse";
+  const lightingStyle = styleBible?.lighting || LIGHTING_BY_MOOD[section] || LIGHTING_BY_MOOD.verse;
+  parts.push(`[LIGHTING] ${lightingStyle}`);
+
+  // ── CHARACTER CONSISTENCY (Pillar 1 enhancement) ──
+  if (characterBible) {
+    const chars = Array.isArray(characterBible) ? characterBible : Object.entries(characterBible).map(([name, desc]) => ({ name, description: typeof desc === 'string' ? desc : JSON.stringify(desc) }));
+    if (chars.length > 0) {
+      const charDescs = chars.map((c: any) => {
+        const desc = c.visual_description || c.description || JSON.stringify(c);
+        return `${c.name}: ${desc}`;
+      }).join("; ");
+      parts.push(`[CHARACTERS] Recurring characters (maintain exact appearance): ${charDescs}`);
+    }
   }
 
-  // Style preset enforcement
-  parts.push(`Visual style: ${stylePreset}`);
-
-  // Shot position context for narrative flow
+  // ── NARRATIVE POSITION ──
   const position = shotIdx / totalShots;
-  if (position < 0.15) parts.push("Opening shot - establish setting and tone");
-  else if (position > 0.85) parts.push("Closing shot - climactic or resolving energy");
-  else if (position > 0.4 && position < 0.6) parts.push("Midpoint - peak intensity");
+  if (position < 0.08) parts.push("[NARRATIVE] Opening hook — establish world with striking first image");
+  else if (position < 0.15) parts.push("[NARRATIVE] Setup — introduce protagonist and setting");
+  else if (position > 0.83 && position < 0.95) parts.push("[NARRATIVE] Climax — peak dramatic intensity");
+  else if (position >= 0.95) parts.push("[NARRATIVE] Final image — memorable closing shot, mirror or contrast opening");
+  else if (position > 0.4 && position < 0.6) parts.push("[NARRATIVE] Midpoint — shift in energy or revelation");
 
-  // Seed phrase for cross-shot consistency
-  parts.push("Maintain strict visual consistency with all other shots in this project");
+  // ── GLOBAL CONSISTENCY ──
+  parts.push(`[CONSISTENCY] Visual style: ${stylePreset}. Maintain strict visual coherence across all shots. Same color grade, same lens characteristics, same world.`);
 
-  const stylePrefix = parts.join(". ") + ". ";
+  const stylePrefix = parts.join(". ") + ".\n\n";
   return stylePrefix + basePrompt;
 }
 
@@ -248,7 +277,7 @@ serve(async (req) => {
       .maybeSingle();
 
     const styleBible = (plan?.style_bible_json as Record<string, any>) || null;
-    const characterBible = (plan?.character_bible_json as Record<string, any>) || null;
+    const characterBible = plan?.character_bible_json || null;
     const shotlistJson = (plan?.shotlist_json as any[]) || [];
 
     const providerChain = buildProviderChain(project.provider_default || undefined);
@@ -262,7 +291,7 @@ serve(async (req) => {
       .order("idx")
       .limit(batch_size);
 
-    // Get total shots count for position-aware prompting
+    // Get total shots count
     const { count: totalShotsCount } = await supabase
       .from("shots")
       .select("*", { count: "exact", head: true })
@@ -283,7 +312,7 @@ serve(async (req) => {
     const results = [];
     let creditsUsed = 0;
 
-    // P0-1: Pre-check credits BEFORE generating
+    // Pre-check credits
     const totalEstimatedCredits = pendingShots.length * 2;
     const { data: wallet } = await supabase
       .from("credit_wallets")
@@ -305,15 +334,24 @@ serve(async (req) => {
       try {
         await supabase.from("shots").update({ status: "generating" }).eq("id", shot.id);
 
-        // ── Style Consistency: enrich prompt with style/character bibles ──
+        // Find matching shotlist entry for metadata
+        const shotMeta = shotlistJson.find((s: any) => s.idx === shot.idx);
         const totalShots = totalShotsCount || shotlistJson.length || pendingShots.length;
+
+        // ── Cinematic Prompt Engine: enrich with 5 pillars ──
         const enrichedPrompt = buildStyleConsistentPrompt(
           shot.prompt || "",
           styleBible,
           characterBible,
           project.style_preset || "cinematic",
           shot.idx,
-          totalShots
+          totalShots,
+          shotMeta ? {
+            shot_type: shotMeta.shot_type,
+            section: shotMeta.section,
+            energy_level: shotMeta.energy_level,
+            camera_movement: shotMeta.camera_movement,
+          } : undefined
         );
 
         const { provider: usedProvider, job_id, attempts } = await generateWithFallback(
@@ -324,7 +362,6 @@ serve(async (req) => {
           shot.seed || Math.floor(Math.random() * 999999)
         );
 
-        // Update shot with actual provider used
         await supabase.from("shots").update({ provider: usedProvider.name }).eq("id", shot.id);
 
         // For mock provider, immediately complete
@@ -350,7 +387,7 @@ serve(async (req) => {
       }
     }
 
-    // P0-1: Atomic credit debit with idempotence (ref_id = project_id + batch timestamp)
+    // Atomic credit debit with idempotence
     if (creditsUsed > 0) {
       const batchRef = `${project_id}_gen_${Date.now()}`;
       const { data: debited } = await supabase.rpc("debit_credits", {

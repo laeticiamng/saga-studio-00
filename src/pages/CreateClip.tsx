@@ -8,10 +8,11 @@ import StylePresetPicker from "@/components/StylePresetPicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Upload, Music, ArrowRight, ArrowLeft, Coins, Loader2, Cpu, Sparkles, ImagePlus, Video, X, Check } from "lucide-react";
+import { Upload, Music, ArrowRight, ArrowLeft, Coins, Loader2, Cpu, Sparkles, ImagePlus, Video, X, Check, Palette } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
@@ -41,6 +42,7 @@ export default function CreateClip() {
   const [style, setStyle] = useState("cinematic");
   const [provider, setProvider] = useState("auto");
   const [aspectRatio, setAspectRatio] = useState("16:9");
+  const [atmosphere, setAtmosphere] = useState("");
   const [loading, setLoading] = useState(false);
   const [estimate, setEstimate] = useState<{ estimated_shots: number; estimated_credits: number } | null>(null);
   const [estimating, setEstimating] = useState(false);
@@ -117,6 +119,7 @@ export default function CreateClip() {
           mode, style_preset: style, audio_url: filePath,
           duration_sec: Math.min(270, Math.max(30, Math.round(audioFile.size / 16000))),
           aspect_ratio: aspectRatio, face_urls: faceUrls, ref_photo_urls: refUrls,
+          synopsis: atmosphere || undefined,
         },
       });
 
@@ -274,6 +277,24 @@ export default function CreateClip() {
                     </label>
                   )}
                 </div>
+              </div>
+
+              {/* Ambiance / Atmosphère */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2 text-sm font-medium">
+                  <Palette className="h-4 w-4 text-primary" /> Ambiance souhaitée
+                  <span className="text-xs font-normal text-muted-foreground ml-1">(optionnel)</span>
+                </Label>
+                <Textarea
+                  value={atmosphere}
+                  onChange={(e) => setAtmosphere(e.target.value)}
+                  placeholder="Ex: Ambiance nocturne urbaine, néons roses et bleus, pluie sur l'asphalte, feeling mélancolique et rêveur…"
+                  rows={3}
+                  className="resize-none text-sm"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Décrivez l'atmosphère, le décor ou l'émotion souhaitée. L'IA intégrera ces éléments dans chaque scène.
+                </p>
               </div>
 
               <Button variant="hero" size="lg" className="w-full" onClick={() => setStep(1)} disabled={!audioFile}>

@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.cleanup]
 verify_jwt = false
+
+[functions.enhance-synopsis]
+verify_jwt = false
