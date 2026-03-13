@@ -157,6 +157,30 @@ export default function ProjectView() {
     toast({ title: "Lien copié !", description: "Le lien de partage a été copié dans le presse-papier" });
   };
 
+  const handleEnrichSynopsis = async () => {
+    if (!project || !session || enriching) return;
+    setEnriching(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("enhance-synopsis", {
+        body: { project_id: project.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.synopsis) {
+        queryClient.invalidateQueries({ queryKey: ["project", id] });
+        toast({
+          title: "✨ Synopsis enrichi",
+          description: data.changes_summary || "Le synopsis a été amélioré par l'IA.",
+        });
+      }
+    } catch (err: any) {
+      console.error("[enhance-synopsis]", err);
+      toast({ title: "Erreur IA", description: err.message, variant: "destructive" });
+    } finally {
+      setEnriching(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
