@@ -7,6 +7,64 @@ const corsHeaders = {
 };
 
 const MAX_RETRIES_PER_SHOT = 2;
+const STALE_GENERATING_TIMEOUT_MS = 30 * 60 * 1000;
+
+function parseJobReference(value?: string | null): { provider: string; jobId: string } | null {
+  if (!value || !value.startsWith("job:")) return null;
+  const [, provider, ...rest] = value.split(":");
+  const jobId = rest.join(":");
+  if (!provider || !jobId) return null;
+  return { provider, jobId };
+}
+
+function isPlaceholderUrl(url?: string | null): boolean {
+  if (!url) return true;
+  return url.includes("placehold.co") || url.includes("placeholder") || url.startsWith("data:");
+}
+
+async function checkProviderStatus(provider: string, jobId: string): Promise<{ status: "pending" | "completed" | "failed"; url?: string; error?: string }> {
+  if (provider === "runway") {
+    const apiKey = Deno.env.get("RUNWAY_API_KEY");
+    if (!apiKey) return { status: "failed", error: "RUNWAY_API_KEY is missing" };
+
+    const res = await fetch(`https://api.dev.runwayml.com/v1/tasks/${jobId}`, {
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "X-Runway-Version": "2024-11-06",
+      },
+    });
+    const data = await res.json();
+    if (!res.ok) return { status: "failed", error: data?.error || data?.message || JSON.stringify(data) };
+
+    if (data.status === "SUCCEEDED") return { status: "completed", url: data.output?.[0] };
+    if (data.status === "FAILED") return { status: "failed", error: data.failure || "Runway task failed" };
+    return { status: "pending" };
+  }
+
+  if (provider === "luma") {
+    const apiKey = Deno.env.get("LUMA_API_KEY");
+    if (!apiKey) return { status: "failed", error: "LUMA_API_KEY is missing" };
+
+    const res = await fetch(`https://api.lumalabs.ai/dream-machine/v1/generations/${jobId}`, {
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+      },
+    });
+    const data = await res.json();
+    if (!res.ok) return { status: "failed", error: data?.detail || data?.message || JSON.stringify(data) };
+
+    if (data.state === "completed") return { status: "completed", url: data.assets?.video };
+    if (data.state === "failed") return { status: "failed", error: data.failure_reason || "Luma task failed" };
+    return { status: "pending" };
+  }
+
+  if (provider === "sora") {
+    // Sora path in this project is synchronous image generation. Job URL is handled in generate-shots.
+    return { status: "pending" };
+  }
+
+  return { status: "failed", error: `Unsupported provider for polling: ${provider}` };
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -31,15 +89,12 @@ serve(async (req) => {
     const retried: string[] = [];
     const failedPermanently: string[] = [];
 
-    // Check failed shots and retry if under limit
     for (const shot of shots) {
       if (shot.status === "failed") {
-        // Count existing retries from error_message pattern
         const retryCount = (shot.error_message?.match(/\[retry (\d+)\]/)?.[1] || "0");
         const currentRetries = parseInt(retryCount, 10);
 
         if (currentRetries < MAX_RETRIES_PER_SHOT) {
-          // Reset to pending for retry
           await supabase.from("shots").update({
             status: "pending",
             error_message: `[retry ${currentRetries + 1}] ${shot.error_message || "retrying"}`,
@@ -50,30 +105,65 @@ serve(async (req) => {
         }
       }
 
-      // Check for stale "generating" shots (stuck > 5 min)
       if (shot.status === "generating") {
+        const jobRef = parseJobReference(shot.output_url);
+
+        if (jobRef) {
+          const providerResult = await checkProviderStatus(jobRef.provider, jobRef.jobId);
+
+          if (providerResult.status === "completed") {
+            if (!providerResult.url || isPlaceholderUrl(providerResult.url)) {
+              await supabase.from("shots").update({
+                status: "failed",
+                error_message: `${jobRef.provider} completed but returned invalid media URL`,
+              }).eq("id", shot.id);
+              continue;
+            }
+
+            await supabase.from("shots").update({
+              status: "completed",
+              output_url: providerResult.url,
+              cost_credits: shot.cost_credits || 2,
+              error_message: null,
+            }).eq("id", shot.id);
+            continue;
+          }
+
+          if (providerResult.status === "failed") {
+            await supabase.from("shots").update({
+              status: "failed",
+              error_message: providerResult.error || `${jobRef.provider} generation failed`,
+            }).eq("id", shot.id);
+            continue;
+          }
+        }
+
         const updated = new Date(shot.updated_at).getTime();
         const now = Date.now();
-        if (now - updated > 5 * 60 * 1000) {
+        if (now - updated > STALE_GENERATING_TIMEOUT_MS) {
           await supabase.from("shots").update({
             status: "failed",
-            error_message: "Timed out after 5 minutes",
+            error_message: `Timed out after ${Math.floor(STALE_GENERATING_TIMEOUT_MS / 60000)} minutes`,
           }).eq("id", shot.id);
         }
       }
     }
 
+    const { data: refreshedShots } = await supabase
+      .from("shots")
+      .select("status")
+      .eq("project_id", project_id);
+
     const summary = {
-      total: shots.length,
-      pending: shots.filter(s => s.status === "pending").length + retried.length,
-      generating: shots.filter(s => s.status === "generating").length,
-      completed: shots.filter(s => s.status === "completed").length,
-      failed: shots.filter(s => s.status === "failed").length - retried.length,
+      total: refreshedShots?.length || 0,
+      pending: refreshedShots?.filter(s => s.status === "pending").length || 0,
+      generating: refreshedShots?.filter(s => s.status === "generating").length || 0,
+      completed: refreshedShots?.filter(s => s.status === "completed").length || 0,
+      failed: refreshedShots?.filter(s => s.status === "failed").length || 0,
     };
 
     const allDone = summary.pending === 0 && summary.generating === 0;
 
-    // If all done, transition project
     if (allDone && summary.completed > 0) {
       await supabase.from("projects").update({ status: "stitching" }).eq("id", project_id);
     } else if (allDone && summary.completed === 0) {
@@ -88,7 +178,7 @@ serve(async (req) => {
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err) {
+  } catch (err: any) {
     return new Response(JSON.stringify({ error: err.message }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
