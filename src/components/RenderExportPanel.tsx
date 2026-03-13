@@ -213,6 +213,18 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
                   {clientRendering ? "Assemblage en cours…" : "Assembler la vidéo"}
                 </Button>
 
+                {clientRendering && (
+                  <Button
+                    variant="destructive"
+                    size="lg"
+                    className="gap-2"
+                    onClick={handleCancelRender}
+                  >
+                    <X className="h-4 w-4" />
+                    Annuler
+                  </Button>
+                )}
+
                 {renderedBlobUrl && (
                   <Button
                     variant="default"
