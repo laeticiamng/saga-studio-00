@@ -38,7 +38,12 @@ const styleLabels: Record<string, string> = {
 const modeLabels: Record<string, string> = {
   story: "Narratif", performance: "Performance", abstract: "Abstrait",
 };
-
+const styleBibleKeyLabels: Record<string, string> = {
+  visual_rules: "Règles visuelles", regles_visuelles: "Règles visuelles",
+  palette: "Palette de couleurs", camera_rules: "Règles caméra", regles_camera: "Règles caméra",
+  lighting: "Éclairage", eclairage: "Éclairage", mood: "Ambiance", ambiance: "Ambiance",
+  texture_guidelines: "Directives texture", directives_texture: "Directives texture",
+};
 export default function ProjectView() {
   const { id } = useParams<{ id: string }>();
   const { session } = useAuth();
@@ -363,7 +368,7 @@ export default function ProjectView() {
                           transition={{ duration: 0.25, delay: i * 0.05 }}
                           className="rounded-lg bg-secondary/30 p-4"
                         >
-                          <span className="text-xs font-semibold text-primary uppercase tracking-wider">{key.replace(/_/g, " ")}</span>
+                          <span className="text-xs font-semibold text-primary uppercase tracking-wider">{styleBibleKeyLabels[key] || key.replace(/_/g, " ")}</span>
                           <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
                             {typeof val === "string" ? val : JSON.stringify(val)}
                           </p>
