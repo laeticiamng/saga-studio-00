@@ -56,7 +56,7 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
 
   const handleClientRender = useCallback(async () => {
     setClientRendering(true);
-    setRenderProgress({ stage: "loading", percent: 0, message: "Initialisation…" });
+    setRenderProgress({ stage: "loading", percent: 0, message: "Initialisation…", etaSeconds: null, elapsedMs: 0 });
     setRenderedBlobUrl(null);
 
     try {
