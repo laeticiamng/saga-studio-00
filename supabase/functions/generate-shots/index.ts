@@ -63,21 +63,37 @@ class RunwayProvider implements VideoProvider {
   private apiKey: string;
   constructor(apiKey: string) { this.apiKey = apiKey; }
   async generateVideo(prompt: string, duration: number) {
+    // Gen-4 text-to-video uses /v1/image_to_video without promptImage
     const runwayDuration = duration <= 5 ? 5 : 10;
-    const res = await fetch("https://api.dev.runwayml.com/v1/text_to_video", {
+    const res = await fetch("https://api.dev.runwayml.com/v1/image_to_video", {
       method: "POST",
-      headers: { "Authorization": `Bearer ${this.apiKey}`, "Content-Type": "application/json", "X-Runway-Version": "2024-11-06" },
-      body: JSON.stringify({ model: "gen4_turbo", promptText: prompt.slice(0, 1000), duration: runwayDuration, ratio: "1280:720" }),
+      headers: {
+        "Authorization": `Bearer ${this.apiKey}`,
+        "Content-Type": "application/json",
+        "X-Runway-Version": "2024-11-06",
+      },
+      body: JSON.stringify({
+        model: "gen4_turbo",
+        promptText: prompt.slice(0, 1000),
+        duration: runwayDuration,
+        ratio: "1280:720",
+        // No promptImage = text-to-video mode
+      }),
     });
     const data = await res.json();
+    console.log("[runway] create response:", JSON.stringify(data));
     if (!res.ok) throw new Error(data.error || data.message || JSON.stringify(data));
     return { job_id: data.id };
   }
   async checkStatus(job_id: string) {
     const res = await fetch(`https://api.dev.runwayml.com/v1/tasks/${job_id}`, {
-      headers: { "Authorization": `Bearer ${Deno.env.get("RUNWAY_API_KEY")}`, "X-Runway-Version": "2024-11-06" },
+      headers: {
+        "Authorization": `Bearer ${Deno.env.get("RUNWAY_API_KEY")}`,
+        "X-Runway-Version": "2024-11-06",
+      },
     });
     const data = await res.json();
+    console.log("[runway] status response:", JSON.stringify(data));
     const status = data.status === "SUCCEEDED" ? "completed" : data.status === "FAILED" ? "failed" : "pending";
     return { status: status as any, url: data.output?.[0], error: data.failure };
   }
