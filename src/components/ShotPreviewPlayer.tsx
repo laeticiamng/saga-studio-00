@@ -43,21 +43,32 @@ export function ShotPreviewPlayer({ shots, audioUrl, bpm }: ShotPreviewPlayerPro
     }
   }, [currentIdx, completedShots.length]);
 
+  // Detect if current shot is an image (not a video)
+  const isCurrentImage = currentShot?.output_url
+    ? /\.(jpg|jpeg|png|gif|webp|svg)(\?|$)|placehold\.co/i.test(currentShot.output_url)
+    : false;
+
   useEffect(() => {
     if (!isPlaying || !currentShot) return;
 
     const duration = (currentShot.duration_sec || 5) * 1000;
-    timerRef.current = setTimeout(playNext, duration);
 
-    if (videoRef.current) {
-      videoRef.current.currentTime = 0;
-      videoRef.current.play().catch(() => {});
+    // For images, always use timer-based advancement
+    if (isCurrentImage) {
+      timerRef.current = setTimeout(playNext, Math.min(duration, 3000)); // 3s max for images
+    } else {
+      // For videos, use timer as fallback + video onEnded
+      timerRef.current = setTimeout(playNext, duration);
+      if (videoRef.current) {
+        videoRef.current.currentTime = 0;
+        videoRef.current.play().catch(() => {});
+      }
     }
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [isPlaying, currentIdx, currentShot, playNext]);
+  }, [isPlaying, currentIdx, currentShot, playNext, isCurrentImage]);
 
   const togglePlay = () => {
     if (isPlaying) {
