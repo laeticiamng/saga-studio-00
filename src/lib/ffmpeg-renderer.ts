@@ -74,7 +74,8 @@ interface ShotInput {
 export async function renderVideo(
   shots: ShotInput[],
   audioUrl: string | null,
-  onProgress: (p: RenderProgress) => void
+  onProgress: (p: RenderProgress) => void,
+  signal?: AbortSignal
 ): Promise<Blob> {
   const globalTimer = new ETATracker();
   const stageTimer = new ETATracker();
