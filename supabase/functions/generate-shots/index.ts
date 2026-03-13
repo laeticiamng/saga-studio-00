@@ -417,21 +417,43 @@ serve(async (req) => {
 
         await supabase.from("shots").update({ provider: usedProvider.name }).eq("id", shot.id);
 
-        // For sync/placeholder providers, immediately check and complete
-        const syncProviders = ["mock", "veo", "sora"];
-        if (syncProviders.includes(usedProvider.name) || job_id.startsWith("http")) {
+        const isSynchronousProvider = usedProvider.name === "sora" || job_id.startsWith("http");
+
+        if (isSynchronousProvider) {
           const result = await usedProvider.checkStatus(job_id);
+
+          if (result.status === "failed") {
+            throw new Error(result.error || `${usedProvider.name} generation failed`);
+          }
+
           if (result.status === "completed") {
+            if (!result.url) {
+              throw new Error(`${usedProvider.name} completed without output URL`);
+            }
+
+            if (!ALLOW_PLACEHOLDER_PROVIDERS && isPlaceholderUrl(result.url)) {
+              throw new Error(`${usedProvider.name} returned placeholder media. Enable a real provider.`);
+            }
+
             await supabase.from("shots").update({
               status: "completed",
-              output_url: result.url || `https://placehold.co/1920x1080/1a1a1a/ff8c00?text=Shot+${shot.idx + 1}`,
+              output_url: result.url,
               cost_credits: 2,
+              error_message: null,
             }).eq("id", shot.id);
             creditsUsed += 2;
+            results.push({ shot_id: shot.id, job_id, provider: usedProvider.name, attempts, status: "completed" });
+            continue;
           }
         }
 
-        results.push({ shot_id: shot.id, job_id, provider: usedProvider.name, attempts, status: "started" });
+        await supabase.from("shots").update({
+          status: "generating",
+          output_url: `job:${usedProvider.name}:${job_id}`,
+          error_message: null,
+        }).eq("id", shot.id);
+
+        results.push({ shot_id: shot.id, job_id, provider: usedProvider.name, attempts, status: "generating" });
       } catch (err: any) {
         await supabase.from("shots").update({
           status: "failed",
