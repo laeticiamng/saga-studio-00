@@ -63,21 +63,37 @@ class RunwayProvider implements VideoProvider {
   private apiKey: string;
   constructor(apiKey: string) { this.apiKey = apiKey; }
   async generateVideo(prompt: string, duration: number) {
+    // Gen-4 text-to-video uses /v1/image_to_video without promptImage
     const runwayDuration = duration <= 5 ? 5 : 10;
-    const res = await fetch("https://api.dev.runwayml.com/v1/text_to_video", {
+    const res = await fetch("https://api.dev.runwayml.com/v1/image_to_video", {
       method: "POST",
-      headers: { "Authorization": `Bearer ${this.apiKey}`, "Content-Type": "application/json", "X-Runway-Version": "2024-11-06" },
-      body: JSON.stringify({ model: "gen4_turbo", promptText: prompt.slice(0, 1000), duration: runwayDuration, ratio: "1280:720" }),
+      headers: {
+        "Authorization": `Bearer ${this.apiKey}`,
+        "Content-Type": "application/json",
+        "X-Runway-Version": "2024-11-06",
+      },
+      body: JSON.stringify({
+        model: "gen4_turbo",
+        promptText: prompt.slice(0, 1000),
+        duration: runwayDuration,
+        ratio: "1280:720",
+        // No promptImage = text-to-video mode
+      }),
     });
     const data = await res.json();
+    console.log("[runway] create response:", JSON.stringify(data));
     if (!res.ok) throw new Error(data.error || data.message || JSON.stringify(data));
     return { job_id: data.id };
   }
   async checkStatus(job_id: string) {
     const res = await fetch(`https://api.dev.runwayml.com/v1/tasks/${job_id}`, {
-      headers: { "Authorization": `Bearer ${Deno.env.get("RUNWAY_API_KEY")}`, "X-Runway-Version": "2024-11-06" },
+      headers: {
+        "Authorization": `Bearer ${Deno.env.get("RUNWAY_API_KEY")}`,
+        "X-Runway-Version": "2024-11-06",
+      },
     });
     const data = await res.json();
+    console.log("[runway] status response:", JSON.stringify(data));
     const status = data.status === "SUCCEEDED" ? "completed" : data.status === "FAILED" ? "failed" : "pending";
     return { status: status as any, url: data.output?.[0], error: data.failure };
   }
@@ -88,44 +104,53 @@ class LumaProvider implements VideoProvider {
   private apiKey: string;
   constructor(apiKey: string) { this.apiKey = apiKey; }
   async generateVideo(prompt: string, duration: number) {
-    // Luma only accepts "5s", "9s", or "10s"
+    // Luma accepts "5s", "9s", or "10s" for ray-2
     const lumaDuration = duration <= 5 ? "5s" : duration <= 9 ? "9s" : "10s";
     const res = await fetch("https://api.lumalabs.ai/dream-machine/v1/generations", {
       method: "POST",
-      headers: { "Authorization": `Bearer ${this.apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: prompt.slice(0, 2000), model: "ray-2", resolution: "1080p", duration: lumaDuration }),
+      headers: {
+        "Authorization": `Bearer ${this.apiKey}`,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify({
+        prompt: prompt.slice(0, 2000),
+        model: "ray-2",
+        resolution: "720p",
+        duration: lumaDuration,
+        generation_type: "video",
+      }),
     });
     const data = await res.json();
+    console.log("[luma] create response:", JSON.stringify(data));
     if (!res.ok) throw new Error(data.detail || data.message || JSON.stringify(data));
     return { job_id: data.id };
   }
   async checkStatus(job_id: string) {
     const res = await fetch(`https://api.lumalabs.ai/dream-machine/v1/generations/${job_id}`, {
-      headers: { "Authorization": `Bearer ${Deno.env.get("LUMA_API_KEY")}` },
+      headers: {
+        "Authorization": `Bearer ${Deno.env.get("LUMA_API_KEY")}`,
+        "Accept": "application/json",
+      },
     });
     const data = await res.json();
+    console.log("[luma] status response:", JSON.stringify(data));
     const status = data.state === "completed" ? "completed" : data.state === "failed" ? "failed" : "pending";
     return { status: status as any, url: data.assets?.video, error: data.failure_reason };
   }
 }
 
-class VeoProvider implements VideoProvider {
-  name = "veo";
-  private apiKey: string;
-  constructor(apiKey: string) { this.apiKey = apiKey; }
-  async generateVideo() { return { job_id: `veo-${crypto.randomUUID()}` }; }
-  async checkStatus() { return { status: "completed" as const, url: `https://placehold.co/1920x1080/1a1a1a/00ff88?text=Veo+Preview` }; }
-}
+// VeoProvider removed — was only returning placeholders
 
 // ─── Provider Fallback Chain ────────────────────────────────────────────────
 
-const PROVIDER_PRIORITY = ["sora", "runway", "luma"] as const;
+const PROVIDER_PRIORITY = ["runway", "luma", "sora"] as const;
 
 function normalizeProviderName(provider?: string | null): string | undefined {
   if (!provider) return undefined;
   if (provider === "sora2") return "sora";
   if (provider === "openai") return "sora";
-  if (provider === "google_veo") return "veo";
+  if (provider === "google_veo") return undefined; // Veo removed
   return provider;
 }
 
@@ -134,13 +159,11 @@ function buildProviderChain(preferredProvider?: string): VideoProvider[] {
     sora: Deno.env.get("OPENAI_API_KEY"),
     runway: Deno.env.get("RUNWAY_API_KEY"),
     luma: Deno.env.get("LUMA_API_KEY"),
-    veo: Deno.env.get("GOOGLE_VEO_API_KEY"),
   };
   const factories: Record<string, (k: string) => VideoProvider> = {
     sora: (k) => new SoraProvider(k),
     runway: (k) => new RunwayProvider(k),
     luma: (k) => new LumaProvider(k),
-    veo: (k) => new VeoProvider(k),
   };
 
   const chain: VideoProvider[] = [];
@@ -159,10 +182,6 @@ function buildProviderChain(preferredProvider?: string): VideoProvider[] {
     const key = keys[name];
     if (!key) return;
 
-    if (name === "veo" && !ALLOW_PLACEHOLDER_PROVIDERS) {
-      return;
-    }
-
     chain.push(factories[name](key));
     seen.add(name);
   };
@@ -172,7 +191,6 @@ function buildProviderChain(preferredProvider?: string): VideoProvider[] {
   for (const name of PROVIDER_PRIORITY) addProvider(name);
 
   if (ALLOW_PLACEHOLDER_PROVIDERS) {
-    addProvider("veo");
     addProvider("mock");
   }
 
