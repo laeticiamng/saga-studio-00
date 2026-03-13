@@ -144,13 +144,13 @@ class LumaProvider implements VideoProvider {
 
 // ─── Provider Fallback Chain ────────────────────────────────────────────────
 
-const PROVIDER_PRIORITY = ["sora", "runway", "luma"] as const;
+const PROVIDER_PRIORITY = ["runway", "luma", "sora"] as const;
 
 function normalizeProviderName(provider?: string | null): string | undefined {
   if (!provider) return undefined;
   if (provider === "sora2") return "sora";
   if (provider === "openai") return "sora";
-  if (provider === "google_veo") return "veo";
+  if (provider === "google_veo") return undefined; // Veo removed
   return provider;
 }
 
@@ -159,13 +159,11 @@ function buildProviderChain(preferredProvider?: string): VideoProvider[] {
     sora: Deno.env.get("OPENAI_API_KEY"),
     runway: Deno.env.get("RUNWAY_API_KEY"),
     luma: Deno.env.get("LUMA_API_KEY"),
-    veo: Deno.env.get("GOOGLE_VEO_API_KEY"),
   };
   const factories: Record<string, (k: string) => VideoProvider> = {
     sora: (k) => new SoraProvider(k),
     runway: (k) => new RunwayProvider(k),
     luma: (k) => new LumaProvider(k),
-    veo: (k) => new VeoProvider(k),
   };
 
   const chain: VideoProvider[] = [];
