@@ -120,6 +120,7 @@ export async function renderVideo(
   stageTimer.reset();
 
   for (let i = 0; i < validShots.length; i++) {
+    checkAbort();
     const shot = validShots[i];
     const fraction = i / totalDownloads;
     const eta = stageTimer.estimate(fraction);
