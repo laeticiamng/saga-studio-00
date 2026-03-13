@@ -38,7 +38,12 @@ const styleLabels: Record<string, string> = {
 const modeLabels: Record<string, string> = {
   story: "Narratif", performance: "Performance", abstract: "Abstrait",
 };
-
+const styleBibleKeyLabels: Record<string, string> = {
+  visual_rules: "Règles visuelles", regles_visuelles: "Règles visuelles",
+  palette: "Palette de couleurs", camera_rules: "Règles caméra", regles_camera: "Règles caméra",
+  lighting: "Éclairage", eclairage: "Éclairage", mood: "Ambiance", ambiance: "Ambiance",
+  texture_guidelines: "Directives texture", directives_texture: "Directives texture",
+};
 export default function ProjectView() {
   const { id } = useParams<{ id: string }>();
   const { session } = useAuth();
