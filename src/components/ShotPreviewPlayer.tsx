@@ -102,14 +102,23 @@ export function ShotPreviewPlayer({ shots, audioUrl, bpm }: ShotPreviewPlayerPro
       {/* Video viewport */}
       <div className="relative aspect-video bg-black flex items-center justify-center">
         {currentShot?.output_url ? (
-          <video
-            ref={videoRef}
-            src={currentShot.output_url}
-            className="w-full h-full object-contain"
-            muted={!!audioUrl}
-            playsInline
-            onEnded={() => { if (isPlaying) playNext(); }}
-          />
+          // Detect if URL is an image (placeholder, .jpg, .png, .webp) vs actual video
+          /\.(jpg|jpeg|png|gif|webp|svg)(\?|$)|placehold\.co/i.test(currentShot.output_url) ? (
+            <img
+              src={currentShot.output_url}
+              alt={`Shot ${(currentShot.idx ?? 0) + 1}`}
+              className="w-full h-full object-contain"
+            />
+          ) : (
+            <video
+              ref={videoRef}
+              src={currentShot.output_url}
+              className="w-full h-full object-contain"
+              muted={!!audioUrl}
+              playsInline
+              onEnded={() => { if (isPlaying) playNext(); }}
+            />
+          )
         ) : (
           <span className="text-muted-foreground">Pas d'aperçu</span>
         )}
