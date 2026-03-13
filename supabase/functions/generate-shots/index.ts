@@ -14,6 +14,13 @@ interface VideoProvider {
   checkStatus(job_id: string): Promise<{ status: "pending" | "completed" | "failed"; url?: string; error?: string }>;
 }
 
+const ALLOW_PLACEHOLDER_PROVIDERS = Deno.env.get("ALLOW_PLACEHOLDER_PROVIDERS") === "true";
+
+function isPlaceholderUrl(url?: string | null): boolean {
+  if (!url) return true;
+  return url.includes("placehold.co") || url.includes("placeholder") || url.startsWith("data:");
+}
+
 class MockProvider implements VideoProvider {
   name = "mock";
   async generateVideo() {
@@ -112,7 +119,15 @@ class VeoProvider implements VideoProvider {
 
 // ─── Provider Fallback Chain ────────────────────────────────────────────────
 
-const PROVIDER_PRIORITY = ["sora", "runway", "luma", "veo"] as const;
+const PROVIDER_PRIORITY = ["sora", "runway", "luma"] as const;
+
+function normalizeProviderName(provider?: string | null): string | undefined {
+  if (!provider) return undefined;
+  if (provider === "sora2") return "sora";
+  if (provider === "openai") return "sora";
+  if (provider === "google_veo") return "veo";
+  return provider;
+}
 
 function buildProviderChain(preferredProvider?: string): VideoProvider[] {
   const keys: Record<string, string | undefined> = {
@@ -129,15 +144,38 @@ function buildProviderChain(preferredProvider?: string): VideoProvider[] {
   };
 
   const chain: VideoProvider[] = [];
-  if (preferredProvider && keys[preferredProvider]) {
-    chain.push(factories[preferredProvider](keys[preferredProvider]!));
-  }
-  for (const name of PROVIDER_PRIORITY) {
-    if (name !== preferredProvider && keys[name]) {
-      chain.push(factories[name](keys[name]!));
+  const seen = new Set<string>();
+
+  const addProvider = (name?: string) => {
+    if (!name || seen.has(name)) return;
+    if (name === "mock") {
+      if (ALLOW_PLACEHOLDER_PROVIDERS) {
+        chain.push(new MockProvider());
+        seen.add(name);
+      }
+      return;
     }
+
+    const key = keys[name];
+    if (!key) return;
+
+    if (name === "veo" && !ALLOW_PLACEHOLDER_PROVIDERS) {
+      return;
+    }
+
+    chain.push(factories[name](key));
+    seen.add(name);
+  };
+
+  addProvider(normalizeProviderName(preferredProvider));
+
+  for (const name of PROVIDER_PRIORITY) addProvider(name);
+
+  if (ALLOW_PLACEHOLDER_PROVIDERS) {
+    addProvider("veo");
+    addProvider("mock");
   }
-  chain.push(new MockProvider());
+
   return chain;
 }
 
