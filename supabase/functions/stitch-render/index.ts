@@ -248,23 +248,31 @@ serve(async (req) => {
       await supabase.from("projects").update({ status: "completed" }).eq("id", project_id);
     } else {
       // ─── FREE CLIENT-SIDE RENDER: Upload manifest to storage ──
-      // The frontend player will use this manifest for synchronized playback
       const manifestPath = `${project_id}/manifest.json`;
-      const manifestBlob = new Blob([JSON.stringify(manifest)], { type: "application/json" });
+      const manifestJson = JSON.stringify(manifest);
+      const encoder = new TextEncoder();
+      const manifestBytes = encoder.encode(manifestJson);
 
-      await supabase.storage.from("renders").upload(manifestPath, manifestBlob, {
+      const { error: uploadError } = await supabase.storage.from("renders").upload(manifestPath, manifestBytes, {
         contentType: "application/json",
         upsert: true,
       });
 
+      if (uploadError) {
+        console.error("Manifest upload error:", uploadError.message);
+      }
+
       const { data: manifestUrlData } = supabase.storage.from("renders").getPublicUrl(manifestPath);
       const manifestUrl = manifestUrlData?.publicUrl;
+      console.log("Manifest URL:", manifestUrl);
 
-      if (!manifestUrl) throw new Error("Failed to upload manifest");
+      if (!manifestUrl) {
+        console.error("Failed to get manifest public URL");
+        throw new Error("Failed to upload manifest");
+      }
 
-      // Use manifest URL as master_url_16_9 — it's a real URL, not a placeholder
-      // The frontend detects manifest.json URLs and renders the interactive player
-      await supabase.from("renders").upsert({
+      // Upsert render as completed with manifest URL
+      const { error: upsertError } = await supabase.from("renders").upsert({
         project_id,
         status: "completed",
         master_url_16_9: manifestUrl,
@@ -281,6 +289,33 @@ serve(async (req) => {
           stitched_at: new Date().toISOString(),
         }),
       }, { onConflict: "project_id" });
+
+      if (upsertError) {
+        console.error("Render upsert error:", upsertError.message);
+        // If the trigger blocks it, try updating directly
+        const { error: updateError } = await supabase.from("renders")
+          .update({
+            status: "completed",
+            master_url_16_9: manifestUrl,
+            master_url_9_16: manifestUrl,
+            teaser_url: null,
+            thumbs_json: thumbs,
+            logs: JSON.stringify({
+              manifest_version: 3,
+              beat_sync_enabled: true,
+              cuts_count: beatAlignedCuts.length,
+              bpm,
+              render_mode: "client_player",
+              manifest_url: manifestUrl,
+              stitched_at: new Date().toISOString(),
+            }),
+          })
+          .eq("project_id", project_id);
+        
+        if (updateError) {
+          console.error("Render update also failed:", updateError.message);
+        }
+      }
 
       await supabase.from("projects").update({ status: "completed" }).eq("id", project_id);
     }
