@@ -251,7 +251,22 @@ export default function ProjectView() {
                 )}
               </div>
               {project.synopsis && (
-                <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl line-clamp-3">{project.synopsis}</p>
+                <div className="flex items-start gap-2 max-w-2xl">
+                  <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3 flex-1">{project.synopsis}</p>
+                  {session && (project.status === "draft" || project.status === "completed") && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleEnrichSynopsis}
+                      disabled={enriching}
+                      className="shrink-0 gap-1.5 text-xs h-7"
+                      title="Enrichir le synopsis avec l'IA"
+                    >
+                      {enriching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+                      {enriching ? "Enrichissement…" : "Enrichir"}
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
 
