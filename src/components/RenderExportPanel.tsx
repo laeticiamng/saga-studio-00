@@ -94,7 +94,7 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
         duration_sec: s.duration_sec || 5,
       }));
 
-      const blob = await renderVideo(shotInputs, audioUrl, setRenderProgress);
+      const blob = await renderVideo(shotInputs, audioUrl, setRenderProgress, controller.signal);
       const url = URL.createObjectURL(blob);
       setRenderedBlobUrl(url);
 
