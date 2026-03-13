@@ -140,13 +140,7 @@ class LumaProvider implements VideoProvider {
   }
 }
 
-class VeoProvider implements VideoProvider {
-  name = "veo";
-  private apiKey: string;
-  constructor(apiKey: string) { this.apiKey = apiKey; }
-  async generateVideo() { return { job_id: `veo-${crypto.randomUUID()}` }; }
-  async checkStatus() { return { status: "completed" as const, url: `https://placehold.co/1920x1080/1a1a1a/00ff88?text=Veo+Preview` }; }
-}
+// VeoProvider removed — was only returning placeholders
 
 // ─── Provider Fallback Chain ────────────────────────────────────────────────
 
