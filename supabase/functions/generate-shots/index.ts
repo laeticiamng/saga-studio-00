@@ -190,10 +190,10 @@ async function generateWithFallback(
   const attempts: { provider: string; error?: string }[] = [];
   for (const provider of chain) {
     try {
-      // Wrap each provider call with a 5s timeout (fail fast, move to next)
+      // Wrap each provider call with a 45s timeout (APIs like image generation often exceed 5s)
       const result = await Promise.race([
         provider.generateVideo(prompt, duration, style, seed),
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Provider timeout (5s)")), 5000)),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Provider timeout (45s)")), 45000)),
       ]);
       attempts.push({ provider: provider.name });
       return { provider, job_id: result.job_id, attempts };
