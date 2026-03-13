@@ -104,22 +104,37 @@ class LumaProvider implements VideoProvider {
   private apiKey: string;
   constructor(apiKey: string) { this.apiKey = apiKey; }
   async generateVideo(prompt: string, duration: number) {
-    // Luma only accepts "5s", "9s", or "10s"
+    // Luma accepts "5s", "9s", or "10s" for ray-2
     const lumaDuration = duration <= 5 ? "5s" : duration <= 9 ? "9s" : "10s";
     const res = await fetch("https://api.lumalabs.ai/dream-machine/v1/generations", {
       method: "POST",
-      headers: { "Authorization": `Bearer ${this.apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: prompt.slice(0, 2000), model: "ray-2", resolution: "1080p", duration: lumaDuration }),
+      headers: {
+        "Authorization": `Bearer ${this.apiKey}`,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify({
+        prompt: prompt.slice(0, 2000),
+        model: "ray-2",
+        resolution: "720p",
+        duration: lumaDuration,
+        generation_type: "video",
+      }),
     });
     const data = await res.json();
+    console.log("[luma] create response:", JSON.stringify(data));
     if (!res.ok) throw new Error(data.detail || data.message || JSON.stringify(data));
     return { job_id: data.id };
   }
   async checkStatus(job_id: string) {
     const res = await fetch(`https://api.lumalabs.ai/dream-machine/v1/generations/${job_id}`, {
-      headers: { "Authorization": `Bearer ${Deno.env.get("LUMA_API_KEY")}` },
+      headers: {
+        "Authorization": `Bearer ${Deno.env.get("LUMA_API_KEY")}`,
+        "Accept": "application/json",
+      },
     });
     const data = await res.json();
+    console.log("[luma] status response:", JSON.stringify(data));
     const status = data.state === "completed" ? "completed" : data.state === "failed" ? "failed" : "pending";
     return { status: status as any, url: data.assets?.video, error: data.failure_reason };
   }
