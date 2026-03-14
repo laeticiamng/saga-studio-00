@@ -149,6 +149,7 @@ export async function renderVideo(
 
   const totalDownloads = validShots.length + (audioUrl ? 1 : 0);
   stageTimer.reset();
+  let downloadFailures = 0;
 
   for (let i = 0; i < validShots.length; i++) {
     checkAbort();
@@ -170,9 +171,17 @@ export async function renderVideo(
 
     try {
       const data = await fetchFileProxy(shot.url);
+      if (data.length < 100) {
+        throw new Error(`Shot ${i + 1}: fichier trop petit (${data.length} octets)`);
+      }
       await ff.writeFile(filename, data);
-    } catch (err) {
-      console.warn(`Failed to download shot ${i}:`, err);
+    } catch (err: any) {
+      downloadFailures++;
+      console.error(`Failed to download shot ${i}:`, err);
+      // Mark this shot as failed but continue — we'll check threshold after
+      if (downloadFailures > validShots.length * 0.5) {
+        throw new Error(`Trop d'échecs de téléchargement (${downloadFailures}/${validShots.length}). Vérifiez que les URLs des shots sont accessibles.`);
+      }
     }
   }
 

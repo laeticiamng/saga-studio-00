@@ -62,7 +62,7 @@ export default function CreateClip() {
     setEstimating(true);
     try {
       const durationSec = Math.min(270, Math.max(30, Math.round(audioFile.size / 16000)));
-      const providerKey = provider === "auto" ? "sora" : provider === "openai" ? "sora" : provider === "google_veo" ? "veo" : provider;
+      const providerKey = provider === "auto" ? "openai_image" : provider;
       const { data } = await supabase.functions.invoke("estimate-cost", {
         body: { duration_sec: durationSec, provider: providerKey },
       });
@@ -367,10 +367,9 @@ export default function CreateClip() {
                     <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="auto">Automatique (recommandé)</SelectItem>
-                      <SelectItem value="openai">OpenAI</SelectItem>
-                      <SelectItem value="runway">Runway Gen-4</SelectItem>
-                      <SelectItem value="luma">Luma Dream Machine</SelectItem>
-                      <SelectItem value="google_veo">Google Veo</SelectItem>
+                      <SelectItem value="openai_image">OpenAI — Images (DALL-E 3)</SelectItem>
+                      <SelectItem value="runway">Runway — Vidéo (Gen-4.5)</SelectItem>
+                      <SelectItem value="luma">Luma — Vidéo (Dream Machine)</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">En mode automatique, le meilleur moteur est choisi selon votre style et votre musique.</p>

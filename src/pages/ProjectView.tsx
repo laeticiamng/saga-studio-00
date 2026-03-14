@@ -8,11 +8,12 @@ import { PipelineProgress } from "@/components/PipelineProgress";
 import { ShotGrid } from "@/components/ShotGrid";
 import { ShotPreviewPlayer } from "@/components/ShotPreviewPlayer";
 import { RenderExportPanel } from "@/components/RenderExportPanel";
+import { ProjectDiagnostics } from "@/components/ProjectDiagnostics";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Play, Film, RefreshCw, Music, Palette, List, Share2, Eye, ArrowLeft, Clock, Clapperboard, Info, Wand2 } from "lucide-react";
+import { Loader2, Play, Film, RefreshCw, Music, Palette, List, Share2, Eye, ArrowLeft, Clock, Clapperboard, Info, Wand2, Activity } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -349,6 +350,10 @@ export default function ProjectView() {
                 <span>Export</span>
               </TabsTrigger>
             )}
+            <TabsTrigger value="diagnostics" className="gap-1.5 text-xs sm:text-sm rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">
+              <Activity className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Diagnostic</span>
+            </TabsTrigger>
           </TabsList>
 
           {/* Preview Tab */}
@@ -520,6 +525,13 @@ export default function ProjectView() {
               </motion.div>
             </TabsContent>
           )}
+
+          {/* Diagnostics Tab */}
+          <TabsContent value="diagnostics" forceMount className="data-[state=inactive]:hidden">
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: "easeOut" }}>
+              <ProjectDiagnostics project={project} shots={shots || null} render={render || null} plan={plan || null} audioAnalysis={audioAnalysis || null} />
+            </motion.div>
+          </TabsContent>
         </Tabs>
       </main>
       <Footer />

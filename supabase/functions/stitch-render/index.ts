@@ -120,11 +120,17 @@ serve(async (req) => {
       await supabase.from("renders").upsert({
         project_id,
         status: "failed",
+        render_mode: "none",
         logs: JSON.stringify({ error: "No completed shots to stitch", failed_at: new Date().toISOString() }),
       }, { onConflict: "project_id" });
       await supabase.from("projects").update({ status: "failed" }).eq("id", project_id);
       throw new Error("No completed shots to stitch");
     }
+
+    // Categorize shots by provider type
+    const imageShots = shots.filter(s => s.provider_type === "image" || s.provider === "sora");
+    const videoShots = shots.filter(s => s.provider_type === "video" && s.provider !== "sora");
+    const hasRealVideo = videoShots.length > 0;
 
     const { data: analysis } = await supabase
       .from("audio_analysis")
@@ -159,7 +165,7 @@ serve(async (req) => {
       ? EXPORT_FORMATS.filter(f => formats.includes(f.key))
       : EXPORT_FORMATS.filter(f => f.key !== "square");
 
-    // Build audio URL (resolve storage path to public URL)
+    // Build audio URL
     let audioPublicUrl = project.audio_url;
     if (audioPublicUrl && !audioPublicUrl.startsWith("http")) {
       const { data: urlData } = supabase.storage.from("audio-uploads").getPublicUrl(audioPublicUrl);
@@ -167,13 +173,18 @@ serve(async (req) => {
     }
 
     const manifest = {
-      version: 3,
+      version: 4,
       type: "manifest_render",
       project_id,
       title: project.title,
       audio_url: audioPublicUrl,
       bpm,
       total_duration: totalDuration,
+      shot_types: {
+        image_count: imageShots.length,
+        video_count: videoShots.length,
+        has_real_video: hasRealVideo,
+      },
       beat_sync: {
         enabled: true,
         cuts: beatAlignedCuts,
@@ -185,6 +196,8 @@ serve(async (req) => {
         return {
           idx: cut.idx,
           url: shot?.output_url,
+          provider: shot?.provider,
+          provider_type: shot?.provider_type || (shot?.provider === "sora" ? "image" : "video"),
           start_sec: cut.start_sec,
           end_sec: cut.end_sec,
           duration_sec: cut.end_sec - cut.start_sec,
@@ -213,41 +226,61 @@ serve(async (req) => {
 
     if (renderServiceUrl) {
       try {
+        console.log("[stitch-render] Attempting external render service:", renderServiceUrl);
         const res = await fetch(renderServiceUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(manifest),
         });
-        renderResult = await res.json();
+        if (res.ok) {
+          renderResult = await res.json();
+          console.log("[stitch-render] External render result:", JSON.stringify(renderResult));
+        } else {
+          const errText = await res.text();
+          console.warn("[stitch-render] External render service returned", res.status, errText);
+        }
       } catch (err: any) {
-        console.warn("External render service failed:", err.message);
+        console.warn("[stitch-render] External render service failed:", err.message);
       }
     }
 
-    const hasExternalRender = renderResult?.master_url_16_9;
+    const hasExternalRender = renderResult?.master_url_16_9 && !renderResult.master_url_16_9.includes("manifest.json");
 
     if (hasExternalRender) {
-      // Real render service returned URLs
+      // ─── PATH A: Server render completed — real MP4 exists ──
+      console.log("[stitch-render] PATH A: Server render with real MP4");
       await supabase.from("renders").upsert({
         project_id,
         status: "completed",
+        render_mode: "server",
         master_url_16_9: renderResult.master_url_16_9,
         master_url_9_16: renderResult.master_url_9_16 || null,
         teaser_url: renderResult.teaser_url || null,
+        manifest_url: null,
         thumbs_json: thumbs,
         logs: JSON.stringify({
-          manifest_version: 3,
+          manifest_version: 4,
           beat_sync_enabled: true,
           cuts_count: beatAlignedCuts.length,
           bpm,
           formats_requested: requestedFormats.map(f => f.key),
           stitched_at: new Date().toISOString(),
-          render_mode: "external_service",
+          render_mode: "server",
+          shot_types: manifest.shot_types,
         }),
       }, { onConflict: "project_id" });
       await supabase.from("projects").update({ status: "completed" }).eq("id", project_id);
+
+      return jsonResponse({
+        success: true,
+        render_mode: "server",
+        shots_stitched: shots.length,
+        beat_sync: { enabled: true, cuts: beatAlignedCuts.length, bpm },
+        formats: requestedFormats.map(f => f.key),
+      });
     } else {
-      // ─── FREE CLIENT-SIDE RENDER: Upload manifest to storage ──
+      // ─── PATH B: Client assembly required — upload manifest, NO fake master URL ──
+      console.log("[stitch-render] PATH B: Client assembly mode (no external render service)");
       const manifestPath = `${project_id}/manifest.json`;
       const manifestJson = JSON.stringify(manifest);
       const encoder = new TextEncoder();
@@ -259,83 +292,64 @@ serve(async (req) => {
       });
 
       if (uploadError) {
-        console.error("Manifest upload error:", uploadError.message);
+        console.error("[stitch-render] Manifest upload error:", uploadError.message);
       }
 
       const { data: manifestUrlData } = supabase.storage.from("renders").getPublicUrl(manifestPath);
       const manifestUrl = manifestUrlData?.publicUrl;
-      console.log("Manifest URL:", manifestUrl);
 
       if (!manifestUrl) {
-        console.error("Failed to get manifest public URL");
         throw new Error("Failed to upload manifest");
       }
 
-      // Upsert render as completed with manifest URL
-      const { error: upsertError } = await supabase.from("renders").upsert({
+      console.log("[stitch-render] Manifest uploaded:", manifestUrl);
+
+      // Store manifest separately — DO NOT write it as master_url
+      await supabase.from("renders").upsert({
         project_id,
         status: "completed",
-        master_url_16_9: manifestUrl,
-        master_url_9_16: manifestUrl,
+        render_mode: "client_assembly",
+        manifest_url: manifestUrl,
+        master_url_16_9: null,  // No real server MP4
+        master_url_9_16: null,
         teaser_url: null,
         thumbs_json: thumbs,
         logs: JSON.stringify({
-          manifest_version: 3,
+          manifest_version: 4,
           beat_sync_enabled: true,
           cuts_count: beatAlignedCuts.length,
           bpm,
-          render_mode: "client_player",
+          render_mode: "client_assembly",
           manifest_url: manifestUrl,
           stitched_at: new Date().toISOString(),
+          shot_types: manifest.shot_types,
+          note: "No external render service configured. Client-side FFmpeg assembly required.",
         }),
       }, { onConflict: "project_id" });
 
-      if (upsertError) {
-        console.error("Render upsert error:", upsertError.message);
-        // If the trigger blocks it, try updating directly
-        const { error: updateError } = await supabase.from("renders")
-          .update({
-            status: "completed",
-            master_url_16_9: manifestUrl,
-            master_url_9_16: manifestUrl,
-            teaser_url: null,
-            thumbs_json: thumbs,
-            logs: JSON.stringify({
-              manifest_version: 3,
-              beat_sync_enabled: true,
-              cuts_count: beatAlignedCuts.length,
-              bpm,
-              render_mode: "client_player",
-              manifest_url: manifestUrl,
-              stitched_at: new Date().toISOString(),
-            }),
-          })
-          .eq("project_id", project_id);
-        
-        if (updateError) {
-          console.error("Render update also failed:", updateError.message);
-        }
-      }
-
+      // Project is "completed" but render_mode tells the UI that client assembly is needed
       await supabase.from("projects").update({ status: "completed" }).eq("id", project_id);
-    }
 
-    return new Response(JSON.stringify({
-      success: true,
-      shots_stitched: shots.length,
-      beat_sync: { enabled: true, cuts: beatAlignedCuts.length, bpm },
-      formats: requestedFormats.map(f => f.key),
-      has_render_service: !!renderServiceUrl,
-      render_completed: true,
-      render_mode: hasExternalRender ? "external_service" : "client_player",
-      manifest_ready: true,
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+      return jsonResponse({
+        success: true,
+        render_mode: "client_assembly",
+        shots_stitched: shots.length,
+        beat_sync: { enabled: true, cuts: beatAlignedCuts.length, bpm },
+        manifest_url: manifestUrl,
+        note: "No external render service. Use browser FFmpeg to assemble the final video.",
+      });
+    }
   } catch (err: any) {
+    console.error("[stitch-render] Error:", err.message);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
+
+function jsonResponse(data: any) {
+  return new Response(JSON.stringify(data), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}

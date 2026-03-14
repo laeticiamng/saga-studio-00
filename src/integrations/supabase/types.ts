@@ -349,9 +349,11 @@ export type Database = {
           created_at: string
           id: string
           logs: string | null
+          manifest_url: string | null
           master_url_16_9: string | null
           master_url_9_16: string | null
           project_id: string
+          render_mode: string | null
           status: Database["public"]["Enums"]["render_status"]
           teaser_url: string | null
           thumbs_json: Json | null
@@ -361,9 +363,11 @@ export type Database = {
           created_at?: string
           id?: string
           logs?: string | null
+          manifest_url?: string | null
           master_url_16_9?: string | null
           master_url_9_16?: string | null
           project_id: string
+          render_mode?: string | null
           status?: Database["public"]["Enums"]["render_status"]
           teaser_url?: string | null
           thumbs_json?: Json | null
@@ -373,9 +377,11 @@ export type Database = {
           created_at?: string
           id?: string
           logs?: string | null
+          manifest_url?: string | null
           master_url_16_9?: string | null
           master_url_9_16?: string | null
           project_id?: string
+          render_mode?: string | null
           status?: Database["public"]["Enums"]["render_status"]
           teaser_url?: string | null
           thumbs_json?: Json | null
@@ -411,6 +417,7 @@ export type Database = {
           project_id: string
           prompt: string | null
           provider: string | null
+          provider_type: string | null
           seed: number | null
           status: Database["public"]["Enums"]["shot_status"]
           updated_at: string
@@ -427,6 +434,7 @@ export type Database = {
           project_id: string
           prompt?: string | null
           provider?: string | null
+          provider_type?: string | null
           seed?: number | null
           status?: Database["public"]["Enums"]["shot_status"]
           updated_at?: string
@@ -443,6 +451,7 @@ export type Database = {
           project_id?: string
           prompt?: string | null
           provider?: string | null
+          provider_type?: string | null
           seed?: number | null
           status?: Database["public"]["Enums"]["shot_status"]
           updated_at?: string
