@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import { Download, Film, Monitor, Smartphone, Square, Loader2, CheckCircle, Clapperboard, X } from "lucide-react";
+import { Download, Film, Monitor, Smartphone, Square, Loader2, CheckCircle, Clapperboard, X, AlertTriangle, Server, Globe } from "lucide-react";
 import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -63,7 +63,6 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
     setRenderedBlobUrl(null);
 
     try {
-      // Fetch shots and manifest data
       const { data: shots } = await supabase
         .from("shots")
         .select("idx, output_url, duration_sec, status")
@@ -81,7 +80,6 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
         throw new Error("Aucun shot terminé trouvé");
       }
 
-      // Resolve audio URL
       let audioUrl = project?.audio_url || null;
       if (audioUrl && !audioUrl.startsWith("http")) {
         const { data: urlData } = supabase.storage.from("audio-uploads").getPublicUrl(audioUrl);
@@ -129,15 +127,16 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
   };
 
   const renderLogs = render?.logs ? (() => { try { return JSON.parse(render.logs); } catch { return null; } })() : null;
+  const renderMode: string = render?.render_mode || renderLogs?.render_mode || "none";
+  const isServerRender = renderMode === "server";
+  const isClientAssembly = renderMode === "client_assembly";
 
-  const isManifestUrl = (url?: string | null) => !!url && url.includes("manifest.json");
-  const isManifestRender = isManifestUrl(render?.master_url_16_9);
-
-  const downloadLinks = [
+  // Only show real download links for server renders
+  const downloadLinks = isServerRender ? [
     { url: render?.master_url_16_9, label: "Master 16:9", icon: Monitor },
     { url: render?.master_url_9_16, label: "Vertical 9:16", icon: Smartphone },
     { url: render?.teaser_url, label: "Teaser 15s", icon: Film },
-  ].filter((l) => l.url && !isManifestUrl(l.url));
+  ].filter((l) => l.url) : [];
 
   return (
     <Card className="border-primary/20 bg-card/60">
@@ -146,29 +145,80 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
           <CardTitle className="flex items-center gap-2 text-lg">
             <Download className="h-5 w-5 text-primary" /> Export & Téléchargements
           </CardTitle>
-          {render && (
-            <Badge variant={render.status === "completed" ? "default" : render.status === "failed" ? "destructive" : "secondary"}>
-              {render.status === "completed" && <CheckCircle className="h-3 w-3 mr-1" />}
-              {render.status === "processing" && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
-              {{ completed: "Terminé", pending: "En attente", processing: "En cours", failed: "Échoué" }[render.status as string] || render.status}
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {/* Render mode badge */}
+            {render && (
+              <Badge variant={isServerRender ? "default" : "secondary"} className="gap-1">
+                {isServerRender ? <Server className="h-3 w-3" /> : <Globe className="h-3 w-3" />}
+                {isServerRender ? "Rendu serveur" : isClientAssembly ? "Assemblage navigateur" : "En attente"}
+              </Badge>
+            )}
+            {render && (
+              <Badge variant={render.status === "completed" ? "default" : render.status === "failed" ? "destructive" : "secondary"}>
+                {render.status === "completed" && <CheckCircle className="h-3 w-3 mr-1" />}
+                {render.status === "processing" && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+                {{ completed: "Terminé", pending: "En attente", processing: "En cours", failed: "Échoué" }[render.status as string] || render.status}
+              </Badge>
+            )}
+          </div>
         </div>
         <CardDescription className="text-sm">
-          Assemblez vos shots en une vidéo MP4 directement dans votre navigateur grâce à FFmpeg.
+          {isServerRender
+            ? "Votre vidéo a été rendue côté serveur. Téléchargez les fichiers finaux ci-dessous."
+            : isClientAssembly
+            ? "Pas de service de rendu serveur disponible. Assemblez la vidéo directement dans votre navigateur avec FFmpeg."
+            : "Assemblez vos shots en une vidéo MP4 directement dans votre navigateur grâce à FFmpeg."
+          }
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Client-side FFmpeg Render */}
+        {/* Info banner for client assembly mode */}
+        {isClientAssembly && !isServerRender && (
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Mode assemblage navigateur</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Aucun service de rendu serveur n'est configuré. La vidéo sera assemblée dans votre navigateur.
+                Cela peut prendre quelques minutes selon le nombre de shots et la puissance de votre machine.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Server render download links */}
+        {isServerRender && downloadLinks.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Fichiers rendus (serveur)</p>
+            {downloadLinks.map((link) => (
+              <a key={link.label} href={link.url} target="_blank" rel="noopener noreferrer" className="block">
+                <Button variant="glass" className="w-full justify-between gap-2 h-12">
+                  <span className="flex items-center gap-2">
+                    <link.icon className="h-4 w-4 text-primary" />
+                    {link.label}
+                  </span>
+                  <Download className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </a>
+            ))}
+          </div>
+        )}
+
+        {/* Client-side FFmpeg Render — always show when project completed */}
         {projectStatus === "completed" && (
           <div className="space-y-4">
             <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
               <div className="flex items-center gap-2">
                 <Clapperboard className="h-5 w-5 text-primary" />
-                <p className="text-sm font-semibold">Assemblage vidéo intégré</p>
+                <p className="text-sm font-semibold">
+                  {isServerRender ? "Ré-assembler dans le navigateur" : "Assembler la vidéo"}
+                </p>
               </div>
               <p className="text-xs text-muted-foreground">
-                Assemble tous les shots terminés avec l'audio en une vidéo MP4 — directement dans votre navigateur, sans serveur externe.
+                {isServerRender
+                  ? "Vous pouvez aussi assembler une version locale dans votre navigateur."
+                  : "Assemble tous les shots terminés avec l'audio en une vidéo MP4 — directement dans votre navigateur, sans serveur externe."
+                }
               </p>
 
               {renderProgress && clientRendering && (
@@ -203,7 +253,7 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
 
               <div className="flex gap-2">
                 <Button
-                  variant="hero"
+                  variant={isServerRender ? "outline" : "hero"}
                   size="lg"
                   className="flex-1 gap-2"
                   onClick={handleClientRender}
@@ -214,26 +264,14 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
                 </Button>
 
                 {clientRendering && (
-                  <Button
-                    variant="destructive"
-                    size="lg"
-                    className="gap-2"
-                    onClick={handleCancelRender}
-                  >
-                    <X className="h-4 w-4" />
-                    Annuler
+                  <Button variant="destructive" size="lg" className="gap-2" onClick={handleCancelRender}>
+                    <X className="h-4 w-4" /> Annuler
                   </Button>
                 )}
 
                 {renderedBlobUrl && (
-                  <Button
-                    variant="default"
-                    size="lg"
-                    className="gap-2"
-                    onClick={handleDownloadBlob}
-                  >
-                    <Download className="h-4 w-4" />
-                    Télécharger MP4
+                  <Button variant="default" size="lg" className="gap-2" onClick={handleDownloadBlob}>
+                    <Download className="h-4 w-4" /> Télécharger MP4
                   </Button>
                 )}
               </div>
@@ -253,7 +291,7 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
           </div>
         )}
 
-        {/* Format Selection for server-side re-render */}
+        {/* Server re-render options */}
         <details className="group">
           <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors py-1">
             Options avancées (re-render serveur)
@@ -294,24 +332,6 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
           </div>
         </details>
 
-        {/* Download Links (from server render) */}
-        {render?.status === "completed" && !isManifestRender && downloadLinks.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Fichiers serveur</p>
-            {downloadLinks.map((link) => (
-              <a key={link.label} href={link.url} target="_blank" rel="noopener noreferrer" className="block">
-                <Button variant="glass" className="w-full justify-between gap-2 h-12">
-                  <span className="flex items-center gap-2">
-                    <link.icon className="h-4 w-4 text-primary" />
-                    {link.label}
-                  </span>
-                  <Download className="h-4 w-4 text-muted-foreground" />
-                </Button>
-              </a>
-            ))}
-          </div>
-        )}
-
         {/* Beat Sync Info */}
         {renderLogs?.beat_sync_enabled && (
           <div className="rounded-xl bg-primary/5 border border-primary/10 p-4 space-y-1.5">
@@ -319,6 +339,13 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
             <p className="text-xs text-muted-foreground">
               BPM : {renderLogs.bpm} · {renderLogs.cuts_count} coupes alignées sur les beats
             </p>
+            {renderLogs.shot_types && (
+              <p className="text-xs text-muted-foreground">
+                {renderLogs.shot_types.video_count > 0 ? `${renderLogs.shot_types.video_count} vidéo(s)` : ""}
+                {renderLogs.shot_types.video_count > 0 && renderLogs.shot_types.image_count > 0 ? " + " : ""}
+                {renderLogs.shot_types.image_count > 0 ? `${renderLogs.shot_types.image_count} image(s) animée(s)` : ""}
+              </p>
+            )}
           </div>
         )}
 
