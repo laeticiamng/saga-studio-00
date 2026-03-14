@@ -169,7 +169,7 @@ export async function renderVideo(
     const filename = `shot_${i}.${ext}`;
 
     try {
-      const data = await fetchFile(shot.url);
+      const data = await fetchFileProxy(shot.url);
       await ff.writeFile(filename, data);
     } catch (err) {
       console.warn(`Failed to download shot ${i}:`, err);
