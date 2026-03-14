@@ -17,7 +17,10 @@ import { useToast } from "@/hooks/use-toast";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 const PROVIDER_LABELS: Record<string, string> = {
-  auto: "Auto", openai: "OpenAI", runway: "Runway", luma: "Luma", google_veo: "Veo",
+  auto: "Auto (recommandé)",
+  openai_image: "OpenAI — Images (DALL-E 3)",
+  runway: "Runway — Vidéo (Gen-4.5)",
+  luma: "Luma — Vidéo (Dream Machine)",
 };
 
 export default function CreateFilm() {
