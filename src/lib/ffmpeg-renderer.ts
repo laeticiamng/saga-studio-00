@@ -187,7 +187,7 @@ export async function renderVideo(
       stepTotal: totalDownloads,
     });
     try {
-      const audioData = await fetchFile(audioUrl);
+      const audioData = await fetchFileProxy(audioUrl);
       await ff.writeFile("audio.mp3", audioData);
     } catch (err) {
       console.warn("Failed to download audio:", err);
