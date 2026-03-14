@@ -350,6 +350,10 @@ export default function ProjectView() {
                 <span>Export</span>
               </TabsTrigger>
             )}
+            <TabsTrigger value="diagnostics" className="gap-1.5 text-xs sm:text-sm rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">
+              <Activity className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Diagnostic</span>
+            </TabsTrigger>
           </TabsList>
 
           {/* Preview Tab */}
