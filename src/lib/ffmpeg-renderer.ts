@@ -1,5 +1,36 @@
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { toBlobURL, fetchFile } from "@ffmpeg/util";
+import { supabase } from "@/integrations/supabase/client";
+
+/** Fetch a file, proxying external URLs through the edge function to avoid CORS */
+async function fetchFileProxy(url: string): Promise<Uint8Array> {
+  // Local / same-origin URLs can be fetched directly
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+  const isSameOrigin = url.startsWith("/") || url.startsWith(window.location.origin) || url.startsWith(supabaseUrl);
+
+  if (isSameOrigin) {
+    return fetchFile(url);
+  }
+
+  // External URL → proxy through edge function
+  const { data, error } = await supabase.functions.invoke("proxy-media", {
+    body: { url },
+  });
+
+  if (error) {
+    throw new Error(`Proxy fetch failed: ${error.message}`);
+  }
+
+  // data is already an ArrayBuffer or Blob from the edge function
+  if (data instanceof Blob) {
+    return new Uint8Array(await data.arrayBuffer());
+  }
+  if (data instanceof ArrayBuffer) {
+    return new Uint8Array(data);
+  }
+  // Fallback: try fetchFile directly
+  return fetchFile(url);
+}
 
 let ffmpeg: FFmpeg | null = null;
 
