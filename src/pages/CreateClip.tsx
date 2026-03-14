@@ -62,7 +62,7 @@ export default function CreateClip() {
     setEstimating(true);
     try {
       const durationSec = Math.min(270, Math.max(30, Math.round(audioFile.size / 16000)));
-      const providerKey = provider === "auto" ? "sora" : provider === "openai" ? "sora" : provider === "google_veo" ? "veo" : provider;
+      const providerKey = provider === "auto" ? "openai_image" : provider;
       const { data } = await supabase.functions.invoke("estimate-cost", {
         body: { duration_sec: durationSec, provider: providerKey },
       });
