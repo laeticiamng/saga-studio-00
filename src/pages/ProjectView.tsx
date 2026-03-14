@@ -525,6 +525,13 @@ export default function ProjectView() {
               </motion.div>
             </TabsContent>
           )}
+
+          {/* Diagnostics Tab */}
+          <TabsContent value="diagnostics" forceMount className="data-[state=inactive]:hidden">
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: "easeOut" }}>
+              <ProjectDiagnostics project={project} shots={shots || null} render={render || null} plan={plan || null} audioAnalysis={audioAnalysis || null} />
+            </motion.div>
+          </TabsContent>
         </Tabs>
       </main>
       <Footer />
