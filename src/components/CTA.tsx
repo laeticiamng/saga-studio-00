@@ -13,14 +13,14 @@ const CTA = () => {
     <section className="page-section relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10" />
       <motion.div
-        animate={{ scale: [1, 1.2, 1], opacity: [0.15, 0.3, 0.15] }}
-        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-1/2 left-1/4 w-64 sm:w-96 h-64 sm:h-96 bg-primary/20 rounded-full blur-3xl"
+        animate={{ scale: [1, 1.1, 1], opacity: [0.08, 0.16, 0.08] }}
+        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute top-1/2 left-1/4 w-64 sm:w-96 h-64 sm:h-96 bg-primary/15 rounded-full blur-[100px]"
       />
       <motion.div
-        animate={{ scale: [1.2, 1, 1.2], opacity: [0.15, 0.3, 0.15] }}
-        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-        className="absolute top-1/4 right-1/4 w-64 sm:w-96 h-64 sm:h-96 bg-accent/20 rounded-full blur-3xl"
+        animate={{ scale: [1.1, 1, 1.1], opacity: [0.08, 0.16, 0.08] }}
+        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 3 }}
+        className="absolute top-1/4 right-1/4 w-64 sm:w-96 h-64 sm:h-96 bg-accent/15 rounded-full blur-[100px]"
       />
 
       <div className="container mx-auto relative z-10">
@@ -31,7 +31,7 @@ const CTA = () => {
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card/40 backdrop-blur-sm border border-border/50 mb-8"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.04] backdrop-blur-xl border border-white/[0.08] mb-8 shadow-[0_2px_16px_rgba(0,0,0,0.15)]"
             >
               <Sparkles className="w-4 h-4 text-primary" />
               <span className="text-sm text-muted-foreground">Gratuit, sans engagement, sans carte bancaire</span>

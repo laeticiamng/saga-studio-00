@@ -23,24 +23,32 @@ const Features = () => {
           </div>
         </AnimatedSection>
 
-        <StaggerContainer staggerDelay={0.1} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
+        <StaggerContainer staggerDelay={0.08} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
           {features.map((feature, index) => (
             <StaggerItem key={index} variant="scaleIn">
-              <motion.div whileHover={{ y: -6, scale: 1.02 }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
-                <Card className="relative p-6 bg-card/60 backdrop-blur-sm border-border/50 hover:border-primary/40 hover:shadow-[0_0_30px_-5px_hsl(35_100%_55%/0.15)] transition-all duration-500 group h-full overflow-hidden">
-                  <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-                    style={{ background: "linear-gradient(135deg, hsl(35 100% 55% / 0.08), transparent, hsl(25 95% 53% / 0.08))" }}
+              <motion.div
+                whileHover={{ y: -4 }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+              >
+                <Card className="relative p-6 bg-card/80 border-border/30 shadow-card hover:shadow-card-hover hover:border-primary/20 transition-all duration-300 group h-full overflow-hidden">
+                  {/* Subtle gradient overlay on hover */}
+                  <div
+                    className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                    style={{ background: "linear-gradient(135deg, hsl(35 100% 55% / 0.04), transparent 60%, hsl(25 95% 53% / 0.03))" }}
                   />
 
+                  {/* Inner top highlight */}
+                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent pointer-events-none" />
+
                   {feature.popular && (
-                    <span className="absolute top-4 right-4 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/20">
+                    <span className="absolute top-4 right-4 text-[10px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/15">
                       Populaire
                     </span>
                   )}
 
                   <div className="relative z-10">
-                    <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-5 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300`}>
-                      <feature.icon className="w-6 h-6 text-white" />
+                    <div className={`w-11 h-11 rounded-lg bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-5 group-hover:scale-105 transition-transform duration-300 shadow-[0_4px_12px_-2px_rgba(0,0,0,0.3)]`}>
+                      <feature.icon className="w-5 h-5 text-white" />
                     </div>
                     <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
                     <p className="text-muted-foreground text-sm leading-relaxed">{feature.description}</p>

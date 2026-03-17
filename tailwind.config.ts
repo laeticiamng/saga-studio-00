@@ -60,6 +60,9 @@ export default {
       boxShadow: {
         'glow': 'var(--glow-primary)',
         'elevated': 'var(--shadow-elevated)',
+        'card': 'var(--shadow-card)',
+        'card-hover': 'var(--shadow-card-hover)',
+        'player': 'var(--shadow-player)',
       },
       transitionProperty: {
         'smooth': 'var(--transition-smooth)',

@@ -47,9 +47,12 @@
     --gradient-hero: linear-gradient(180deg, hsl(0 0% 5%), hsl(35 100% 10%));
     --gradient-card: linear-gradient(135deg, hsl(0 0% 8% / 0.6), hsl(35 50% 15% / 0.4));
 
-    /* Glows and shadows */
-    --glow-primary: 0 0 40px hsl(35 100% 55% / 0.3);
+    /* Glows and shadows — premium multi-layer */
+    --glow-primary: 0 0 30px hsl(35 100% 55% / 0.15);
     --shadow-elevated: 0 20px 60px -10px hsl(35 100% 20% / 0.4);
+    --shadow-card: 0 1px 3px hsl(0 0% 0% / 0.5), 0 8px 24px -4px hsl(0 0% 0% / 0.3);
+    --shadow-card-hover: 0 2px 4px hsl(0 0% 0% / 0.5), 0 16px 40px -8px hsl(0 0% 0% / 0.4), 0 0 0 1px hsl(35 100% 55% / 0.08);
+    --shadow-player: 0 2px 8px hsl(0 0% 0% / 0.6), 0 24px 64px -12px hsl(0 0% 0% / 0.5), inset 0 1px 0 hsl(0 0% 100% / 0.03);
 
     /* Transitions */
     --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -94,8 +97,11 @@
     --gradient-hero: linear-gradient(180deg, hsl(40 30% 97%), hsl(35 40% 90%));
     --gradient-card: linear-gradient(135deg, hsl(0 0% 100% / 0.8), hsl(35 30% 95% / 0.6));
 
-    --glow-primary: 0 0 40px hsl(35 100% 45% / 0.15);
+    --glow-primary: 0 0 30px hsl(35 100% 45% / 0.1);
     --shadow-elevated: 0 20px 60px -10px hsl(0 0% 0% / 0.1);
+    --shadow-card: 0 1px 3px hsl(0 0% 0% / 0.08), 0 8px 24px -4px hsl(0 0% 0% / 0.06);
+    --shadow-card-hover: 0 2px 4px hsl(0 0% 0% / 0.1), 0 16px 40px -8px hsl(0 0% 0% / 0.08), 0 0 0 1px hsl(35 100% 45% / 0.1);
+    --shadow-player: 0 2px 8px hsl(0 0% 0% / 0.1), 0 24px 64px -12px hsl(0 0% 0% / 0.08);
 
     --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }
@@ -205,6 +211,72 @@
   .touch-target {
     min-height: 44px;
     min-width: 44px;
+  }
+}
+
+/* Premium player styles */
+@layer components {
+  .player-shell {
+    @apply relative rounded-xl overflow-hidden;
+    box-shadow: var(--shadow-player);
+    background: hsl(var(--card));
+  }
+
+  .player-controls-gradient {
+    background: linear-gradient(0deg, hsl(0 0% 0% / 0.7) 0%, hsl(0 0% 0% / 0.3) 60%, transparent 100%);
+  }
+
+  .player-vignette {
+    background: radial-gradient(ellipse at center, transparent 50%, hsl(0 0% 0% / 0.3) 100%);
+  }
+
+  .player-progress-track {
+    @apply relative w-full cursor-pointer;
+    height: 3px;
+    transition: height 0.15s ease-out;
+  }
+  .player-progress-track:hover,
+  .player-shell:hover .player-progress-track {
+    height: 6px;
+  }
+
+  .player-progress-fill {
+    background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)));
+    @apply h-full rounded-full;
+    transition: width 0.1s linear;
+  }
+
+  .player-progress-thumb {
+    @apply absolute top-1/2 -translate-y-1/2 rounded-full bg-white;
+    width: 12px;
+    height: 12px;
+    opacity: 0;
+    transform: translateY(-50%) scale(0.6);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    box-shadow: 0 1px 4px hsl(0 0% 0% / 0.4);
+  }
+  .player-progress-track:hover .player-progress-thumb,
+  .player-shell:hover .player-progress-thumb {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+
+  .player-shot-marker {
+    @apply absolute top-1/2 -translate-y-1/2 rounded-full;
+    width: 3px;
+    height: 3px;
+    background: hsl(0 0% 100% / 0.4);
+  }
+
+  /* Noise texture overlay for premium feel */
+  .noise-overlay::after {
+    content: '';
+    @apply absolute inset-0 pointer-events-none;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 128px 128px;
+    mix-blend-mode: overlay;
   }
 }
 
