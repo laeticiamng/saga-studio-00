@@ -219,9 +219,10 @@ async function generateWithFallback(
       ]);
       attempts.push({ provider: provider.name });
       return { provider, job_id: result.job_id, attempts };
-    } catch (err: any) {
-      attempts.push({ provider: provider.name, error: err.message });
-      console.warn(`[generate-shots] ${provider.name} failed: ${err.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      attempts.push({ provider: provider.name, error: message });
+      console.warn(`[generate-shots] ${provider.name} failed: ${message}`);
     }
   }
   throw new Error(`All providers failed: ${attempts.map(a => `${a.provider}:${a.error}`).join(", ")}`);
@@ -465,13 +466,14 @@ serve(async (req) => {
         }).eq("id", shot.id);
 
         results.push({ shot_id: shot.id, provider: usedProvider.name, output_type: usedProvider.outputType, status: "generating" });
-      } catch (err: any) {
-        console.error(`[generate-shots] Shot ${shot.idx} failed:`, err.message);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        console.error(`[generate-shots] Shot ${shot.idx} failed:`, message);
         await supabase.from("shots").update({
           status: "failed",
-          error_message: err.message,
+          error_message: message,
         }).eq("id", shot.id);
-        results.push({ shot_id: shot.id, error: err.message });
+        results.push({ shot_id: shot.id, error: message });
       }
     }
 
@@ -495,9 +497,10 @@ serve(async (req) => {
       credits_used: creditsUsed,
       provider_chain: providerChain.map(p => ({ name: p.name, type: p.outputType })),
     });
-  } catch (err: any) {
-    console.error("[generate-shots] Fatal error:", err.message);
-    return new Response(JSON.stringify({ error: err.message }), {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[generate-shots] Fatal error:", message);
+    return new Response(JSON.stringify({ error: message }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

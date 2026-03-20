@@ -168,8 +168,8 @@ RÈGLES CRITIQUES :
         const errText = await aiResponse.text();
         console.warn("AI gateway error:", aiResponse.status, errText);
       }
-    } catch (aiErr: any) {
-      console.warn("AI call failed, using fallback plan:", aiErr.message);
+    } catch (aiErr: unknown) {
+      console.warn("AI call failed, using fallback plan:", aiErr instanceof Error ? aiErr.message : aiErr);
     }
 
     // Fallback plan with 5 pillars applied
@@ -258,9 +258,10 @@ RÈGLES CRITIQUES :
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Plan error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return new Response(JSON.stringify({ error: message }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

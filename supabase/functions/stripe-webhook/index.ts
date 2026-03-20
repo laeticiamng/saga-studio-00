@@ -58,8 +58,8 @@ serve(async (req) => {
     let event: Stripe.Event;
     try {
       event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
-    } catch (err: any) {
-      log("REJECTED: Invalid signature", { error: err.message });
+    } catch (err: unknown) {
+      log("REJECTED: Invalid signature", { error: err instanceof Error ? err.message : "Unknown" });
       return new Response(JSON.stringify({ error: "Invalid signature" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -175,9 +175,11 @@ serve(async (req) => {
     }
 
     return ok();
-  } catch (err: any) {
-    log("ERROR", { message: err.message, stack: err.stack?.slice(0, 200) });
-    return new Response(JSON.stringify({ error: err.message }), {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    const stack = err instanceof Error ? err.stack?.slice(0, 200) : undefined;
+    log("ERROR", { message, stack });
+    return new Response(JSON.stringify({ error: message }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

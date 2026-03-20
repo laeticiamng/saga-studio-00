@@ -239,8 +239,9 @@ serve(async (req) => {
           const errText = await res.text();
           console.warn("[stitch-render] External render service returned", res.status, errText);
         }
-      } catch (err: any) {
-        console.warn("[stitch-render] External render service failed:", err.message);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        console.warn("[stitch-render] External render service failed:", message);
       }
     }
 
@@ -339,9 +340,10 @@ serve(async (req) => {
         note: "No external render service. Use browser FFmpeg to assemble the final video.",
       });
     }
-  } catch (err: any) {
-    console.error("[stitch-render] Error:", err.message);
-    return new Response(JSON.stringify({ error: err.message }), {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[stitch-render] Error:", message);
+    return new Response(JSON.stringify({ error: message }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

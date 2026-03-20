@@ -63,8 +63,9 @@ serve(async (req) => {
     return new Response(JSON.stringify({ processed: results.length, results }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return new Response(JSON.stringify({ error: message }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -207,7 +208,8 @@ async function executeStep(
     }).eq("id", jobId);
 
     return { project_id: project.id, action: `executed_${step.fn}`, result };
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
     const { data: job } = await supabase
       .from("job_queue").select("retry_count, max_retries").eq("id", jobId).single();
 
@@ -216,13 +218,13 @@ async function executeStep(
 
     if (retryCount >= maxRetries) {
       await supabase.from("job_queue")
-        .update({ status: "failed", error_message: err.message, retry_count: retryCount }).eq("id", jobId);
+        .update({ status: "failed", error_message: message, retry_count: retryCount }).eq("id", jobId);
       await supabase.from("projects").update({ status: "failed" }).eq("id", project.id);
-      return { project_id: project.id, action: "failed_max_retries", error: err.message };
+      return { project_id: project.id, action: "failed_max_retries", error: message };
     } else {
       await supabase.from("job_queue")
-        .update({ status: "pending", error_message: err.message, retry_count: retryCount }).eq("id", jobId);
-      return { project_id: project.id, action: "retry_scheduled", retry: retryCount, error: err.message };
+        .update({ status: "pending", error_message: message, retry_count: retryCount }).eq("id", jobId);
+      return { project_id: project.id, action: "retry_scheduled", retry: retryCount, error: message };
     }
   }
 }
