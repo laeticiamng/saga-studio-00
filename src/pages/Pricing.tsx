@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -72,37 +72,53 @@ export default function Pricing() {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   usePageTitle("Tarifs");
+  const [loadingPriceId, setLoadingPriceId] = useState<string | null>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
 
   useEffect(() => {
-    if (searchParams.get("success") === "true") {
+    const success = searchParams.get("success");
+    const canceled = searchParams.get("canceled");
+    if (success === "true") {
       toast({ title: "Paiement réussi !", description: "Vos crédits ont été mis à jour." });
       checkSubscription();
+      navigate("/pricing", { replace: true });
     }
-    if (searchParams.get("canceled") === "true") {
+    if (canceled === "true") {
       toast({ title: "Paiement annulé", variant: "destructive" });
+      navigate("/pricing", { replace: true });
     }
-  }, [searchParams, toast, checkSubscription]);
+  }, [searchParams, toast, checkSubscription, navigate]);
 
   const handleCheckout = async (priceId: string, mode: "subscription" | "payment") => {
     if (!user) { navigate("/auth"); return; }
+    if (loadingPriceId) return;
+    setLoadingPriceId(priceId);
     try {
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: { price_id: priceId, mode },
       });
       if (error) throw error;
       if (data?.url) window.open(data.url, "_blank");
-    } catch (err: any) {
-      toast({ title: "Erreur de paiement", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Une erreur inattendue s'est produite";
+      toast({ title: "Erreur de paiement", description: message, variant: "destructive" });
+    } finally {
+      setLoadingPriceId(null);
     }
   };
 
   const handleManageSubscription = async () => {
+    if (portalLoading) return;
+    setPortalLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("customer-portal");
       if (error) throw error;
       if (data?.url) window.open(data.url, "_blank");
-    } catch (err: any) {
-      toast({ title: "Erreur", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Une erreur inattendue s'est produite";
+      toast({ title: "Erreur", description: message, variant: "destructive" });
+    } finally {
+      setPortalLoading(false);
     }
   };
 
@@ -173,7 +189,8 @@ export default function Pricing() {
                     ))}
                   </ul>
                   {current && subscription.subscribed ? (
-                    <Button variant="glass" className="w-full" onClick={handleManageSubscription}>
+                    <Button variant="glass" className="w-full" onClick={handleManageSubscription} disabled={portalLoading}>
+                      {portalLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                       Gérer l'abonnement <ExternalLink className="ml-2 h-4 w-4" />
                     </Button>
                   ) : plan.stripe_key ? (
@@ -181,7 +198,9 @@ export default function Pricing() {
                       variant={plan.highlight ? "hero" : "glass"}
                       className="w-full"
                       onClick={() => handleCheckout(STRIPE_CONFIG.plans[plan.stripe_key!].price_id, "subscription")}
+                      disabled={!!loadingPriceId}
                     >
+                      {loadingPriceId === STRIPE_CONFIG.plans[plan.stripe_key!].price_id && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                       {plan.cta}
                     </Button>
                   ) : current ? (
@@ -210,7 +229,8 @@ export default function Pricing() {
                     <Coins className="h-5 w-5 text-primary" />
                     <span className="font-medium">{pack.credits} crédits</span>
                   </div>
-                  <Button variant="glass" size="sm" onClick={() => handleCheckout(pack.price_id, "payment")}>
+                  <Button variant="glass" size="sm" onClick={() => handleCheckout(pack.price_id, "payment")} disabled={!!loadingPriceId}>
+                    {loadingPriceId === pack.price_id && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                     {pack.price}
                   </Button>
                 </CardContent>

@@ -144,8 +144,9 @@ export default function ProjectView() {
       await supabase.from("projects").update({ status: "analyzing" as const }).eq("id", project.id);
       toast({ title: "Pipeline lancé", description: "Traitement de votre projet en cours…" });
       await callEdgeFunction("pipeline-worker", { project_id: project.id });
-    } catch (err: any) {
-      toast({ title: "Erreur du pipeline", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Une erreur inattendue s'est produite";
+      toast({ title: "Erreur du pipeline", description: message, variant: "destructive" });
       await supabase.from("projects").update({ status: "failed" as const }).eq("id", project.id);
     } finally {
       setPipelineRunning(false);
@@ -174,9 +175,10 @@ export default function ProjectView() {
           description: data.changes_summary || "Le synopsis a été amélioré par l'IA.",
         });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("[enhance-synopsis]", err);
-      toast({ title: "Erreur IA", description: err.message, variant: "destructive" });
+      const message = err instanceof Error ? err.message : "Une erreur inattendue s'est produite";
+      toast({ title: "Erreur IA", description: message, variant: "destructive" });
     } finally {
       setEnriching(false);
     }

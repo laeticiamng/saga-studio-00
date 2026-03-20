@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Coins } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { logger } from "@/lib/logger";
 
 export function CreditDisplay() {
   const { user } = useAuth();
@@ -16,7 +17,7 @@ export function CreditDisplay() {
         .select("balance")
         .eq("id", user.id)
         .single();
-      if (error) return 0;
+      if (error) { logger.warn("CreditDisplay", "Failed to fetch wallet:", error.message); return 0; }
       return data?.balance ?? 0;
     },
     enabled: !!user,

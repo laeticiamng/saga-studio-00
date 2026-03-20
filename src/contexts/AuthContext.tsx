@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 interface SubscriptionInfo {
   subscribed: boolean;
@@ -40,8 +41,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           subscription_end: data.subscription_end ?? null,
         });
       }
-    } catch {
-      // Silently fail
+    } catch (err: unknown) {
+      logger.warn("AuthContext", "Subscription check failed:", err);
     }
   }, []);
 
@@ -101,18 +102,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-const defaultAuth: AuthContextType = {
-  user: null,
-  session: null,
-  loading: true,
-  subscription: { subscribed: false, product_id: null, subscription_end: null },
-  checkSubscription: async () => {},
-  signUp: async () => {},
-  signIn: async () => {},
-  signOut: async () => {},
-};
-
 export function useAuth() {
   const context = useContext(AuthContext);
-  return context ?? defaultAuth;
+  if (!context) throw new Error("useAuth must be used within an AuthProvider");
+  return context;
 }

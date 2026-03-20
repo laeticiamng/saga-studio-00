@@ -67,8 +67,8 @@ export default function CreateClip() {
         body: { duration_sec: durationSec, provider: providerKey },
       });
       if (data) setEstimate(data);
-    } catch {
-      // fallback
+    } catch (err: unknown) {
+      console.warn("[CreateClip] Cost estimate failed, using fallback:", err);
     } finally {
       setEstimating(false);
     }
@@ -133,8 +133,9 @@ export default function CreateClip() {
       navigate(`/project/${project.id}`);
 
       supabase.functions.invoke("pipeline-worker", { body: { project_id: project.id } }).catch(console.error);
-    } catch (err: any) {
-      toast({ title: "Erreur", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Une erreur inattendue s'est produite";
+      toast({ title: "Erreur", description: message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -440,7 +441,7 @@ export default function CreateClip() {
                   </span>
                   <span className="text-primary flex items-center gap-1.5">
                     {estimating && <Loader2 className="h-3 w-3 animate-spin" />}
-                    {estimatedCredits} crédits
+                    ~{estimatedCredits} crédits{!estimate && " (approx.)"}
                   </span>
                 </div>
               </div>

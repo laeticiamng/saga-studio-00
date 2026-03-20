@@ -53,6 +53,8 @@ serve(async (req) => {
     const { type, title, mode, style_preset, duration_sec, synopsis, audio_url, aspect_ratio, face_urls, ref_photo_urls } = body;
 
     if (!type || !["clip", "film"].includes(type)) throw new Error("Invalid project type");
+    if (title && typeof title === "string" && title.length > 200) throw new Error("Title too long (max 200 chars)");
+    if (synopsis && typeof synopsis === "string" && synopsis.length > 10000) throw new Error("Synopsis too long (max 10000 chars)");
 
     // Atomic credit check & debit for project creation base cost
     const { data: debited } = await supabase.rpc("debit_credits", {
@@ -89,8 +91,9 @@ serve(async (req) => {
     return new Response(JSON.stringify({ project }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return new Response(JSON.stringify({ error: message }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

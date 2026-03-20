@@ -108,6 +108,10 @@ export default function Settings() {
       toast({ title: "URL invalide", description: "Entrez une URL valide (https://...)", variant: "destructive" });
       return;
     }
+    if (!newWebhookUrl.startsWith("https://") && !newWebhookUrl.startsWith("http://localhost")) {
+      toast({ title: "HTTPS requis", description: "L'URL du webhook doit utiliser HTTPS pour la sécurité.", variant: "destructive" });
+      return;
+    }
     setAddingWebhook(true);
     const { error } = await supabase.from("webhook_endpoints").insert({ user_id: user.id, url: newWebhookUrl.trim() });
     setAddingWebhook(false);
