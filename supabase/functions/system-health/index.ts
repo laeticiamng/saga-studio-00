@@ -90,8 +90,9 @@ serve(async (req) => {
           url: renderServiceUrl,
           detail: res.ok ? "Service reachable" : `HTTP ${res.status}`,
         };
-      } catch (err: any) {
-        renderService = { status: "error", url: renderServiceUrl, detail: err.message };
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        renderService = { status: "error", url: renderServiceUrl, detail: message };
       }
     } else {
       renderService = {
@@ -111,8 +112,9 @@ serve(async (req) => {
           status: error ? "error" : "ok",
           detail: error ? error.message : undefined,
         });
-      } catch (err: any) {
-        storageResults.push({ bucket, status: "error", detail: err.message });
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        storageResults.push({ bucket, status: "error", detail: message });
       }
     }
 
@@ -127,7 +129,7 @@ serve(async (req) => {
           status: error ? "error" : "ok",
           count: count ?? 0,
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         dbResults.push({ table, status: "error" });
       }
     }
@@ -189,8 +191,9 @@ serve(async (req) => {
     return new Response(JSON.stringify(health), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

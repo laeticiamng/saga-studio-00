@@ -82,8 +82,8 @@ Estimate realistic BPM and song structure. Return ONLY valid JSON:
             }
           }
         }
-      } catch (aiErr: any) {
-        console.warn("AI analysis failed, using heuristic:", aiErr.message);
+      } catch (aiErr: unknown) {
+        console.warn("AI analysis failed, using heuristic:", aiErr instanceof Error ? aiErr.message : aiErr);
       }
     }
 
@@ -149,8 +149,9 @@ Estimate realistic BPM and song structure. Return ONLY valid JSON:
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return new Response(JSON.stringify({ error: message }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

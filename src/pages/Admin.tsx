@@ -119,8 +119,9 @@ export default function Admin() {
       qc.invalidateQueries({ queryKey: ["admin-ledger"] });
       qc.invalidateQueries({ queryKey: ["admin-renders"] });
       return data;
-    } catch (err: any) {
-      toast({ title: "Erreur", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Une erreur inattendue s'est produite";
+      toast({ title: "Erreur", description: message, variant: "destructive" });
     } finally {
       setActionLoading(null);
     }

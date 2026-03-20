@@ -57,7 +57,7 @@ export default function Dashboard() {
   const { user } = useAuth();
   usePageTitle("Mes projets");
 
-  const { data: projects, isLoading } = useQuery({
+  const { data: projects, isLoading, isError, refetch } = useQuery({
     queryKey: ["projects", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -98,6 +98,19 @@ export default function Dashboard() {
           <div className="flex justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
+        ) : isError ? (
+          <Card className="border-destructive/50 bg-card/40">
+            <CardContent className="flex flex-col items-center justify-center py-16 gap-4">
+              <AlertCircle className="h-12 w-12 text-destructive/60" />
+              <h3 className="text-lg font-medium">Impossible de charger vos projets</h3>
+              <p className="text-muted-foreground text-sm text-center max-w-md">
+                Une erreur est survenue lors du chargement. Vérifiez votre connexion et réessayez.
+              </p>
+              <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-2">
+                <Loader2 className="h-4 w-4" /> Réessayer
+              </Button>
+            </CardContent>
+          </Card>
         ) : !projects?.length ? (
           <Card className="border-dashed border-border/50 bg-card/40">
             <CardContent className="flex flex-col items-center justify-center py-20 md:py-24">

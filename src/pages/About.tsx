@@ -56,8 +56,9 @@ function ContactForm() {
       if (data?.error) throw new Error(data.error);
       setSent(true);
       toast({ title: "Message envoyé !", description: "Nous vous répondrons sous 24 heures." });
-    } catch (err: any) {
-      toast({ title: "Erreur d'envoi", description: err.message || "Veuillez réessayer.", variant: "destructive" });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Veuillez réessayer.";
+      toast({ title: "Erreur d'envoi", description: message, variant: "destructive" });
     } finally {
       setSending(false);
     }

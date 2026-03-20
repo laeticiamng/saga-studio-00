@@ -70,9 +70,10 @@ async function sendRenderEmail(
       return { error: data };
     }
     return { success: true, id: data.id };
-  } catch (err: any) {
-    console.error("Resend fetch error:", err.message);
-    return { error: err.message };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("Resend fetch error:", message);
+    return { error: message };
   }
 }
 
@@ -165,13 +166,14 @@ serve(async (req) => {
                 .eq("id", ep.id);
             }
           }
-        } catch (fetchErr: any) {
+        } catch (fetchErr: unknown) {
+          const fetchMessage = fetchErr instanceof Error ? fetchErr.message?.slice(0, 1000) : "Unknown error";
           await supabase.from("webhook_deliveries").insert({
             endpoint_id: ep.id,
             event,
             payload,
             status_code: 0,
-            response_body: fetchErr.message?.slice(0, 1000) || "Unknown error",
+            response_body: fetchMessage,
           });
           results.push({ endpoint_id: ep.id, status: 0, error: fetchErr.message });
         }
@@ -185,9 +187,10 @@ serve(async (req) => {
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("dispatch-webhooks error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

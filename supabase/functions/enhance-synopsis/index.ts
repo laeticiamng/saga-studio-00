@@ -282,9 +282,10 @@ Utilise les outils fournis pour structurer ta réponse.`;
     return new Response(JSON.stringify({ success: true, ...plan }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("enhance-synopsis error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return new Response(JSON.stringify({ error: message }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
