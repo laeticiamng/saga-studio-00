@@ -175,7 +175,7 @@ export async function renderVideo(
         throw new Error(`Shot ${i + 1}: fichier trop petit (${data.length} octets)`);
       }
       await ff.writeFile(filename, data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       downloadFailures++;
       console.error(`Failed to download shot ${i}:`, err);
       // Mark this shot as failed but continue — we'll check threshold after

@@ -69,8 +69,9 @@ export default function Auth() {
         setIsLogin(true);
         setPassword("");
       }
-    } catch (err: any) {
-      toast({ title: "Erreur", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Une erreur inattendue s'est produite";
+      toast({ title: "Erreur", description: message, variant: "destructive" });
     } finally {
       setLoading(false);
     }

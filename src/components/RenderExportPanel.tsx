@@ -48,8 +48,9 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
         body: { project_id: projectId, formats: selectedFormats },
       });
       toast({ title: "Rendu en cours", description: `Export de ${selectedFormats.length} format(s)…` });
-    } catch (err: any) {
-      toast({ title: "Erreur", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Une erreur inattendue s'est produite";
+      toast({ title: "Erreur", description: message, variant: "destructive" });
     } finally {
       setReRendering(false);
     }
@@ -97,14 +98,15 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
       setRenderedBlobUrl(url);
 
       toast({ title: "Vidéo assemblée !", description: "Cliquez sur Télécharger pour récupérer le MP4" });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Client render error:", err);
-      if (err.message === "Assemblage annulé") {
+      const message = err instanceof Error ? err.message : "Une erreur inattendue s'est produite";
+      if (message === "Assemblage annulé") {
         setRenderProgress(null);
         toast({ title: "Annulé", description: "L'assemblage a été annulé" });
       } else {
-        setRenderProgress({ stage: "error", percent: 0, message: err.message, etaSeconds: null, elapsedMs: 0 });
-        toast({ title: "Erreur d'assemblage", description: err.message, variant: "destructive" });
+        setRenderProgress({ stage: "error", percent: 0, message, etaSeconds: null, elapsedMs: 0 });
+        toast({ title: "Erreur d'assemblage", description: message, variant: "destructive" });
       }
     } finally {
       abortRef.current = null;
