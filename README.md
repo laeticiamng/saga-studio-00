@@ -1,73 +1,141 @@
-# Welcome to your Lovable project
+# Saga Studio — AI Series Production Platform
 
-## Project info
+Plateforme de production de séries premium assistée par IA. Saga Studio orchestre automatiquement la création d'épisodes via un pipeline multi-agents, de l'idée initiale à la livraison finale.
 
-**URL**: https://lovable.dev/projects/4506d537-3bcb-44da-9272-c9e4e687868d
+## Architecture
 
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/4506d537-3bcb-44da-9272-c9e4e687868d) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+Utilisateur → CreateSeries → Autopilot → Pipeline 10 étapes
+                                           ├── Story Development (story_architect, scriptwriter)
+                                           ├── Psychology Review (psychology_reviewer) ← approval gate
+                                           ├── Legal/Ethics Review (legal_ethics_reviewer) ← approval gate
+                                           ├── Visual Bible (visual_director)
+                                           ├── Continuity Check (continuity_checker) ← approval gate
+                                           ├── Shot Generation (scene_designer, shot_planner)
+                                           ├── Shot Review (qa_reviewer) ← approval gate
+                                           ├── Assembly (editor)
+                                           ├── Edit Review (qa_reviewer) ← approval gate
+                                           └── Delivery (delivery_manager) → QC → Export
 ```
 
-**Edit a file directly in GitHub**
+## Stack technique
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+| Couche | Technologie |
+|--------|------------|
+| Frontend | React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui |
+| Backend | Supabase (PostgreSQL, Auth, Edge Functions, Storage) |
+| IA | Gemini 2.5 Flash via Lovable AI Gateway |
+| Tests | Vitest |
+| Paiements | Stripe |
 
-**Use GitHub Codespaces**
+## Démarrage rapide
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```bash
+# 1. Cloner et installer
+git clone <repo-url>
+cd saga-studio-00
+npm install
 
-## What technologies are used for this project?
+# 2. Configuration
+cp .env.example .env
+# Renseigner VITE_SUPABASE_* dans .env
 
-This project is built with:
+# 3. Développement
+npm run dev        # Serveur dev (port 8080)
+npm run test       # Tests
+npm run typecheck  # Vérification TypeScript
+npm run ci         # typecheck + lint + tests
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Modèle de données
 
-## How can I deploy this project?
+### Hiérarchie série
+- `projects` (type=series) → `series` → `seasons` → `episodes` → `scenes`
+- `scripts` → `script_versions` (1:1 avec episodes)
+- `bibles` (8 types: style, character, wardrobe, location, world, music, voice, prop)
+- `character_profiles` → `character_reference_packs`
 
-Simply open [Lovable](https://lovable.dev/projects/4506d537-3bcb-44da-9272-c9e4e687868d) and click on Share -> Publish.
+### Orchestration
+- `workflow_templates` → `workflow_runs` → `workflow_steps` → `workflow_step_runs`
+- `workflow_approvals` (lien vers approval_steps)
+- `workflow_confidence_scores` (scoring par dimension)
 
-## Can I connect a custom domain to my Lovable project?
+### Agents
+- `agent_registry` (23 agents spécialisés)
+- `agent_prompts` (prompts versionnés)
+- `agent_runs` → `agent_outputs`
 
-Yes, you can!
+### Qualité / Compliance
+- `approval_steps` → `approval_decisions`
+- `continuity_reports`, `psychology_reviews`, `legal_ethics_reviews`
+- `continuity_memory_nodes` → `continuity_memory_edges` → `continuity_conflicts`
+- `brand_safety_flags`
+- `redaction_profiles` → `redaction_rules` → `redaction_runs` → `redaction_reports`
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### Livraison
+- `delivery_manifests` → `qc_reports`
+- `export_jobs`
+- `render_batches`, `asset_packs`
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## Pages UI
+
+| Page | Route | Description |
+|------|-------|-------------|
+| Dashboard | `/dashboard` | Vue d'ensemble des projets |
+| CreateSeries | `/create/series` | Création d'une nouvelle série |
+| SeriesView | `/series/:id` | Vue détaillée d'une série |
+| EpisodeView | `/series/:id/episode/:episodeId` | Vue détaillée d'un épisode |
+| AutopilotDashboard | `/series/:id/autopilot` | Timeline et contrôle du pipeline |
+| ApprovalInbox | `/series/:id/approvals` | Approbation/rejet des étapes |
+| ContinuityCenter | `/series/:id/continuity` | Graphe de mémoire et conflits |
+| DeliveryCenter | `/series/:id/delivery` | QC, compliance et export |
+| AgentDashboard | `/series/:id/agents` | Monitoring des agents IA |
+| BibleManager | `/series/:id/bibles` | Gestion des bibles de production |
+| CharacterGallery | `/series/:id/characters` | Galerie des personnages |
+
+## Edge Functions
+
+| Fonction | Description |
+|----------|-------------|
+| `create-series` | Crée un projet série avec saison 1 |
+| `episode-pipeline` | Dispatche les agents pour une étape |
+| `run-agent` | Exécute un agent IA avec retry et scoring |
+| `autopilot-run` | Démarre le pipeline complet pour un épisode |
+| `approval-evaluate` | Traite une décision humaine (approve/reject/revision) |
+| `continuity-check` | Vérifie la cohérence inter-épisodes |
+| `redaction-pass` | Vérifie la compliance avant export |
+| `delivery-qc` | QC final avant livraison |
+| `workflow-pause` | Met en pause un workflow |
+| `workflow-resume` | Reprend un workflow pausé ou échoué |
+| `workflow-cancel-safe` | Annule un workflow proprement |
+
+## Tests
+
+```bash
+npm run test           # Tous les tests
+npm run test:unit      # Tests unitaires (workflow, agents, gates, continuité)
+npm run test:e2e       # Tests E2E pipeline
+npm run typecheck      # Vérification types
+npm run ci             # Suite CI complète
+```
+
+91 tests couvrent : pipeline, idempotency, retries, approval gates, confidence scoring, continuity, redaction, delivery blocking.
+
+## Sécurité
+
+- `.env` exclu du versioning (`.gitignore`)
+- RLS (Row Level Security) activé sur toutes les tables
+- Auth JWT validé dans chaque edge function
+- Service role key uniquement dans les edge functions (jamais côté client)
+- Rate limiting sur la création de séries
+- Feature flags pour activer/désactiver les fonctionnalités
+
+## Documentation complémentaire
+
+- [docs/architecture.md](docs/architecture.md) — Architecture détaillée
+- [docs/autopilot.md](docs/autopilot.md) — Fonctionnement de l'autopilot
+- [docs/agents.md](docs/agents.md) — Liste et configuration des agents
+- [docs/continuity.md](docs/continuity.md) — Système de mémoire de continuité
+- [docs/delivery.md](docs/delivery.md) — Pipeline de livraison
+- [docs/security.md](docs/security.md) — Politique de sécurité
+- [docs/runbooks.md](docs/runbooks.md) — Procédures opérationnelles
