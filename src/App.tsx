@@ -32,6 +32,18 @@ const About = lazy(() => import("./pages/About"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
+// Series Studio pages
+const CreateSeries = lazy(() => import("./pages/CreateSeries"));
+const SeriesView = lazy(() => import("./pages/SeriesView"));
+const SeasonView = lazy(() => import("./pages/SeasonView"));
+const EpisodeView = lazy(() => import("./pages/EpisodeView"));
+const BibleManager = lazy(() => import("./pages/BibleManager"));
+const CharacterGallery = lazy(() => import("./pages/CharacterGallery"));
+const AgentDashboard = lazy(() => import("./pages/AgentDashboard"));
+const AdminAgentManager = lazy(() => import("./pages/AdminAgentManager"));
+const AdminProviderDashboard = lazy(() => import("./pages/AdminProviderDashboard"));
+const AdminAuditLog = lazy(() => import("./pages/AdminAuditLog"));
+
 const PageLoader = () => (
   <div className="min-h-screen bg-background flex items-center justify-center">
     <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -70,7 +82,17 @@ const App = () => (
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 <Route path="/share/:id" element={<ShareView />} />
+                <Route path="/create/series" element={<ProtectedRoute><CreateSeries /></ProtectedRoute>} />
+                <Route path="/series/:id" element={<ProtectedRoute><SeriesView /></ProtectedRoute>} />
+                <Route path="/series/:id/season/:seasonId" element={<ProtectedRoute><SeasonView /></ProtectedRoute>} />
+                <Route path="/series/:id/episode/:episodeId" element={<ProtectedRoute><EpisodeView /></ProtectedRoute>} />
+                <Route path="/series/:id/bibles" element={<ProtectedRoute><BibleManager /></ProtectedRoute>} />
+                <Route path="/series/:id/characters" element={<ProtectedRoute><CharacterGallery /></ProtectedRoute>} />
+                <Route path="/series/:id/agents" element={<ProtectedRoute><AgentDashboard /></ProtectedRoute>} />
                 <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+                <Route path="/admin/agents" element={<AdminRoute><AdminAgentManager /></AdminRoute>} />
+                <Route path="/admin/providers" element={<AdminRoute><AdminProviderDashboard /></AdminRoute>} />
+                <Route path="/admin/audit" element={<AdminRoute><AdminAuditLog /></AdminRoute>} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/legal" element={<Legal />} />

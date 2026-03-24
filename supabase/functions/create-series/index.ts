@@ -6,10 +6,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// --- Simple in-memory rate limiter ---
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 5;       // max requests
-const RATE_WINDOW_MS = 60_000; // per 60 seconds
+const RATE_LIMIT = 3;
+const RATE_WINDOW_MS = 60_000;
 
 function isRateLimited(key: string): boolean {
   const now = Date.now();
@@ -21,7 +20,6 @@ function isRateLimited(key: string): boolean {
   entry.count++;
   return entry.count > RATE_LIMIT;
 }
-// --- End rate limiter ---
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -41,7 +39,6 @@ serve(async (req) => {
     );
     if (authErr || !user) throw new Error("Unauthorized");
 
-    // Rate limit per user: 5 projects per minute
     if (isRateLimited(user.id)) {
       return new Response(JSON.stringify({ error: "Trop de requêtes. Réessayez dans une minute." }), {
         status: 429,
@@ -49,46 +46,76 @@ serve(async (req) => {
       });
     }
 
+    // Check feature flag
+    const { data: flag } = await supabase
+      .from("feature_flags")
+      .select("enabled")
+      .eq("key", "series_enabled")
+      .single();
+    if (!flag?.enabled) {
+      throw new Error("La fonctionnalité Séries n'est pas encore activée.");
+    }
+
     const body = await req.json();
-    const { type, title, mode, style_preset, duration_sec, synopsis, audio_url, aspect_ratio, face_urls, ref_photo_urls } = body;
+    const { title, logline, genre, tone, target_audience, total_seasons, style_preset } = body;
 
-    if (!type || !["clip", "film", "series"].includes(type)) throw new Error("Invalid project type");
-    if (title && typeof title === "string" && title.length > 200) throw new Error("Title too long (max 200 chars)");
-    if (synopsis && typeof synopsis === "string" && synopsis.length > 10000) throw new Error("Synopsis too long (max 10000 chars)");
+    if (!title || typeof title !== "string" || title.length > 200) {
+      throw new Error("Titre requis (max 200 caractères)");
+    }
 
-    // Atomic credit check & debit for project creation base cost
+    // Debit credits for series creation
     const { data: debited } = await supabase.rpc("debit_credits", {
       p_user_id: user.id,
       p_amount: 5,
-      p_reason: "Création de projet",
-      p_ref_type: "project_creation",
+      p_reason: "Création de série",
+      p_ref_type: "series_creation",
     });
     if (!debited) {
       throw new Error("Crédits insuffisants (5 requis minimum)");
     }
 
-    const { data: project, error } = await supabase
+    // Create project with type='series'
+    const { data: project, error: projectErr } = await supabase
       .from("projects")
       .insert({
         user_id: user.id,
-        type,
-        title: title || "Sans titre",
-        mode: mode || "story",
+        type: "series",
+        title,
         style_preset: style_preset || "cinematic",
-        duration_sec: duration_sec || null,
-        synopsis: synopsis || null,
-        audio_url: audio_url || null,
-        aspect_ratio: aspect_ratio || "16:9",
-        face_urls: face_urls || [],
-        ref_photo_urls: ref_photo_urls || [],
         status: "draft",
       })
       .select()
       .single();
+    if (projectErr) throw projectErr;
 
-    if (error) throw error;
+    // Create series record
+    const { data: series, error: seriesErr } = await supabase
+      .from("series")
+      .insert({
+        project_id: project.id,
+        logline: logline || null,
+        genre: genre || null,
+        tone: tone || null,
+        target_audience: target_audience || null,
+        total_seasons: total_seasons || 1,
+      })
+      .select()
+      .single();
+    if (seriesErr) throw seriesErr;
 
-    return new Response(JSON.stringify({ project }), {
+    // Create initial season
+    const { data: season, error: seasonErr } = await supabase
+      .from("seasons")
+      .insert({
+        series_id: series.id,
+        number: 1,
+        title: "Saison 1",
+      })
+      .select()
+      .single();
+    if (seasonErr) throw seasonErr;
+
+    return new Response(JSON.stringify({ project, series, season }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err: unknown) {

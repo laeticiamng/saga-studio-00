@@ -59,3 +59,27 @@ verify_jwt = false
 
 [functions.proxy-media]
 verify_jwt = false
+
+[functions.create-series]
+verify_jwt = false
+
+[functions.episode-pipeline]
+verify_jwt = false
+
+[functions.run-agent]
+verify_jwt = false
+
+[functions.agent-status]
+verify_jwt = false
+
+[functions.batch-render]
+verify_jwt = false
+
+[functions.export-assets]
+verify_jwt = false
+
+[functions.provider-health]
+verify_jwt = false
+
+[functions.audit-log]
+verify_jwt = false
