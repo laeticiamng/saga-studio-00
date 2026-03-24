@@ -30,7 +30,7 @@ const statusLabels: Record<string, string> = {
   draft: "Brouillon", resolved: "Résolu", dismissed: "Rejeté", reviewed: "Examiné",
 };
 
-const typeLabels: Record<string, string> = { clip: "Clip", film: "Film" };
+const typeLabels: Record<string, string> = { clip: "Clip", film: "Film", series: "Série" };
 
 const styleLabels: Record<string, string> = {
   cinematic: "Cinématique", anime: "Anime", watercolor: "Aquarelle",
@@ -322,6 +322,19 @@ export default function Admin() {
               )}
             </CardContent>
           </Card>
+        </div>
+
+        {/* Series Studio Admin Links */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          <Button variant="outline" size="sm" asChild>
+            <a href="/admin/agents">Agents IA</a>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <a href="/admin/providers">Fournisseurs</a>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <a href="/admin/audit">Journal d'audit</a>
+          </Button>
         </div>
 
         {/* Tabs */}

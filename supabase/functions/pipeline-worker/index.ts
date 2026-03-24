@@ -43,6 +43,16 @@ serve(async (req) => {
     const results: any[] = [];
 
     if (singleProjectId) {
+      // Series projects use the episode-pipeline, not this worker
+      const { data: proj } = await supabase
+        .from("projects").select("type").eq("id", singleProjectId).single();
+      if (proj?.type === "series") {
+        return new Response(JSON.stringify({
+          skipped: true,
+          reason: "Series projects use episode-pipeline instead of pipeline-worker",
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
       // Auto-loop: keep processing steps until we hit a waiting/terminal state
       const loopResults = await loopProject(supabase, callFunction, singleProjectId);
       results.push(...loopResults);
@@ -50,7 +60,7 @@ serve(async (req) => {
       // Batch mode: process all active projects (one step each)
       for (const step of PIPELINE_STEPS) {
         const { data: projects } = await supabase
-          .from("projects").select("id, status").eq("status", step.from).limit(5);
+          .from("projects").select("id, status, type").eq("status", step.from).neq("type", "series").limit(5);
         for (const project of projects || []) {
           const r = await executeStep(supabase, callFunction, project);
           results.push(r);

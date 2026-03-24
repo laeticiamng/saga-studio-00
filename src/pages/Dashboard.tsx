@@ -7,9 +7,10 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Film, Music, Plus, Clock, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { Film, Music, Plus, Clock, CheckCircle, AlertCircle, Loader2, Tv } from "lucide-react";
 import { OnboardingTour } from "@/components/OnboardingTour";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { useFeatureFlag } from "@/hooks/useFeatureFlag";
 
 const statusLabels: Record<string, string> = {
   draft: "Brouillon",
@@ -20,11 +21,13 @@ const statusLabels: Record<string, string> = {
   completed: "Terminé",
   failed: "Échoué",
   cancelled: "Annulé",
+  in_production: "En production",
 };
 
 const typeLabels: Record<string, string> = {
   clip: "Clip",
   film: "Film",
+  series: "Série",
 };
 
 const styleLabels: Record<string, string> = {
@@ -51,11 +54,13 @@ const statusIcons: Record<string, React.ReactNode> = {
   analyzing: <Loader2 className="h-4 w-4 animate-spin text-primary" />,
   planning: <Loader2 className="h-4 w-4 animate-spin text-primary" />,
   stitching: <Loader2 className="h-4 w-4 animate-spin text-primary" />,
+  in_production: <Loader2 className="h-4 w-4 animate-spin text-primary" />,
 };
 
 export default function Dashboard() {
   const { user } = useAuth();
   usePageTitle("Mes projets");
+  const seriesEnabled = useFeatureFlag("series_enabled");
 
   const { data: projects, isLoading, isError, refetch } = useQuery({
     queryKey: ["projects", user?.id],
@@ -91,6 +96,13 @@ export default function Dashboard() {
                 <Film className="h-4 w-4" /> Nouveau film
               </Link>
             </Button>
+            {seriesEnabled && (
+              <Button variant="glass" size="sm" asChild>
+                <Link to="/create/series" className="gap-2">
+                  <Tv className="h-4 w-4" /> Nouvelle série
+                </Link>
+              </Button>
+            )}
           </div>
         </div>
 
@@ -138,12 +150,12 @@ export default function Dashboard() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {projects.map((project) => (
-              <Link key={project.id} to={`/project/${project.id}`}>
+              <Link key={project.id} to={project.type === "series" ? `/project/${project.id}` : `/project/${project.id}`}>
                 <Card className="border-border/50 bg-card/60 hover:bg-card/80 transition-all cursor-pointer group h-full">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <Badge variant="outline" className="text-xs">
-                        {project.type === "clip" ? <Music className="h-3 w-3 mr-1" /> : <Film className="h-3 w-3 mr-1" />}
+                        {project.type === "clip" ? <Music className="h-3 w-3 mr-1" /> : project.type === "series" ? <Tv className="h-3 w-3 mr-1" /> : <Film className="h-3 w-3 mr-1" />}
                         {typeLabels[project.type] || project.type}
                       </Badge>
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
