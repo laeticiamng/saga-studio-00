@@ -5,19 +5,22 @@ export function useApprovalSteps(episodeId: string | undefined) {
   return useQuery({
     queryKey: ["approval_steps", episodeId],
     queryFn: async () => {
-      if (!episodeId) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from("approval_steps")
         .select(`
           *,
           decisions:approval_decisions(*)
         `)
-        .eq("episode_id", episodeId)
         .order("created_at", { ascending: true });
+
+      if (episodeId) {
+        query = query.eq("episode_id", episodeId);
+      }
+
+      const { data, error } = await query.limit(100);
       if (error) throw error;
       return data;
     },
-    enabled: !!episodeId,
   });
 }
 
@@ -45,6 +48,7 @@ export function useUpdateApprovalStep() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["approval_steps", data.episode_id] });
+      queryClient.invalidateQueries({ queryKey: ["approval_steps", undefined] });
     },
   });
 }

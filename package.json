@@ -8,7 +8,16 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:unit": "vitest run --reporter=verbose src/__tests__/unit/",
+    "test:integration": "vitest run --reporter=verbose src/__tests__/integration/",
+    "test:e2e": "vitest run --reporter=verbose src/__tests__/e2e/",
+    "test:edge": "vitest run --reporter=verbose src/__tests__/edge/",
+    "test:db": "vitest run --reporter=verbose src/__tests__/db/",
+    "typecheck": "tsc --noEmit",
+    "ci": "npm run typecheck && npm run lint && npm run test"
   },
   "dependencies": {
     "@ffmpeg/ffmpeg": "0.12.10",

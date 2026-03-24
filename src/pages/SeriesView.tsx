@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +12,7 @@ import { SeasonPanel } from "@/components/series/SeasonPanel";
 import { BibleEditor } from "@/components/series/BibleEditor";
 import { CharacterProfileCard } from "@/components/series/CharacterProfileCard";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { Loader2, Tv, Plus, Users, BookOpen } from "lucide-react";
+import { Loader2, Tv, Plus, Users, BookOpen, Zap, Shield, Network, Package, Bot, ClipboardList } from "lucide-react";
 
 export default function SeriesView() {
   const { id } = useParams<{ id: string }>();
@@ -76,6 +76,30 @@ export default function SeriesView() {
               Public: {series.target_audience}
             </p>
           )}
+          {/* Quick nav to studio tools */}
+          <div className="flex gap-2 mt-4 flex-wrap">
+            <Button variant="outline" size="sm" asChild>
+              <Link to={`/series/${id}/autopilot`}><Zap className="h-4 w-4 mr-1" />Autopilot</Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link to={`/series/${id}/approvals`}><Shield className="h-4 w-4 mr-1" />Approbations</Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link to={`/series/${id}/continuity`}><Network className="h-4 w-4 mr-1" />Continuité</Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link to={`/series/${id}/delivery`}><Package className="h-4 w-4 mr-1" />Livraison</Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link to={`/series/${id}/agents`}><Bot className="h-4 w-4 mr-1" />Agents</Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link to={`/series/${id}/bibles`}><BookOpen className="h-4 w-4 mr-1" />Bibles</Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link to={`/series/${id}/characters`}><Users className="h-4 w-4 mr-1" />Personnages</Link>
+            </Button>
+          </div>
         </div>
 
         <Tabs defaultValue="episodes" className="space-y-4">

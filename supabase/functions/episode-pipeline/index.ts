@@ -6,18 +6,23 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Episode status → agent(s) to run → next status
-const PIPELINE_STEPS: Record<string, { agents: string[]; nextStatus: string }> = {
-  story_development:  { agents: ["story_architect", "scriptwriter"], nextStatus: "psychology_review" },
-  psychology_review:  { agents: ["psychology_reviewer"],             nextStatus: "legal_ethics_review" },
-  legal_ethics_review:{ agents: ["legal_ethics_reviewer"],           nextStatus: "visual_bible" },
-  visual_bible:       { agents: ["visual_director"],                 nextStatus: "continuity_check" },
-  continuity_check:   { agents: ["continuity_checker"],              nextStatus: "shot_generation" },
-  shot_generation:    { agents: ["scene_designer", "shot_planner"],  nextStatus: "shot_review" },
-  shot_review:        { agents: ["qa_reviewer"],                     nextStatus: "assembly" },
-  assembly:           { agents: ["editor"],                          nextStatus: "edit_review" },
-  edit_review:        { agents: ["qa_reviewer"],                     nextStatus: "delivery" },
-  delivery:           { agents: ["delivery_manager"],                nextStatus: "completed" },
+// Episode status → agent(s) to run → next status + gate config
+const PIPELINE_STEPS: Record<string, {
+  agents: string[];
+  nextStatus: string;
+  requiresApproval: boolean;
+  autoAdvanceThreshold: number;
+}> = {
+  story_development:   { agents: ["story_architect", "scriptwriter"], nextStatus: "psychology_review", requiresApproval: false, autoAdvanceThreshold: 0 },
+  psychology_review:   { agents: ["psychology_reviewer"],             nextStatus: "legal_ethics_review", requiresApproval: true, autoAdvanceThreshold: 0.85 },
+  legal_ethics_review: { agents: ["legal_ethics_reviewer"],           nextStatus: "visual_bible", requiresApproval: true, autoAdvanceThreshold: 0.90 },
+  visual_bible:        { agents: ["visual_director"],                 nextStatus: "continuity_check", requiresApproval: false, autoAdvanceThreshold: 0 },
+  continuity_check:    { agents: ["continuity_checker"],              nextStatus: "shot_generation", requiresApproval: true, autoAdvanceThreshold: 0.90 },
+  shot_generation:     { agents: ["scene_designer", "shot_planner"],  nextStatus: "shot_review", requiresApproval: false, autoAdvanceThreshold: 0 },
+  shot_review:         { agents: ["qa_reviewer"],                     nextStatus: "assembly", requiresApproval: true, autoAdvanceThreshold: 0.80 },
+  assembly:            { agents: ["editor"],                          nextStatus: "edit_review", requiresApproval: false, autoAdvanceThreshold: 0 },
+  edit_review:         { agents: ["qa_reviewer"],                     nextStatus: "delivery", requiresApproval: true, autoAdvanceThreshold: 0.85 },
+  delivery:            { agents: ["delivery_manager"],                nextStatus: "completed", requiresApproval: false, autoAdvanceThreshold: 0 },
 };
 
 serve(async (req) => {
@@ -30,10 +35,28 @@ serve(async (req) => {
     );
 
     const body = await req.json();
-    const { episode_id } = body;
+    const { episode_id, force_step, idempotency_key } = body;
     if (!episode_id) throw new Error("episode_id required");
 
-    // Fetch episode with season chain for authorization
+    // Idempotency check: if we already processed this exact request, return cached result
+    if (idempotency_key) {
+      const { data: existingRun } = await supabase
+        .from("workflow_runs")
+        .select("*")
+        .eq("idempotency_key", idempotency_key)
+        .single();
+      if (existingRun) {
+        return new Response(JSON.stringify({
+          message: "Already processed (idempotent)",
+          workflow_run_id: existingRun.id,
+          status: existingRun.status,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // Fetch episode with full chain
     const { data: episode, error: epErr } = await supabase
       .from("episodes")
       .select(`
@@ -49,22 +72,112 @@ serve(async (req) => {
       .single();
     if (epErr || !episode) throw new Error("Episode not found");
 
-    const currentStatus = episode.status;
+    const currentStatus = force_step || episode.status;
     const step = PIPELINE_STEPS[currentStatus];
 
     if (!step) {
       return new Response(JSON.stringify({
         message: `Episode status '${currentStatus}' is not a pipeline step (may be draft, completed, failed, or cancelled).`,
+        episode_status: episode.status,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const seriesId = episode.season?.series?.id;
+    const correlationId = crypto.randomUUID();
+
+    // Create or update workflow run for tracking
+    let workflowRun;
+    if (episode.workflow_run_id) {
+      const { data: existingWr } = await supabase
+        .from("workflow_runs")
+        .select("*")
+        .eq("id", episode.workflow_run_id)
+        .single();
+      if (existingWr && existingWr.status !== "cancelled" && existingWr.status !== "failed") {
+        workflowRun = existingWr;
+        await supabase.from("workflow_runs").update({
+          current_step_key: currentStatus,
+          status: "running",
+        }).eq("id", workflowRun.id);
+      }
+    }
+
+    if (!workflowRun) {
+      const { data: newWr, error: wrErr } = await supabase
+        .from("workflow_runs")
+        .insert({
+          episode_id: episode.id,
+          series_id: seriesId,
+          status: "running",
+          current_step_key: currentStatus,
+          correlation_id: correlationId,
+          idempotency_key: idempotency_key || `ep_${episode.id}_${currentStatus}_${Date.now()}`,
+          started_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+      if (wrErr) throw wrErr;
+      workflowRun = newWr;
+
+      // Link workflow run to episode
+      await supabase.from("episodes").update({
+        workflow_run_id: workflowRun.id,
+      }).eq("id", episode.id);
+    }
+
+    // Create workflow step record
+    const { data: wfStep, error: wfStepErr } = await supabase
+      .from("workflow_steps")
+      .insert({
+        workflow_run_id: workflowRun.id,
+        step_key: currentStatus,
+        step_order: Object.keys(PIPELINE_STEPS).indexOf(currentStatus) + 1,
+        label: currentStatus.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),
+        status: "running",
+        agents: step.agents,
+        requires_approval: step.requiresApproval,
+        auto_advance_threshold: step.autoAdvanceThreshold || null,
+        started_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+    if (wfStepErr) throw wfStepErr;
+
+    // Create approval step if this step requires approval
+    if (step.requiresApproval) {
+      await supabase.from("approval_steps").insert({
+        episode_id: episode.id,
+        step_name: currentStatus,
+        status: "pending",
+        reviewer_agent: step.agents[0],
+      });
+
+      await supabase.from("workflow_approvals").insert({
+        workflow_step_id: wfStep.id,
+        decision: "pending",
+      });
+    }
+
     const agentRuns = [];
 
-    // Dispatch agent runs for this step
+    // Dispatch agent runs for this step with idempotency
     for (const agentSlug of step.agents) {
+      const agentIdempotencyKey = `${episode.id}_${currentStatus}_${agentSlug}_${workflowRun.id}`;
+
+      // Check for existing run (idempotency)
+      const { data: existingRun } = await supabase
+        .from("agent_runs")
+        .select("*")
+        .eq("idempotency_key", agentIdempotencyKey)
+        .single();
+
+      if (existingRun && (existingRun.status === "completed" || existingRun.status === "running")) {
+        agentRuns.push(existingRun);
+        continue;
+      }
+
       const { data: run, error: runErr } = await supabase
         .from("agent_runs")
         .insert({
@@ -73,30 +186,72 @@ serve(async (req) => {
           series_id: seriesId,
           season_id: episode.season?.id,
           status: "queued",
-          input: { episode_id: episode.id, trigger_status: currentStatus },
+          idempotency_key: agentIdempotencyKey,
+          correlation_id: correlationId,
+          input: {
+            episode_id: episode.id,
+            trigger_status: currentStatus,
+            workflow_run_id: workflowRun.id,
+            workflow_step_id: wfStep.id,
+          },
         })
         .select()
         .single();
       if (runErr) throw runErr;
       agentRuns.push(run);
 
-      // Also create a job_queue entry for tracking
+      // Link to workflow step
+      await supabase.from("workflow_step_runs").insert({
+        workflow_step_id: wfStep.id,
+        agent_run_id: run.id,
+      });
+
+      // Job queue entry
       await supabase.from("job_queue").insert({
         project_id: episode.season?.series?.project_id,
         episode_id: episode.id,
         agent_slug: agentSlug,
         step: currentStatus,
         status: "pending",
-        payload: { agent_run_id: run.id },
+        payload: {
+          agent_run_id: run.id,
+          workflow_run_id: workflowRun.id,
+          correlation_id: correlationId,
+        },
       });
     }
 
-    // Invoke run-agent for each queued agent (fire-and-forget)
+    // Invoke run-agent for each queued agent
     for (const run of agentRuns) {
-      supabase.functions.invoke("run-agent", {
-        body: { agent_run_id: run.id },
-      }).catch(() => { /* fire and forget */ });
+      if (run.status === "queued") {
+        supabase.functions.invoke("run-agent", {
+          body: {
+            agent_run_id: run.id,
+            correlation_id: correlationId,
+          },
+        }).catch((err: unknown) => {
+          // Log failure but don't block — dead letter handling via job_queue
+          console.error(`Failed to invoke run-agent for ${run.id}:`, err);
+        });
+      }
     }
+
+    // Audit log
+    await supabase.functions.invoke("audit-log", {
+      body: {
+        action: "episode_pipeline_step_dispatched",
+        entity_type: "episode",
+        entity_id: episode.id,
+        details: {
+          step: currentStatus,
+          next_status: step.nextStatus,
+          agents: step.agents,
+          workflow_run_id: workflowRun.id,
+          correlation_id: correlationId,
+          requires_approval: step.requiresApproval,
+        },
+      },
+    }).catch(() => {});
 
     return new Response(JSON.stringify({
       episode_id: episode.id,
@@ -104,11 +259,17 @@ serve(async (req) => {
       next_status: step.nextStatus,
       agents_dispatched: step.agents,
       agent_runs: agentRuns.map(r => r.id),
+      workflow_run_id: workflowRun.id,
+      workflow_step_id: wfStep.id,
+      correlation_id: correlationId,
+      requires_approval: step.requiresApproval,
+      auto_advance_threshold: step.autoAdvanceThreshold,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("episode-pipeline error:", message);
     return new Response(JSON.stringify({ error: message }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
