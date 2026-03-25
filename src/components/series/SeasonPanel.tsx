@@ -4,14 +4,14 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EpisodeCard } from "./EpisodeCard";
 import { useEpisodes, useCreateEpisode } from "@/hooks/useEpisodes";
-import type { Tables } from "@/integrations/supabase/types";
+
 import { Plus, Loader2 } from "lucide-react";
 
 export function SeasonPanel({
   season,
   seriesId,
 }: {
-  season: Tables<"seasons">;
+  season: any;
   seriesId: string;
 }) {
   const { data: episodes, isLoading } = useEpisodes(season.id);

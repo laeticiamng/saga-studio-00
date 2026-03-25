@@ -1,12 +1,11 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { Tables } from "@/integrations/supabase/types";
 import { User } from "lucide-react";
 
 export function CharacterProfileCard({
   character,
 }: {
-  character: Tables<"character_profiles">;
+  character: any;
 }) {
   const refImages = (character.reference_images as string[]) || [];
 
