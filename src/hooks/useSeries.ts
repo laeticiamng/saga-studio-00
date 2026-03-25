@@ -1,23 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 
 export function useSeriesList() {
   const { user } = useAuth();
-
   return useQuery({
     queryKey: ["series", "list", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("series")
-        .select(`
-          *,
-          project:projects!series_project_id_fkey(id, title, status, style_preset, created_at, updated_at)
-        `)
+        .select("*, project:projects!series_project_id_fkey(id, title, status, style_preset, created_at, updated_at)")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data as any[];
     },
     enabled: !!user,
   });
@@ -28,16 +23,13 @@ export function useSeries(seriesId: string | undefined) {
     queryKey: ["series", seriesId],
     queryFn: async () => {
       if (!seriesId) return null;
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("series")
-        .select(`
-          *,
-          project:projects!series_project_id_fkey(id, title, status, style_preset, synopsis, created_at, updated_at)
-        `)
+        .select("*, project:projects!series_project_id_fkey(id, title, status, style_preset, synopsis, created_at, updated_at)")
         .eq("id", seriesId)
         .single();
       if (error) throw error;
-      return data;
+      return data as any;
     },
     enabled: !!seriesId,
   });
@@ -48,13 +40,13 @@ export function useSeriesByProjectId(projectId: string | undefined) {
     queryKey: ["series", "by-project", projectId],
     queryFn: async () => {
       if (!projectId) return null;
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("series")
         .select("*")
         .eq("project_id", projectId)
         .single();
       if (error) throw error;
-      return data;
+      return data as any;
     },
     enabled: !!projectId,
   });
@@ -62,7 +54,6 @@ export function useSeriesByProjectId(projectId: string | undefined) {
 
 export function useCreateSeries() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async (input: {
@@ -89,22 +80,18 @@ export function useCreateSeries() {
 
 export function useUpdateSeries() {
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: async ({
-      id,
-      ...updates
-    }: Partial<Tables<"series">> & { id: string }) => {
-      const { data, error } = await supabase
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+      const { data, error } = await (supabase as any)
         .from("series")
         .update(updates)
         .eq("id", id)
         .select()
         .single();
       if (error) throw error;
-      return data;
+      return data as any;
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["series", data.id] });
       queryClient.invalidateQueries({ queryKey: ["series", "list"] });
     },

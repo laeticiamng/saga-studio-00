@@ -9,6 +9,8 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { Play, Pause, RotateCcw, X, CheckCircle, Clock, AlertTriangle, Zap } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const STEP_LABELS: Record<string, string> = {
   story_development: "Développement narratif",
@@ -34,10 +36,26 @@ const STATUS_COLORS: Record<string, string> = {
   skipped: "bg-gray-300",
 };
 
+function useSeriesEpisodes(seriesId: string | undefined) {
+  return useQuery({
+    queryKey: ["series_episodes", seriesId],
+    enabled: !!seriesId,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("episodes")
+        .select("*")
+        .eq("series_id", seriesId!)
+        .order("number", { ascending: true });
+      if (error) throw error;
+      return data as any[];
+    },
+  });
+}
+
 export default function AutopilotDashboard() {
   usePageTitle("Autopilot");
   const { id: seriesId } = useParams<{ id: string }>();
-  const { data: episodes } = useEpisodes(undefined, seriesId);
+  const { data: episodes } = useSeriesEpisodes(seriesId);
   const [selectedEpisodeId, setSelectedEpisodeId] = useState<string | null>(null);
 
   const activeEpisodeId = selectedEpisodeId || episodes?.[0]?.id;
@@ -50,7 +68,7 @@ export default function AutopilotDashboard() {
   const resumeWorkflow = useResumeWorkflow();
   const cancelWorkflow = useCancelWorkflow();
 
-  const completedSteps = steps?.filter(s => s.status === "completed" || s.status === "approved").length || 0;
+  const completedSteps = steps?.filter((s: any) => s.status === "completed" || s.status === "approved").length || 0;
   const totalSteps = 10;
   const progress = (completedSteps / totalSteps) * 100;
 
@@ -120,7 +138,7 @@ export default function AutopilotDashboard() {
 
       {/* Episode selector */}
       <div className="flex gap-2 mb-6 flex-wrap">
-        {episodes?.map(ep => (
+        {episodes?.map((ep: any) => (
           <Button
             key={ep.id}
             variant={activeEpisodeId === ep.id ? "default" : "outline"}
@@ -128,9 +146,11 @@ export default function AutopilotDashboard() {
             onClick={() => setSelectedEpisodeId(ep.id)}
           >
             Ep. {ep.number} — {ep.title}
-            <Badge className="ml-2" variant={ep.status === "completed" ? "default" : "secondary"}>
-              {ep.status}
-            </Badge>
+            {ep.status && (
+              <Badge className="ml-2" variant={ep.status === "completed" ? "default" : "secondary"}>
+                {ep.status}
+              </Badge>
+            )}
           </Button>
         ))}
       </div>
@@ -168,9 +188,9 @@ export default function AutopilotDashboard() {
         <CardContent>
           <div className="space-y-3">
             {Object.entries(STEP_LABELS).map(([key, label], idx) => {
-              const step = steps?.find(s => s.step_key === key);
+              const step = steps?.find((s: any) => s.step_key === key);
               const status = step?.status || "pending";
-              const confidence = confidenceScores?.find(s => s.dimension === key || s.dimension?.includes(key));
+              const confidence = confidenceScores?.find((s: any) => s.dimension === key || s.dimension?.includes(key));
 
               return (
                 <div key={key} className="flex items-center gap-3 p-3 rounded-lg border">
@@ -221,7 +241,7 @@ export default function AutopilotDashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {confidenceScores.map(score => (
+              {confidenceScores.map((score: any) => (
                 <div key={score.id} className="p-3 border rounded-lg">
                   <p className="text-sm font-medium capitalize">{score.dimension?.replace(/_/g, " ")}</p>
                   <div className="flex items-center gap-2 mt-1">

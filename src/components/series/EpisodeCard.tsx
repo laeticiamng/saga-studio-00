@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { Tables } from "@/integrations/supabase/types";
+
 
 const statusLabels: Record<string, string> = {
   draft: "Brouillon",
@@ -31,7 +31,7 @@ export function EpisodeCard({
   episode,
   seriesId,
 }: {
-  episode: Tables<"episodes">;
+  episode: any;
   seriesId: string;
 }) {
   const statusColor = statusColors[episode.status] || "bg-primary/10 text-primary";

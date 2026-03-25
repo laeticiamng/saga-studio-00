@@ -6,13 +6,13 @@ export function usePsychologyReviews(episodeId: string | undefined) {
     queryKey: ["psychology_reviews", episodeId],
     queryFn: async () => {
       if (!episodeId) return [];
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("psychology_reviews")
         .select("*")
         .eq("episode_id", episodeId)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data as any[];
     },
     enabled: !!episodeId,
   });
@@ -23,13 +23,13 @@ export function useLegalEthicsReviews(episodeId: string | undefined) {
     queryKey: ["legal_ethics_reviews", episodeId],
     queryFn: async () => {
       if (!episodeId) return [];
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("legal_ethics_reviews")
         .select("*")
         .eq("episode_id", episodeId)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data as any[];
     },
     enabled: !!episodeId,
   });
@@ -40,13 +40,13 @@ export function useContinuityReports(episodeId: string | undefined) {
     queryKey: ["continuity_reports", episodeId],
     queryFn: async () => {
       if (!episodeId) return [];
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("continuity_reports")
         .select("*")
         .eq("episode_id", episodeId)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data as any[];
     },
     enabled: !!episodeId,
   });

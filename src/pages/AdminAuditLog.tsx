@@ -13,7 +13,7 @@ export default function AdminAuditLog() {
   const { data: logs, isLoading } = useQuery({
     queryKey: ["audit_logs"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("audit_logs")
         .select("*")
         .order("created_at", { ascending: false })

@@ -6,12 +6,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBibles, useCreateBible, useDeleteBible } from "@/hooks/useBibles";
-import type { Database } from "@/integrations/supabase/types";
 import { Plus, Trash2, BookOpen, Loader2 } from "lucide-react";
 
-type BibleType = Database["public"]["Enums"]["bible_type"];
+type BibleType = "style" | "character" | "world" | "tone" | "custom";
 
-const typeLabels: Record<BibleType, string> = {
+const typeLabels: Record<string, string> = {
   style: "Style visuel",
   character: "Personnages",
   wardrobe: "Costumes",
@@ -20,6 +19,8 @@ const typeLabels: Record<BibleType, string> = {
   music: "Musique",
   voice: "Voix",
   prop: "Accessoires",
+  tone: "Tonalité",
+  custom: "Personnalisé",
 };
 
 export function BibleEditor({ seriesId }: { seriesId: string }) {

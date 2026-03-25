@@ -6,14 +6,14 @@ export function useContinuityNodes(seriesId: string | undefined) {
     queryKey: ["continuity_nodes", seriesId],
     enabled: !!seriesId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("continuity_memory_nodes")
         .select("*")
         .eq("series_id", seriesId!)
         .eq("is_active", true)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data as any[];
     },
   });
 }
@@ -23,12 +23,12 @@ export function useContinuityEdges(seriesId: string | undefined) {
     queryKey: ["continuity_edges", seriesId],
     enabled: !!seriesId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("continuity_memory_edges")
         .select("*, source:continuity_memory_nodes!continuity_memory_edges_source_node_id_fkey(label, node_type), target:continuity_memory_nodes!continuity_memory_edges_target_node_id_fkey(label, node_type)")
         .eq("series_id", seriesId!);
       if (error) throw error;
-      return data;
+      return data as any[];
     },
   });
 }
@@ -38,7 +38,7 @@ export function useContinuityConflicts(seriesId: string | undefined, episodeId?:
     queryKey: ["continuity_conflicts", seriesId, episodeId],
     enabled: !!seriesId,
     queryFn: async () => {
-      let query = supabase
+      let query = (supabase as any)
         .from("continuity_conflicts")
         .select("*")
         .eq("series_id", seriesId!)
@@ -46,7 +46,7 @@ export function useContinuityConflicts(seriesId: string | undefined, episodeId?:
       if (episodeId) query = query.eq("episode_id", episodeId);
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+      return data as any[];
     },
   });
 }
@@ -56,13 +56,13 @@ export function useDeliveryManifests(seriesId: string | undefined) {
     queryKey: ["delivery_manifests", seriesId],
     enabled: !!seriesId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("delivery_manifests")
         .select("*")
         .eq("series_id", seriesId!)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data as any[];
     },
   });
 }
@@ -72,13 +72,13 @@ export function useQCReports(episodeId: string | undefined) {
     queryKey: ["qc_reports", episodeId],
     enabled: !!episodeId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("qc_reports")
         .select("*")
         .eq("episode_id", episodeId!)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data as any[];
     },
   });
 }
@@ -88,13 +88,13 @@ export function useExportJobs(seriesId: string | undefined) {
     queryKey: ["export_jobs", seriesId],
     enabled: !!seriesId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("export_jobs")
         .select("*")
         .eq("series_id", seriesId!)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data as any[];
     },
   });
 }
