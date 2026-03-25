@@ -83,7 +83,8 @@ export function useApprovalEvaluate() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (_data: any, { episodeId }: { episodeId: string }) => {
+    onSuccess: (_data: any, variables: any) => {
+      const { episodeId } = variables;
       queryClient.invalidateQueries({ queryKey: ["workflow_run", episodeId] });
       queryClient.invalidateQueries({ queryKey: ["workflow_steps"] });
       queryClient.invalidateQueries({ queryKey: ["approval_steps", episodeId] });
