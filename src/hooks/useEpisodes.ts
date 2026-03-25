@@ -1,19 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { TablesInsert } from "@/integrations/supabase/types";
 
 export function useEpisodes(seasonId: string | undefined) {
   return useQuery({
     queryKey: ["episodes", seasonId],
     queryFn: async () => {
       if (!seasonId) return [];
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("episodes")
         .select("*")
         .eq("season_id", seasonId)
         .order("number", { ascending: true });
       if (error) throw error;
-      return data;
+      return data as any[];
     },
     enabled: !!seasonId,
   });
@@ -24,18 +23,13 @@ export function useEpisode(episodeId: string | undefined) {
     queryKey: ["episode", episodeId],
     queryFn: async () => {
       if (!episodeId) return null;
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("episodes")
-        .select(`
-          *,
-          season:seasons!episodes_season_id_fkey(
-            id, number, title, series_id
-          )
-        `)
+        .select("*, season:seasons!episodes_season_id_fkey(id, number, title, series_id)")
         .eq("id", episodeId)
         .single();
       if (error) throw error;
-      return data;
+      return data as any;
     },
     enabled: !!episodeId,
   });
@@ -43,18 +37,17 @@ export function useEpisode(episodeId: string | undefined) {
 
 export function useCreateEpisode() {
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: async (input: TablesInsert<"episodes">) => {
-      const { data, error } = await supabase
+    mutationFn: async (input: any) => {
+      const { data, error } = await (supabase as any)
         .from("episodes")
         .insert(input)
         .select()
         .single();
       if (error) throw error;
-      return data;
+      return data as any;
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["episodes", data.season_id] });
     },
   });
@@ -62,22 +55,18 @@ export function useCreateEpisode() {
 
 export function useUpdateEpisode() {
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: async ({
-      id,
-      ...updates
-    }: { id: string } & Partial<TablesInsert<"episodes">>) => {
-      const { data, error } = await supabase
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+      const { data, error } = await (supabase as any)
         .from("episodes")
         .update(updates)
         .eq("id", id)
         .select()
         .single();
       if (error) throw error;
-      return data;
+      return data as any;
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["episodes", data.season_id] });
       queryClient.invalidateQueries({ queryKey: ["episode", data.id] });
     },
