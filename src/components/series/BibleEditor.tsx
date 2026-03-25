@@ -10,7 +10,7 @@ import { Plus, Trash2, BookOpen, Loader2 } from "lucide-react";
 
 type BibleType = "style" | "character" | "world" | "tone" | "custom";
 
-const typeLabels: Record<BibleType, string> = {
+const typeLabels: Record<string, string> = {
   style: "Style visuel",
   character: "Personnages",
   wardrobe: "Costumes",
@@ -19,6 +19,8 @@ const typeLabels: Record<BibleType, string> = {
   music: "Musique",
   voice: "Voix",
   prop: "Accessoires",
+  tone: "Tonalité",
+  custom: "Personnalisé",
 };
 
 export function BibleEditor({ seriesId }: { seriesId: string }) {
