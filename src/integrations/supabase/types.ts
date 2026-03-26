@@ -14,6 +14,325 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_outputs: {
+        Row: {
+          agent_run_id: string
+          content: Json
+          created_at: string
+          id: string
+          output_type: string
+        }
+        Insert: {
+          agent_run_id: string
+          content?: Json
+          created_at?: string
+          id?: string
+          output_type: string
+        }
+        Update: {
+          agent_run_id?: string
+          content?: Json
+          created_at?: string
+          id?: string
+          output_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_outputs_agent_run_id_fkey"
+            columns: ["agent_run_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_prompts: {
+        Row: {
+          agent_slug: string
+          content: string
+          created_at: string
+          id: string
+          is_active: boolean
+          version: number
+        }
+        Insert: {
+          agent_slug: string
+          content: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          version?: number
+        }
+        Update: {
+          agent_slug?: string
+          content?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_prompts_agent_slug_fkey"
+            columns: ["agent_slug"]
+            isOneToOne: false
+            referencedRelation: "agent_registry"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
+      agent_registry: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          is_active: boolean
+          name: string
+          role: string | null
+          slug: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          is_active?: boolean
+          name: string
+          role?: string | null
+          slug: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          is_active?: boolean
+          name?: string
+          role?: string | null
+          slug?: string
+        }
+        Relationships: []
+      }
+      agent_runs: {
+        Row: {
+          agent_slug: string
+          completed_at: string | null
+          correlation_id: string | null
+          created_at: string
+          episode_id: string | null
+          error_message: string | null
+          id: string
+          idempotency_key: string | null
+          input: Json | null
+          latency_ms: number | null
+          max_retries: number | null
+          model_used: string | null
+          output: Json | null
+          prompt_version: number | null
+          retry_count: number | null
+          season_id: string | null
+          series_id: string | null
+          started_at: string | null
+          status: string
+          tokens_used: number | null
+        }
+        Insert: {
+          agent_slug: string
+          completed_at?: string | null
+          correlation_id?: string | null
+          created_at?: string
+          episode_id?: string | null
+          error_message?: string | null
+          id?: string
+          idempotency_key?: string | null
+          input?: Json | null
+          latency_ms?: number | null
+          max_retries?: number | null
+          model_used?: string | null
+          output?: Json | null
+          prompt_version?: number | null
+          retry_count?: number | null
+          season_id?: string | null
+          series_id?: string | null
+          started_at?: string | null
+          status?: string
+          tokens_used?: number | null
+        }
+        Update: {
+          agent_slug?: string
+          completed_at?: string | null
+          correlation_id?: string | null
+          created_at?: string
+          episode_id?: string | null
+          error_message?: string | null
+          id?: string
+          idempotency_key?: string | null
+          input?: Json | null
+          latency_ms?: number | null
+          max_retries?: number | null
+          model_used?: string | null
+          output?: Json | null
+          prompt_version?: number | null
+          retry_count?: number | null
+          season_id?: string | null
+          series_id?: string | null
+          started_at?: string | null
+          status?: string
+          tokens_used?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_runs_agent_slug_fkey"
+            columns: ["agent_slug"]
+            isOneToOne: false
+            referencedRelation: "agent_registry"
+            referencedColumns: ["slug"]
+          },
+          {
+            foreignKeyName: "agent_runs_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_runs_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_runs_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      approval_decisions: {
+        Row: {
+          approval_step_id: string
+          created_at: string
+          decided_by: string | null
+          decision: string
+          id: string
+          reason: string | null
+        }
+        Insert: {
+          approval_step_id: string
+          created_at?: string
+          decided_by?: string | null
+          decision: string
+          id?: string
+          reason?: string | null
+        }
+        Update: {
+          approval_step_id?: string
+          created_at?: string
+          decided_by?: string | null
+          decision?: string
+          id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_decisions_approval_step_id_fkey"
+            columns: ["approval_step_id"]
+            isOneToOne: false
+            referencedRelation: "approval_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      approval_steps: {
+        Row: {
+          created_at: string
+          episode_id: string
+          id: string
+          notes: string | null
+          reviewer_agent: string | null
+          reviewer_user: string | null
+          status: string
+          step_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          episode_id: string
+          id?: string
+          notes?: string | null
+          reviewer_agent?: string | null
+          reviewer_user?: string | null
+          status?: string
+          step_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          episode_id?: string
+          id?: string
+          notes?: string | null
+          reviewer_agent?: string | null
+          reviewer_user?: string | null
+          status?: string
+          step_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_steps_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      asset_packs: {
+        Row: {
+          created_at: string
+          episode_id: string | null
+          id: string
+          manifest: Json | null
+          pack_type: string
+          series_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          episode_id?: string | null
+          id?: string
+          manifest?: Json | null
+          pack_type?: string
+          series_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          episode_id?: string | null
+          id?: string
+          manifest?: Json | null
+          pack_type?: string
+          series_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_packs_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_packs_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audio_analysis: {
         Row: {
           beats_json: Json | null
@@ -55,6 +374,412 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: true
             referencedRelation: "projects_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_logs: {
+        Row: {
+          action: string
+          correlation_id: string | null
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          ip_address: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          correlation_id?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          ip_address?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          correlation_id?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      bibles: {
+        Row: {
+          content: Json
+          created_at: string
+          id: string
+          name: string
+          series_id: string
+          type: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          content?: Json
+          created_at?: string
+          id?: string
+          name: string
+          series_id: string
+          type?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          id?: string
+          name?: string
+          series_id?: string
+          type?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bibles_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_safety_flags: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          episode_id: string
+          id: string
+          resolved: boolean
+          severity: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description: string
+          episode_id: string
+          id?: string
+          resolved?: boolean
+          severity?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          episode_id?: string
+          id?: string
+          resolved?: boolean
+          severity?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_safety_flags_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      character_profiles: {
+        Row: {
+          arc: string | null
+          backstory: string | null
+          created_at: string
+          id: string
+          name: string
+          personality: string | null
+          relationships: Json | null
+          series_id: string
+          updated_at: string
+          visual_description: string | null
+          voice_notes: string | null
+          wardrobe: string | null
+        }
+        Insert: {
+          arc?: string | null
+          backstory?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          personality?: string | null
+          relationships?: Json | null
+          series_id: string
+          updated_at?: string
+          visual_description?: string | null
+          voice_notes?: string | null
+          wardrobe?: string | null
+        }
+        Update: {
+          arc?: string | null
+          backstory?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          personality?: string | null
+          relationships?: Json | null
+          series_id?: string
+          updated_at?: string
+          visual_description?: string | null
+          voice_notes?: string | null
+          wardrobe?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_profiles_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      character_reference_packs: {
+        Row: {
+          character_id: string
+          created_at: string
+          id: string
+          image_urls: Json | null
+          source: string | null
+        }
+        Insert: {
+          character_id: string
+          created_at?: string
+          id?: string
+          image_urls?: Json | null
+          source?: string | null
+        }
+        Update: {
+          character_id?: string
+          created_at?: string
+          id?: string
+          image_urls?: Json | null
+          source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_reference_packs_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "character_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      continuity_conflicts: {
+        Row: {
+          conflict_type: string
+          created_at: string
+          description: string
+          episode_id: string | null
+          id: string
+          resolved: boolean
+          series_id: string
+          severity: string
+        }
+        Insert: {
+          conflict_type?: string
+          created_at?: string
+          description: string
+          episode_id?: string | null
+          id?: string
+          resolved?: boolean
+          series_id: string
+          severity?: string
+        }
+        Update: {
+          conflict_type?: string
+          created_at?: string
+          description?: string
+          episode_id?: string | null
+          id?: string
+          resolved?: boolean
+          series_id?: string
+          severity?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "continuity_conflicts_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "continuity_conflicts_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      continuity_memory_edges: {
+        Row: {
+          created_at: string
+          edge_type: string
+          id: string
+          properties: Json | null
+          series_id: string
+          source_node_id: string
+          target_node_id: string
+        }
+        Insert: {
+          created_at?: string
+          edge_type?: string
+          id?: string
+          properties?: Json | null
+          series_id: string
+          source_node_id: string
+          target_node_id: string
+        }
+        Update: {
+          created_at?: string
+          edge_type?: string
+          id?: string
+          properties?: Json | null
+          series_id?: string
+          source_node_id?: string
+          target_node_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "continuity_memory_edges_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "series"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "continuity_memory_edges_source_node_id_fkey"
+            columns: ["source_node_id"]
+            isOneToOne: false
+            referencedRelation: "continuity_memory_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "continuity_memory_edges_target_node_id_fkey"
+            columns: ["target_node_id"]
+            isOneToOne: false
+            referencedRelation: "continuity_memory_nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      continuity_memory_nodes: {
+        Row: {
+          created_at: string
+          first_appearance_episode: string | null
+          id: string
+          is_active: boolean
+          label: string
+          last_updated_episode: string | null
+          node_type: string
+          properties: Json | null
+          series_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          first_appearance_episode?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          last_updated_episode?: string | null
+          node_type?: string
+          properties?: Json | null
+          series_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          first_appearance_episode?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          last_updated_episode?: string | null
+          node_type?: string
+          properties?: Json | null
+          series_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "continuity_memory_nodes_first_appearance_episode_fkey"
+            columns: ["first_appearance_episode"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "continuity_memory_nodes_last_updated_episode_fkey"
+            columns: ["last_updated_episode"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "continuity_memory_nodes_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      continuity_reports: {
+        Row: {
+          agent_run_id: string | null
+          created_at: string
+          episode_id: string
+          id: string
+          issues: Json | null
+          summary: string | null
+          verdict: string
+        }
+        Insert: {
+          agent_run_id?: string | null
+          created_at?: string
+          episode_id: string
+          id?: string
+          issues?: Json | null
+          summary?: string | null
+          verdict?: string
+        }
+        Update: {
+          agent_run_id?: string | null
+          created_at?: string
+          episode_id?: string
+          id?: string
+          issues?: Json | null
+          summary?: string | null
+          verdict?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "continuity_reports_agent_run_id_fkey"
+            columns: ["agent_run_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "continuity_reports_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
             referencedColumns: ["id"]
           },
         ]
@@ -107,10 +832,182 @@ export type Database = {
         }
         Relationships: []
       }
+      delivery_manifests: {
+        Row: {
+          created_at: string
+          episode_id: string | null
+          id: string
+          manifest_type: string
+          metadata: Json | null
+          series_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          episode_id?: string | null
+          id?: string
+          manifest_type?: string
+          metadata?: Json | null
+          series_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          episode_id?: string | null
+          id?: string
+          manifest_type?: string
+          metadata?: Json | null
+          series_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_manifests_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_manifests_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      episodes: {
+        Row: {
+          created_at: string
+          id: string
+          number: number
+          project_id: string | null
+          season_id: string
+          status: string
+          synopsis: string | null
+          title: string
+          updated_at: string
+          workflow_run_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          number: number
+          project_id?: string | null
+          season_id: string
+          status?: string
+          synopsis?: string | null
+          title?: string
+          updated_at?: string
+          workflow_run_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          number?: number
+          project_id?: string | null
+          season_id?: string
+          status?: string
+          synopsis?: string | null
+          title?: string
+          updated_at?: string
+          workflow_run_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "episodes_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      export_jobs: {
+        Row: {
+          created_at: string
+          episode_id: string | null
+          format: string
+          id: string
+          metadata: Json | null
+          output_url: string | null
+          series_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          episode_id?: string | null
+          format?: string
+          id?: string
+          metadata?: Json | null
+          output_url?: string | null
+          series_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          episode_id?: string | null
+          format?: string
+          id?: string
+          metadata?: Json | null
+          output_url?: string | null
+          series_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "export_jobs_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "export_jobs_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feature_flags: {
+        Row: {
+          created_at: string
+          description: string | null
+          enabled: boolean
+          id: string
+          key: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          key: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          key?: string
+        }
+        Relationships: []
+      }
       job_queue: {
         Row: {
+          agent_slug: string | null
           completed_at: string | null
           created_at: string
+          episode_id: string | null
           error_message: string | null
           id: string
           max_retries: number | null
@@ -124,8 +1021,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          agent_slug?: string | null
           completed_at?: string | null
           created_at?: string
+          episode_id?: string | null
           error_message?: string | null
           id?: string
           max_retries?: number | null
@@ -139,8 +1038,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          agent_slug?: string | null
           completed_at?: string | null
           created_at?: string
+          episode_id?: string | null
           error_message?: string | null
           id?: string
           max_retries?: number | null
@@ -166,6 +1067,51 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legal_ethics_reviews: {
+        Row: {
+          agent_run_id: string | null
+          created_at: string
+          episode_id: string
+          flags: Json | null
+          id: string
+          recommendations: string | null
+          verdict: string
+        }
+        Insert: {
+          agent_run_id?: string | null
+          created_at?: string
+          episode_id: string
+          flags?: Json | null
+          id?: string
+          recommendations?: string | null
+          verdict?: string
+        }
+        Update: {
+          agent_run_id?: string | null
+          created_at?: string
+          episode_id?: string
+          flags?: Json | null
+          id?: string
+          recommendations?: string | null
+          verdict?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_ethics_reviews_agent_run_id_fkey"
+            columns: ["agent_run_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_ethics_reviews_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
             referencedColumns: ["id"]
           },
         ]
@@ -344,6 +1290,300 @@ export type Database = {
         }
         Relationships: []
       }
+      provider_registry: {
+        Row: {
+          api_base_url: string | null
+          capabilities: Json | null
+          cost_per_second: number | null
+          created_at: string
+          id: string
+          is_active: boolean
+          max_duration_sec: number | null
+          name: string
+          provider_type: string
+          updated_at: string
+        }
+        Insert: {
+          api_base_url?: string | null
+          capabilities?: Json | null
+          cost_per_second?: number | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_duration_sec?: number | null
+          name: string
+          provider_type?: string
+          updated_at?: string
+        }
+        Update: {
+          api_base_url?: string | null
+          capabilities?: Json | null
+          cost_per_second?: number | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_duration_sec?: number | null
+          name?: string
+          provider_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      psychology_reviews: {
+        Row: {
+          agent_run_id: string | null
+          character_assessments: Json | null
+          created_at: string
+          episode_id: string
+          id: string
+          recommendations: string | null
+          verdict: string
+        }
+        Insert: {
+          agent_run_id?: string | null
+          character_assessments?: Json | null
+          created_at?: string
+          episode_id: string
+          id?: string
+          recommendations?: string | null
+          verdict?: string
+        }
+        Update: {
+          agent_run_id?: string | null
+          character_assessments?: Json | null
+          created_at?: string
+          episode_id?: string
+          id?: string
+          recommendations?: string | null
+          verdict?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "psychology_reviews_agent_run_id_fkey"
+            columns: ["agent_run_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "psychology_reviews_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qc_reports: {
+        Row: {
+          blocking_issues: Json | null
+          checked_by: string | null
+          checks: Json | null
+          created_at: string
+          delivery_manifest_id: string | null
+          episode_id: string | null
+          id: string
+          overall_verdict: string
+          score: number | null
+          warnings: Json | null
+        }
+        Insert: {
+          blocking_issues?: Json | null
+          checked_by?: string | null
+          checks?: Json | null
+          created_at?: string
+          delivery_manifest_id?: string | null
+          episode_id?: string | null
+          id?: string
+          overall_verdict?: string
+          score?: number | null
+          warnings?: Json | null
+        }
+        Update: {
+          blocking_issues?: Json | null
+          checked_by?: string | null
+          checks?: Json | null
+          created_at?: string
+          delivery_manifest_id?: string | null
+          episode_id?: string | null
+          id?: string
+          overall_verdict?: string
+          score?: number | null
+          warnings?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qc_reports_delivery_manifest_id_fkey"
+            columns: ["delivery_manifest_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_manifests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qc_reports_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      redaction_profiles: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          series_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          series_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          series_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "redaction_profiles_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      redaction_reports: {
+        Row: {
+          created_at: string
+          findings: Json | null
+          id: string
+          redaction_run_id: string
+          summary: string | null
+          verdict: string
+        }
+        Insert: {
+          created_at?: string
+          findings?: Json | null
+          id?: string
+          redaction_run_id: string
+          summary?: string | null
+          verdict?: string
+        }
+        Update: {
+          created_at?: string
+          findings?: Json | null
+          id?: string
+          redaction_run_id?: string
+          summary?: string | null
+          verdict?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "redaction_reports_redaction_run_id_fkey"
+            columns: ["redaction_run_id"]
+            isOneToOne: false
+            referencedRelation: "redaction_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      redaction_rules: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          pattern: string | null
+          profile_id: string
+          rule_type: string
+        }
+        Insert: {
+          action?: string
+          created_at?: string
+          id?: string
+          pattern?: string | null
+          profile_id: string
+          rule_type: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          pattern?: string | null
+          profile_id?: string
+          rule_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "redaction_rules_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "redaction_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      redaction_runs: {
+        Row: {
+          applied_rules: Json | null
+          completed_at: string | null
+          created_at: string
+          episode_id: string
+          id: string
+          issues_found: number | null
+          issues_resolved: number | null
+          profile_id: string
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          applied_rules?: Json | null
+          completed_at?: string | null
+          created_at?: string
+          episode_id: string
+          id?: string
+          issues_found?: number | null
+          issues_resolved?: number | null
+          profile_id: string
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          applied_rules?: Json | null
+          completed_at?: string | null
+          created_at?: string
+          episode_id?: string
+          id?: string
+          issues_found?: number | null
+          issues_resolved?: number | null
+          profile_id?: string
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "redaction_runs_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "redaction_runs_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "redaction_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       renders: {
         Row: {
           created_at: string
@@ -399,6 +1639,218 @@ export type Database = {
             foreignKeyName: "renders_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: true
+            referencedRelation: "projects_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scenes: {
+        Row: {
+          characters: Json | null
+          created_at: string
+          description: string | null
+          duration_target_sec: number | null
+          episode_id: string
+          id: string
+          idx: number
+          location: string | null
+          mood: string | null
+          time_of_day: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          characters?: Json | null
+          created_at?: string
+          description?: string | null
+          duration_target_sec?: number | null
+          episode_id: string
+          id?: string
+          idx?: number
+          location?: string | null
+          mood?: string | null
+          time_of_day?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          characters?: Json | null
+          created_at?: string
+          description?: string | null
+          duration_target_sec?: number | null
+          episode_id?: string
+          id?: string
+          idx?: number
+          location?: string | null
+          mood?: string | null
+          time_of_day?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scenes_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      script_versions: {
+        Row: {
+          change_summary: string | null
+          content: string
+          created_at: string
+          created_by: string | null
+          id: string
+          script_id: string
+          version: number
+        }
+        Insert: {
+          change_summary?: string | null
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          script_id: string
+          version: number
+        }
+        Update: {
+          change_summary?: string | null
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          script_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "script_versions_script_id_fkey"
+            columns: ["script_id"]
+            isOneToOne: false
+            referencedRelation: "scripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scripts: {
+        Row: {
+          created_at: string
+          current_version: number
+          episode_id: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_version?: number
+          episode_id: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_version?: number
+          episode_id?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scripts_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: true
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seasons: {
+        Row: {
+          arc_summary: string | null
+          created_at: string
+          id: string
+          number: number
+          series_id: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          arc_summary?: string | null
+          created_at?: string
+          id?: string
+          number: number
+          series_id: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          arc_summary?: string | null
+          created_at?: string
+          id?: string
+          number?: number
+          series_id?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seasons_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      series: {
+        Row: {
+          created_at: string
+          genre: string | null
+          id: string
+          logline: string | null
+          project_id: string
+          target_audience: string | null
+          tone: string | null
+          total_seasons: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          genre?: string | null
+          id?: string
+          logline?: string | null
+          project_id: string
+          target_audience?: string | null
+          tone?: string | null
+          total_seasons?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          genre?: string | null
+          id?: string
+          logline?: string | null
+          project_id?: string
+          target_audience?: string | null
+          tone?: string | null
+          total_seasons?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "series_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "series_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects_public"
             referencedColumns: ["id"]
           },
@@ -565,6 +2017,245 @@ export type Database = {
         }
         Relationships: []
       }
+      workflow_approvals: {
+        Row: {
+          created_at: string
+          decided_by_user: string | null
+          decision: string
+          id: string
+          reason: string | null
+          workflow_step_id: string
+        }
+        Insert: {
+          created_at?: string
+          decided_by_user?: string | null
+          decision?: string
+          id?: string
+          reason?: string | null
+          workflow_step_id: string
+        }
+        Update: {
+          created_at?: string
+          decided_by_user?: string | null
+          decision?: string
+          id?: string
+          reason?: string | null
+          workflow_step_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_approvals_workflow_step_id_fkey"
+            columns: ["workflow_step_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_confidence_scores: {
+        Row: {
+          agent_run_id: string | null
+          created_at: string
+          details: Json | null
+          dimension: string
+          episode_id: string | null
+          id: string
+          score: number
+          workflow_step_id: string | null
+        }
+        Insert: {
+          agent_run_id?: string | null
+          created_at?: string
+          details?: Json | null
+          dimension: string
+          episode_id?: string | null
+          id?: string
+          score?: number
+          workflow_step_id?: string | null
+        }
+        Update: {
+          agent_run_id?: string | null
+          created_at?: string
+          details?: Json | null
+          dimension?: string
+          episode_id?: string | null
+          id?: string
+          score?: number
+          workflow_step_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_confidence_scores_agent_run_id_fkey"
+            columns: ["agent_run_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_confidence_scores_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_confidence_scores_workflow_step_id_fkey"
+            columns: ["workflow_step_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_runs: {
+        Row: {
+          completed_at: string | null
+          correlation_id: string | null
+          created_at: string
+          current_step_key: string | null
+          episode_id: string
+          error_message: string | null
+          id: string
+          idempotency_key: string | null
+          series_id: string | null
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          correlation_id?: string | null
+          created_at?: string
+          current_step_key?: string | null
+          episode_id: string
+          error_message?: string | null
+          id?: string
+          idempotency_key?: string | null
+          series_id?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          correlation_id?: string | null
+          created_at?: string
+          current_step_key?: string | null
+          episode_id?: string
+          error_message?: string | null
+          id?: string
+          idempotency_key?: string | null
+          series_id?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_runs_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_runs_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_step_runs: {
+        Row: {
+          agent_run_id: string
+          created_at: string
+          id: string
+          workflow_step_id: string
+        }
+        Insert: {
+          agent_run_id: string
+          created_at?: string
+          id?: string
+          workflow_step_id: string
+        }
+        Update: {
+          agent_run_id?: string
+          created_at?: string
+          id?: string
+          workflow_step_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_step_runs_agent_run_id_fkey"
+            columns: ["agent_run_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_step_runs_workflow_step_id_fkey"
+            columns: ["workflow_step_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_steps: {
+        Row: {
+          agents: string[] | null
+          auto_advance_threshold: number | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          label: string | null
+          requires_approval: boolean | null
+          started_at: string | null
+          status: string
+          step_key: string
+          step_order: number
+          workflow_run_id: string
+        }
+        Insert: {
+          agents?: string[] | null
+          auto_advance_threshold?: number | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          label?: string | null
+          requires_approval?: boolean | null
+          started_at?: string | null
+          status?: string
+          step_key: string
+          step_order?: number
+          workflow_run_id: string
+        }
+        Update: {
+          agents?: string[] | null
+          auto_advance_threshold?: number | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          label?: string | null
+          requires_approval?: boolean | null
+          started_at?: string | null
+          status?: string
+          step_key?: string
+          step_order?: number
+          workflow_run_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_steps_workflow_run_id_fkey"
+            columns: ["workflow_run_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       projects_public: {
@@ -620,6 +2311,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      user_owns_series: { Args: { p_series_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
@@ -639,7 +2331,7 @@ export type Database = {
         | "completed"
         | "failed"
         | "cancelled"
-      project_type: "clip" | "film"
+      project_type: "clip" | "film" | "series"
       render_status: "pending" | "processing" | "completed" | "failed"
       shot_status:
         | "pending"
@@ -787,7 +2479,7 @@ export const Constants = {
         "failed",
         "cancelled",
       ],
-      project_type: ["clip", "film"],
+      project_type: ["clip", "film", "series"],
       render_status: ["pending", "processing", "completed", "failed"],
       shot_status: [
         "pending",
