@@ -327,13 +327,13 @@ export default function Admin() {
         {/* Series Studio Admin Links */}
         <div className="flex flex-wrap gap-2 mb-4">
           <Button variant="outline" size="sm" asChild>
-            <a href="/admin/agents">Agents IA</a>
+            <Link to="/admin/agents">Agents IA</Link>
           </Button>
           <Button variant="outline" size="sm" asChild>
-            <a href="/admin/providers">Fournisseurs</a>
+            <Link to="/admin/providers">Fournisseurs</Link>
           </Button>
           <Button variant="outline" size="sm" asChild>
-            <a href="/admin/audit">Journal d'audit</a>
+            <Link to="/admin/audit">Journal d'audit</Link>
           </Button>
         </div>
 
