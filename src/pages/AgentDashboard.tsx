@@ -73,7 +73,7 @@ export default function AgentDashboard() {
           <CardContent>
             <div className="grid gap-2 sm:grid-cols-2">
               {agents?.map((agent) => (
-                <div key={agent.id} className="flex items-center justify-between p-2 border rounded">
+                <div key={agent.slug} className="flex items-center justify-between p-2 border rounded">
                   <div>
                     <span className="font-medium text-sm">{agent.name}</span>
                     <span className="text-xs text-muted-foreground ml-2">{agent.category}</span>
