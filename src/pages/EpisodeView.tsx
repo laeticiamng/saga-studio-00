@@ -2,14 +2,16 @@ import { useParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEpisode } from "@/hooks/useEpisodes";
 import { useScript } from "@/hooks/useScripts";
 import { useAgentRuns } from "@/hooks/useAgentRuns";
+import { usePsychologyReviews, useLegalEthicsReviews, useContinuityReports } from "@/hooks/useReviews";
 import { EpisodePipeline } from "@/components/series/EpisodePipeline";
 import { SceneBreakdown } from "@/components/series/SceneBreakdown";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { Loader2, FileText, Layers, Play, Activity, Shield } from "lucide-react";
+import { Loader2, FileText, Layers, Play, Activity, Shield, Brain, Scale, Eye, CheckCircle, AlertTriangle } from "lucide-react";
 
 export default function EpisodeView() {
   const { episodeId } = useParams<{ episodeId: string }>();
