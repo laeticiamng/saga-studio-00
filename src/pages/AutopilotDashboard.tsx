@@ -41,10 +41,18 @@ function useSeriesEpisodes(seriesId: string | undefined) {
     queryKey: ["series_episodes", seriesId],
     enabled: !!seriesId,
     queryFn: async () => {
+      // Episodes don't have series_id — go through seasons
+      const { data: seasons, error: sErr } = await (supabase as any)
+        .from("seasons")
+        .select("id")
+        .eq("series_id", seriesId!);
+      if (sErr) throw sErr;
+      if (!seasons || seasons.length === 0) return [];
+      const seasonIds = seasons.map((s: any) => s.id);
       const { data, error } = await (supabase as any)
         .from("episodes")
         .select("*")
-        .eq("series_id", seriesId!)
+        .in("season_id", seasonIds)
         .order("number", { ascending: true });
       if (error) throw error;
       return data as any[];
@@ -112,7 +120,9 @@ export default function AutopilotDashboard() {
   };
 
   return (
-    <div className="container mx-auto py-8 max-w-6xl">
+    <div className="min-h-screen bg-background flex flex-col">
+      <Navbar />
+      <main className="flex-1 container mx-auto py-8 max-w-6xl">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold flex items-center gap-2">
           <Zap className="h-8 w-8" /> Autopilot
