@@ -70,7 +70,24 @@ export default function Dashboard() {
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+
+      // For series projects, fetch associated series IDs
+      const seriesProjects = data?.filter(p => p.type === "series") || [];
+      let seriesMap: Record<string, string> = {};
+      if (seriesProjects.length > 0) {
+        const { data: seriesData } = await (supabase as any)
+          .from("series")
+          .select("id, project_id")
+          .in("project_id", seriesProjects.map(p => p.id));
+        if (seriesData) {
+          seriesData.forEach((s: any) => { seriesMap[s.project_id] = s.id; });
+        }
+      }
+
+      return (data || []).map(p => ({
+        ...p,
+        _seriesId: seriesMap[p.id] || null,
+      }));
     },
     enabled: !!user,
   });
