@@ -17,7 +17,7 @@ export function useFeatureFlag(key: string): boolean {
           .eq("key", key)
           .maybeSingle();
         if (error) return false;
-        return data?.enabled ?? false;
+        return (data as any)?.enabled ?? false;
       } catch {
         return false;
       }
