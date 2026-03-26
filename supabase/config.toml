@@ -86,3 +86,27 @@ verify_jwt = false
 
 [functions.import-document]
 verify_jwt = false
+
+[functions.autopilot-run]
+verify_jwt = false
+
+[functions.approval-evaluate]
+verify_jwt = false
+
+[functions.continuity-check]
+verify_jwt = false
+
+[functions.delivery-qc]
+verify_jwt = false
+
+[functions.redaction-pass]
+verify_jwt = false
+
+[functions.workflow-pause]
+verify_jwt = false
+
+[functions.workflow-resume]
+verify_jwt = false
+
+[functions.workflow-cancel-safe]
+verify_jwt = false
