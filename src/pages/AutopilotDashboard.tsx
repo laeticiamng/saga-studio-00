@@ -1,4 +1,6 @@
 import { useParams } from "react-router-dom";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useEpisodes } from "@/hooks/useEpisodes";
 import { useWorkflowRun, useWorkflowSteps, useConfidenceScores, useStartAutopilot, usePauseWorkflow, useResumeWorkflow, useCancelWorkflow } from "@/hooks/useWorkflow";
