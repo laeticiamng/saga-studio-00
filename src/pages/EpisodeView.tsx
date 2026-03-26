@@ -144,10 +144,88 @@ export default function EpisodeView() {
             )}
           </TabsContent>
 
-          <TabsContent value="reviews">
-            <p className="text-sm text-muted-foreground py-4 text-center">
-              Les revues (psychologie, juridique, continuité) apparaîtront ici après les étapes de validation.
-            </p>
+          <TabsContent value="reviews" className="space-y-4">
+            {/* Psychology Reviews */}
+            {psychReviews && psychReviews.length > 0 && (
+              <Card>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Brain className="h-5 w-5" /> Revues psychologiques</CardTitle></CardHeader>
+                <CardContent className="space-y-3">
+                  {psychReviews.map((r: any) => (
+                    <div key={r.id} className="border rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant={r.verdict === "pass" ? "secondary" : "destructive"}>{r.verdict}</Badge>
+                      </div>
+                      {r.recommendations && <p className="text-sm text-muted-foreground">{r.recommendations}</p>}
+                      {r.character_assessments && Array.isArray(r.character_assessments) && r.character_assessments.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {r.character_assessments.map((a: any, i: number) => (
+                            <p key={i} className="text-xs text-muted-foreground">• {a.character || a.name}: {a.assessment || a.note || JSON.stringify(a)}</p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Legal/Ethics Reviews */}
+            {legalReviews && legalReviews.length > 0 && (
+              <Card>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Scale className="h-5 w-5" /> Revues juridiques/éthiques</CardTitle></CardHeader>
+                <CardContent className="space-y-3">
+                  {legalReviews.map((r: any) => (
+                    <div key={r.id} className="border rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant={r.verdict === "pass" ? "secondary" : "destructive"}>{r.verdict}</Badge>
+                      </div>
+                      {r.recommendations && <p className="text-sm text-muted-foreground">{r.recommendations}</p>}
+                      {r.flags && Array.isArray(r.flags) && r.flags.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {r.flags.map((f: any, i: number) => (
+                            <p key={i} className="text-xs flex items-center gap-1">
+                              <AlertTriangle className="h-3 w-3" /> {f.description || f.flag || JSON.stringify(f)}
+                            </p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Continuity Reports */}
+            {continuityReports && continuityReports.length > 0 && (
+              <Card>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Eye className="h-5 w-5" /> Rapports de continuité</CardTitle></CardHeader>
+                <CardContent className="space-y-3">
+                  {continuityReports.map((r: any) => (
+                    <div key={r.id} className="border rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant={r.verdict === "pass" ? "secondary" : "destructive"}>{r.verdict}</Badge>
+                      </div>
+                      {r.summary && <p className="text-sm text-muted-foreground">{r.summary}</p>}
+                      {r.issues && Array.isArray(r.issues) && r.issues.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {r.issues.map((issue: any, i: number) => (
+                            <p key={i} className="text-xs flex items-center gap-1">
+                              <AlertTriangle className="h-3 w-3" /> {issue.description || JSON.stringify(issue)}
+                            </p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {(!psychReviews?.length && !legalReviews?.length && !continuityReports?.length) && (
+              <p className="text-sm text-muted-foreground py-4 text-center">
+                Les revues (psychologie, juridique, continuité) apparaîtront ici après les étapes de validation.
+              </p>
+            )}
           </TabsContent>
         </Tabs>
       </main>
