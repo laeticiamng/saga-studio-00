@@ -5,6 +5,7 @@ import { Sparkles, Video, Zap } from "lucide-react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
 import heroImage from "@/assets/hero-cinema.jpg";
+import HeroDemo from "./HeroDemo";
 
 const Hero = () => {
   const navigate = useNavigate();
@@ -133,6 +134,7 @@ const Hero = () => {
             </div>
           ))}
         </motion.div>
+        <HeroDemo />
       </motion.div>
 
       {/* Bottom fade for section transition */}
