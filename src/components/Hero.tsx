@@ -79,7 +79,7 @@ const Hero = () => {
         >
           <Sparkles className="w-4 h-4 text-primary" />
           <span className="text-sm text-muted-foreground">
-            Votre premier clip offert — Aucune carte bancaire requise
+            Votre première vidéo offerte — Aucune carte bancaire requise
           </span>
         </motion.div>
 
@@ -113,7 +113,7 @@ const Hero = () => {
         >
           <Button variant="hero" size="lg" className="group" onClick={handleGetStarted}>
             <Video className="w-5 h-5 group-hover:scale-110 transition-transform" />
-            Essai gratuit — Créer ma vidéo
+            Essai gratuit — Créer mon projet
           </Button>
           <Button variant="glass" size="lg" onClick={() => navigate("/pricing")}>
             <Zap className="w-5 h-5" />
@@ -127,7 +127,7 @@ const Hero = () => {
           transition={{ duration: 0.8, delay: 0.7 }}
           className="mt-10 sm:mt-16 flex flex-wrap justify-center gap-4 sm:gap-8 text-xs sm:text-sm text-muted-foreground"
         >
-          {["Qualité HD et 4K", "13 styles visuels au choix", "Vidéo prête en ~10 min"].map((t) => (
+          {["Qualité HD et 4K", "Clips, films & séries", "Vidéo prête en ~10 min"].map((t) => (
             <div key={t} className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-primary/80" />
               <span>{t}</span>
