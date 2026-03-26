@@ -166,8 +166,12 @@ export default function Dashboard() {
           </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {projects.map((project) => (
-              <Link key={project.id} to={`/project/${project.id}`}>
+            {projects.map((project) => {
+              const linkTo = project.type === "series" && (project as any)._seriesId
+                ? `/series/${(project as any)._seriesId}`
+                : `/project/${project.id}`;
+              return (
+              <Link key={project.id} to={linkTo}>
                 <Card className="border-border/50 bg-card/60 hover:bg-card/80 transition-all cursor-pointer group h-full">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
