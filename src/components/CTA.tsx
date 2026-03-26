@@ -34,17 +34,17 @@ const CTA = () => {
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.04] backdrop-blur-xl border border-white/[0.08] mb-8 shadow-[0_2px_16px_rgba(0,0,0,0.15)]"
             >
               <Sparkles className="w-4 h-4 text-primary" />
-              <span className="text-sm text-muted-foreground">Gratuit, sans engagement, sans carte bancaire</span>
+              <span className="text-sm text-muted-foreground">Votre première vidéo offerte — sans engagement</span>
             </motion.div>
 
             <h2 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-4 sm:mb-6">
-              Prêt à créer
+              Prêt à donner vie
               <br />
-              <span className="text-primary">votre premier clip ?</span>
+              <span className="text-primary">à votre projet ?</span>
             </h2>
 
             <p className="text-base sm:text-xl text-muted-foreground mb-8 sm:mb-12 px-2">
-              Votre premier clip est offert. Uploadez votre musique, choisissez un style, et recevez votre vidéo en quelques minutes.
+              Clip, court-métrage ou série — décrivez votre vision et laissez l'IA produire votre vidéo en quelques minutes.
             </p>
 
             <motion.div
@@ -61,7 +61,7 @@ const CTA = () => {
                 onClick={() => navigate(user ? "/create/clip" : "/auth?signup")}
               >
                 <Video className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                Essai gratuit — Créer ma vidéo
+                Essai gratuit — Créer mon projet
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Button>
               <Button variant="glass" size="lg" onClick={() => navigate("/pricing")}>
@@ -76,7 +76,7 @@ const CTA = () => {
               transition={{ duration: 0.5, delay: 0.4 }}
               className="text-sm text-muted-foreground mt-8"
             >
-              1 clip complet offert • Sans engagement • Résultat en ~10 minutes
+              1 projet complet offert • Sans engagement • Résultat en ~10 minutes
             </motion.p>
           </div>
         </AnimatedSection>
