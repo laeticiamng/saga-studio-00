@@ -94,6 +94,9 @@ export default function SeriesView() {
               <Link to={`/series/${id}/agents`}><Bot className="h-4 w-4 mr-1" />Agents</Link>
             </Button>
             <Button variant="outline" size="sm" asChild>
+              <Link to={`/series/${id}/documents`}><ClipboardList className="h-4 w-4 mr-1" />Documents</Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
               <Link to={`/series/${id}/bibles`}><BookOpen className="h-4 w-4 mr-1" />Bibles</Link>
             </Button>
             <Button variant="outline" size="sm" asChild>
