@@ -176,7 +176,7 @@ export default function Dashboard() {
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <Badge variant="outline" className="text-xs">
-                        {project.type === "clip" ? <Music className="h-3 w-3 mr-1" /> : <Film className="h-3 w-3 mr-1" />}
+                        {project.type === "series" ? <Tv className="h-3 w-3 mr-1" /> : project.type === "clip" ? <Music className="h-3 w-3 mr-1" /> : <Film className="h-3 w-3 mr-1" />}
                         {typeLabels[project.type] || project.type}
                       </Badge>
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
