@@ -12,9 +12,9 @@ export function useWorkflowRun(episodeId: string | undefined) {
         .eq("episode_id", episodeId!)
         .order("created_at", { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
       if (error) throw error;
-      return data as any;
+      return data as any | null;
     },
   });
 }
