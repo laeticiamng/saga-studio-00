@@ -269,6 +269,8 @@ export default function AutopilotDashboard() {
           </CardContent>
         </Card>
       )}
+      </main>
+      <Footer />
     </div>
   );
 }
