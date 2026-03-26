@@ -49,6 +49,7 @@ const AutopilotDashboard = lazy(() => import("./pages/AutopilotDashboard"));
 const ApprovalInbox = lazy(() => import("./pages/ApprovalInbox"));
 const ContinuityCenter = lazy(() => import("./pages/ContinuityCenter"));
 const DeliveryCenter = lazy(() => import("./pages/DeliveryCenter"));
+const DocumentsCenter = lazy(() => import("./pages/DocumentsCenter"));
 
 const PageLoader = () => (
   <div className="min-h-screen bg-background flex items-center justify-center">
@@ -99,6 +100,7 @@ const App = () => (
                 <Route path="/series/:id/approvals" element={<ProtectedRoute><ApprovalInbox /></ProtectedRoute>} />
                 <Route path="/series/:id/continuity" element={<ProtectedRoute><ContinuityCenter /></ProtectedRoute>} />
                 <Route path="/series/:id/delivery" element={<ProtectedRoute><DeliveryCenter /></ProtectedRoute>} />
+                <Route path="/series/:id/documents" element={<ProtectedRoute><DocumentsCenter /></ProtectedRoute>} />
                 <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
                 <Route path="/admin/agents" element={<AdminRoute><AdminAgentManager /></AdminRoute>} />
                 <Route path="/admin/providers" element={<AdminRoute><AdminProviderDashboard /></AdminRoute>} />
