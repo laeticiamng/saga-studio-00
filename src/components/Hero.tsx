@@ -89,9 +89,9 @@ const Hero = () => {
           transition={{ duration: 0.7, delay: 0.15 }}
           className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold mb-4 sm:mb-6 bg-gradient-to-r from-foreground via-foreground/90 to-foreground/60 bg-clip-text text-transparent"
         >
-          Transformez votre musique
+          Transformez vos idées
           <br />
-          <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">en clip vidéo avec l'IA</span>
+          <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">en films, séries ou vidéo avec l'IA</span>
         </motion.h1>
 
         <motion.p
@@ -100,7 +100,7 @@ const Hero = () => {
           transition={{ duration: 0.7, delay: 0.3 }}
           className="text-base sm:text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-8 sm:mb-12 px-2"
         >
-          Uploadez votre musique, choisissez un style visuel, et recevez une vidéo complète de 1 à 5 minutes.
+          Du clip musical au long-métrage, décrivez votre vision et recevez une vidéo complète.
           <br className="hidden md:block" />
           <span className="text-foreground/80">Aucune compétence en montage requise.</span>
         </motion.p>
