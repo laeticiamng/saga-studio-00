@@ -1,4 +1,6 @@
 import { useParams } from "react-router-dom";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useDeliveryManifests, useQCReports, useExportJobs } from "@/hooks/useContinuity";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,7 +53,9 @@ export default function DeliveryCenter() {
   };
 
   return (
-    <div className="container mx-auto py-8 max-w-6xl">
+    <div className="min-h-screen bg-background flex flex-col">
+      <Navbar />
+      <main className="flex-1 container mx-auto py-8 max-w-6xl">
       <h1 className="text-3xl font-bold flex items-center gap-2 mb-6">
         <Package className="h-8 w-8" /> Centre de livraison
       </h1>
@@ -217,6 +221,8 @@ export default function DeliveryCenter() {
           )}
         </TabsContent>
       </Tabs>
+      </main>
+      <Footer />
     </div>
   );
 }

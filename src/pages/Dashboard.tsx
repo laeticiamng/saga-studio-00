@@ -70,7 +70,24 @@ export default function Dashboard() {
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+
+      // For series projects, fetch associated series IDs
+      const seriesProjects = data?.filter(p => p.type === "series") || [];
+      let seriesMap: Record<string, string> = {};
+      if (seriesProjects.length > 0) {
+        const { data: seriesData } = await (supabase as any)
+          .from("series")
+          .select("id, project_id")
+          .in("project_id", seriesProjects.map(p => p.id));
+        if (seriesData) {
+          seriesData.forEach((s: any) => { seriesMap[s.project_id] = s.id; });
+        }
+      }
+
+      return (data || []).map(p => ({
+        ...p,
+        _seriesId: seriesMap[p.id] || null,
+      }));
     },
     enabled: !!user,
   });
@@ -149,13 +166,17 @@ export default function Dashboard() {
           </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {projects.map((project) => (
-              <Link key={project.id} to={`/project/${project.id}`}>
+            {projects.map((project) => {
+              const linkTo = project.type === "series" && (project as any)._seriesId
+                ? `/series/${(project as any)._seriesId}`
+                : `/project/${project.id}`;
+              return (
+              <Link key={project.id} to={linkTo}>
                 <Card className="border-border/50 bg-card/60 hover:bg-card/80 transition-all cursor-pointer group h-full">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <Badge variant="outline" className="text-xs">
-                        {project.type === "clip" ? <Music className="h-3 w-3 mr-1" /> : <Film className="h-3 w-3 mr-1" />}
+                        {project.type === "series" ? <Tv className="h-3 w-3 mr-1" /> : project.type === "clip" ? <Music className="h-3 w-3 mr-1" /> : <Film className="h-3 w-3 mr-1" />}
                         {typeLabels[project.type] || project.type}
                       </Badge>
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -175,7 +196,8 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
               </Link>
-            ))}
+              );
+            })}
           </div>
         )}
       </main>
