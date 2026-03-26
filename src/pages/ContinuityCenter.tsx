@@ -1,4 +1,6 @@
 import { useParams } from "react-router-dom";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useContinuityNodes, useContinuityEdges, useContinuityConflicts } from "@/hooks/useContinuity";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,7 +40,9 @@ export default function ContinuityCenter() {
   });
 
   return (
-    <div className="container mx-auto py-8 max-w-6xl">
+    <div className="min-h-screen bg-background flex flex-col">
+      <Navbar />
+      <main className="flex-1 container mx-auto py-8 max-w-6xl">
       <h1 className="text-3xl font-bold flex items-center gap-2 mb-6">
         <Network className="h-8 w-8" /> Centre de continuité
       </h1>

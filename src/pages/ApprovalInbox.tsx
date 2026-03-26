@@ -1,4 +1,6 @@
 import { useParams } from "react-router-dom";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useApprovalSteps } from "@/hooks/useApprovals";
 import { useApprovalEvaluate } from "@/hooks/useWorkflow";
@@ -59,7 +61,9 @@ export default function ApprovalInbox() {
   };
 
   return (
-    <div className="container mx-auto py-8 max-w-4xl">
+    <div className="min-h-screen bg-background flex flex-col">
+      <Navbar />
+      <main className="flex-1 container mx-auto py-8 max-w-4xl">
       <h1 className="text-3xl font-bold flex items-center gap-2 mb-6">
         <Shield className="h-8 w-8" /> Boîte d'approbation
       </h1>
