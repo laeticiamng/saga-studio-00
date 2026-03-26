@@ -50,19 +50,19 @@ const Hero = () => {
       <motion.div
         animate={{ scale: [1, 1.12, 1], opacity: [0.12, 0.22, 0.12] }}
         transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-1/4 left-1/2 -translate-x-1/2 w-72 sm:w-[28rem] h-72 sm:h-[28rem] rounded-full blur-[100px]"
+        className="absolute top-1/4 left-1/2 -translate-x-1/2 w-72 sm:w-[28rem] h-72 sm:h-[28rem] rounded-full blur-[100px] motion-reduce:hidden"
         style={{ background: "hsl(35 100% 55% / 0.2)" }}
       />
       <motion.div
         animate={{ scale: [1, 1.08, 1], opacity: [0.08, 0.15, 0.08] }}
         transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-        className="absolute top-1/3 left-1/3 -translate-x-1/2 w-48 sm:w-80 h-48 sm:h-80 rounded-full blur-[80px]"
+        className="absolute top-1/3 left-1/3 -translate-x-1/2 w-48 sm:w-80 h-48 sm:h-80 rounded-full blur-[80px] motion-reduce:hidden"
         style={{ background: "hsl(15 100% 50% / 0.15)" }}
       />
       <motion.div
         animate={{ scale: [1, 1.1, 1], opacity: [0.06, 0.12, 0.06] }}
         transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 4 }}
-        className="absolute top-1/2 right-1/4 w-40 sm:w-72 h-40 sm:h-72 rounded-full blur-[100px]"
+        className="absolute top-1/2 right-1/4 w-40 sm:w-72 h-40 sm:h-72 rounded-full blur-[100px] motion-reduce:hidden"
         style={{ background: "hsl(25 95% 53% / 0.12)" }}
       />
 

@@ -15,12 +15,12 @@ const CTA = () => {
       <motion.div
         animate={{ scale: [1, 1.1, 1], opacity: [0.08, 0.16, 0.08] }}
         transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-1/2 left-1/4 w-64 sm:w-96 h-64 sm:h-96 bg-primary/15 rounded-full blur-[100px]"
+        className="absolute top-1/2 left-1/4 w-64 sm:w-96 h-64 sm:h-96 bg-primary/15 rounded-full blur-[100px] motion-reduce:hidden"
       />
       <motion.div
         animate={{ scale: [1.1, 1, 1.1], opacity: [0.08, 0.16, 0.08] }}
         transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 3 }}
-        className="absolute top-1/4 right-1/4 w-64 sm:w-96 h-64 sm:h-96 bg-accent/15 rounded-full blur-[100px]"
+        className="absolute top-1/4 right-1/4 w-64 sm:w-96 h-64 sm:h-96 bg-accent/15 rounded-full blur-[100px] motion-reduce:hidden"
       />
 
       <div className="container mx-auto relative z-10">
