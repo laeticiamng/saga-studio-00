@@ -18,6 +18,9 @@ export default function EpisodeView() {
   const { data: episode, isLoading } = useEpisode(episodeId);
   const { data: script } = useScript(episodeId);
   const { data: agentRuns } = useAgentRuns({ episodeId });
+  const { data: psychReviews } = usePsychologyReviews(episodeId);
+  const { data: legalReviews } = useLegalEthicsReviews(episodeId);
+  const { data: continuityReports } = useContinuityReports(episodeId);
 
   usePageTitle(episode ? `Ép. ${episode.number} — ${episode.title}` : "Épisode");
 
