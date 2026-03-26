@@ -1,5 +1,5 @@
+import { createElement } from "react";
 import { createRoot } from "react-dom/client";
-import App from "./App.tsx";
 import "./index.css";
 
 window.addEventListener("unhandledrejection", (e) => {
@@ -8,9 +8,7 @@ window.addEventListener("unhandledrejection", (e) => {
 
 const rootEl = document.getElementById("root")!;
 
-try {
-  createRoot(rootEl).render(<App />);
-} catch (err) {
+function showFatalError(err: unknown) {
   console.error("[Fatal] App failed to initialize:", err);
   rootEl.innerHTML = `
     <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0d0d0d;color:#f5e6cc;font-family:'Space Grotesk',system-ui,sans-serif;padding:1.5rem;text-align:center">
@@ -21,3 +19,15 @@ try {
     </div>
   `;
 }
+
+// Dynamic import so that module-level errors (e.g. missing Supabase env vars)
+// are caught and the fallback error page is shown instead of a black screen.
+import("./App.tsx")
+  .then(({ default: App }) => {
+    try {
+      createRoot(rootEl).render(createElement(App));
+    } catch (err) {
+      showFatalError(err);
+    }
+  })
+  .catch(showFatalError);
