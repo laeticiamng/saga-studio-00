@@ -1011,6 +1011,56 @@ export type Database = {
         }
         Relationships: []
       }
+      field_provenance: {
+        Row: {
+          created_at: string
+          document_version: number | null
+          extraction_confidence: number | null
+          extraction_date: string | null
+          id: string
+          source_document_id: string | null
+          source_passage: string | null
+          status: string
+          target_field: string
+          target_record_id: string
+          target_table: string
+        }
+        Insert: {
+          created_at?: string
+          document_version?: number | null
+          extraction_confidence?: number | null
+          extraction_date?: string | null
+          id?: string
+          source_document_id?: string | null
+          source_passage?: string | null
+          status?: string
+          target_field: string
+          target_record_id: string
+          target_table: string
+        }
+        Update: {
+          created_at?: string
+          document_version?: number | null
+          extraction_confidence?: number | null
+          extraction_date?: string | null
+          id?: string
+          source_document_id?: string | null
+          source_passage?: string | null
+          status?: string
+          target_field?: string
+          target_record_id?: string
+          target_table?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_provenance_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "source_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_queue: {
         Row: {
           agent_slug: string | null
@@ -1942,6 +1992,290 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      source_document_autofill_runs: {
+        Row: {
+          auto_filled: number | null
+          completed_at: string | null
+          created_at: string
+          document_id: string
+          id: string
+          needs_review: number | null
+          rejected: number | null
+          started_at: string | null
+          status: string
+          total_fields: number | null
+        }
+        Insert: {
+          auto_filled?: number | null
+          completed_at?: string | null
+          created_at?: string
+          document_id: string
+          id?: string
+          needs_review?: number | null
+          rejected?: number | null
+          started_at?: string | null
+          status?: string
+          total_fields?: number | null
+        }
+        Update: {
+          auto_filled?: number | null
+          completed_at?: string | null
+          created_at?: string
+          document_id?: string
+          id?: string
+          needs_review?: number | null
+          rejected?: number | null
+          started_at?: string | null
+          status?: string
+          total_fields?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_document_autofill_runs_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "source_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      source_document_chunks: {
+        Row: {
+          chunk_index: number
+          content: string
+          created_at: string
+          document_id: string
+          id: string
+          metadata: Json | null
+          page_number: number | null
+          section_type: string | null
+        }
+        Insert: {
+          chunk_index?: number
+          content?: string
+          created_at?: string
+          document_id: string
+          id?: string
+          metadata?: Json | null
+          page_number?: number | null
+          section_type?: string | null
+        }
+        Update: {
+          chunk_index?: number
+          content?: string
+          created_at?: string
+          document_id?: string
+          id?: string
+          metadata?: Json | null
+          page_number?: number | null
+          section_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_document_chunks_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "source_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      source_document_entities: {
+        Row: {
+          ambiguity_flag: boolean | null
+          created_at: string
+          document_id: string
+          entity_key: string
+          entity_type: string
+          entity_value: Json
+          extraction_confidence: number
+          id: string
+          mapping_confidence: number | null
+          semantic_confidence: number | null
+          source_chunk_id: string | null
+          source_passage: string | null
+          status: string
+        }
+        Insert: {
+          ambiguity_flag?: boolean | null
+          created_at?: string
+          document_id: string
+          entity_key: string
+          entity_type: string
+          entity_value?: Json
+          extraction_confidence?: number
+          id?: string
+          mapping_confidence?: number | null
+          semantic_confidence?: number | null
+          source_chunk_id?: string | null
+          source_passage?: string | null
+          status?: string
+        }
+        Update: {
+          ambiguity_flag?: boolean | null
+          created_at?: string
+          document_id?: string
+          entity_key?: string
+          entity_type?: string
+          entity_value?: Json
+          extraction_confidence?: number
+          id?: string
+          mapping_confidence?: number | null
+          semantic_confidence?: number | null
+          source_chunk_id?: string | null
+          source_passage?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_document_entities_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "source_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "source_document_entities_source_chunk_id_fkey"
+            columns: ["source_chunk_id"]
+            isOneToOne: false
+            referencedRelation: "source_document_chunks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      source_document_mappings: {
+        Row: {
+          created_at: string
+          current_value: Json | null
+          entity_id: string
+          id: string
+          proposed_value: Json | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          target_field: string
+          target_record_id: string | null
+          target_table: string
+        }
+        Insert: {
+          created_at?: string
+          current_value?: Json | null
+          entity_id: string
+          id?: string
+          proposed_value?: Json | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          target_field: string
+          target_record_id?: string | null
+          target_table: string
+        }
+        Update: {
+          created_at?: string
+          current_value?: Json | null
+          entity_id?: string
+          id?: string
+          proposed_value?: Json | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          target_field?: string
+          target_record_id?: string | null
+          target_table?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_document_mappings_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "source_document_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      source_documents: {
+        Row: {
+          created_at: string
+          extraction_mode: string | null
+          file_name: string
+          file_size_bytes: number | null
+          file_type: string
+          id: string
+          metadata: Json | null
+          parent_document_id: string | null
+          project_id: string | null
+          series_id: string | null
+          status: string
+          storage_path: string | null
+          updated_at: string
+          uploaded_by: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          extraction_mode?: string | null
+          file_name: string
+          file_size_bytes?: number | null
+          file_type?: string
+          id?: string
+          metadata?: Json | null
+          parent_document_id?: string | null
+          project_id?: string | null
+          series_id?: string | null
+          status?: string
+          storage_path?: string | null
+          updated_at?: string
+          uploaded_by: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          extraction_mode?: string | null
+          file_name?: string
+          file_size_bytes?: number | null
+          file_type?: string
+          id?: string
+          metadata?: Json | null
+          parent_document_id?: string | null
+          project_id?: string | null
+          series_id?: string | null
+          status?: string
+          storage_path?: string | null
+          updated_at?: string
+          uploaded_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_documents_parent_document_id_fkey"
+            columns: ["parent_document_id"]
+            isOneToOne: false
+            referencedRelation: "source_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "source_documents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "source_documents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "source_documents_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "series"
             referencedColumns: ["id"]
           },
         ]
