@@ -13,7 +13,7 @@ import Navbar from "@/components/Navbar";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 const Index = () => {
-  usePageTitle("Créez des clips vidéo épiques avec l'IA");
+  usePageTitle("Créez films, séries et vidéos avec l'IA");
   return (
     <div className="min-h-screen">
       <Navbar />
