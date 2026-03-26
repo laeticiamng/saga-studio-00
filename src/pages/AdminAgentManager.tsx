@@ -24,7 +24,7 @@ export default function AdminAgentManager() {
         ) : (
           <div className="space-y-3">
             {agents?.map((agent) => (
-              <Card key={agent.id}>
+              <Card key={agent.slug}>
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
                     <div>

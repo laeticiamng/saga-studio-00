@@ -31,7 +31,7 @@ export default function AdminProviderDashboard() {
         ) : (
           <div className="space-y-3">
             {providers?.map((provider) => (
-              <Card key={provider.id}>
+              <Card key={provider.id || provider.name}>
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     {statusIcons[provider.health_status || "unknown"]}

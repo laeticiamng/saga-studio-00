@@ -85,29 +85,35 @@ export type Database = {
         Row: {
           category: string
           created_at: string
+          dependencies: string[] | null
           description: string | null
           is_active: boolean
           name: string
           role: string | null
           slug: string
+          status: string
         }
         Insert: {
           category?: string
           created_at?: string
+          dependencies?: string[] | null
           description?: string | null
           is_active?: boolean
           name: string
           role?: string | null
           slug: string
+          status?: string
         }
         Update: {
           category?: string
           created_at?: string
+          dependencies?: string[] | null
           description?: string | null
           is_active?: boolean
           name?: string
           role?: string | null
           slug?: string
+          status?: string
         }
         Relationships: []
       }
@@ -931,6 +937,7 @@ export type Database = {
         Row: {
           created_at: string
           episode_id: string | null
+          export_type: string
           format: string
           id: string
           metadata: Json | null
@@ -942,6 +949,7 @@ export type Database = {
         Insert: {
           created_at?: string
           episode_id?: string | null
+          export_type?: string
           format?: string
           id?: string
           metadata?: Json | null
@@ -953,6 +961,7 @@ export type Database = {
         Update: {
           created_at?: string
           episode_id?: string | null
+          export_type?: string
           format?: string
           id?: string
           metadata?: Json | null
@@ -1296,8 +1305,12 @@ export type Database = {
           capabilities: Json | null
           cost_per_second: number | null
           created_at: string
+          display_name: string | null
+          health_checked_at: string | null
+          health_status: string | null
           id: string
           is_active: boolean
+          is_enabled: boolean
           max_duration_sec: number | null
           name: string
           provider_type: string
@@ -1308,8 +1321,12 @@ export type Database = {
           capabilities?: Json | null
           cost_per_second?: number | null
           created_at?: string
+          display_name?: string | null
+          health_checked_at?: string | null
+          health_status?: string | null
           id?: string
           is_active?: boolean
+          is_enabled?: boolean
           max_duration_sec?: number | null
           name: string
           provider_type?: string
@@ -1320,8 +1337,12 @@ export type Database = {
           capabilities?: Json | null
           cost_per_second?: number | null
           created_at?: string
+          display_name?: string | null
+          health_checked_at?: string | null
+          health_status?: string | null
           id?: string
           is_active?: boolean
+          is_enabled?: boolean
           max_duration_sec?: number | null
           name?: string
           provider_type?: string
