@@ -165,6 +165,8 @@ export default function ApprovalInbox() {
           </div>
         </div>
       )}
+      </main>
+      <Footer />
     </div>
   );
 }

@@ -180,6 +180,8 @@ export default function ContinuityCenter() {
           )}
         </TabsContent>
       </Tabs>
+      </main>
+      <Footer />
     </div>
   );
 }

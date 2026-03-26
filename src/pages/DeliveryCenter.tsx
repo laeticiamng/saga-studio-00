@@ -221,6 +221,8 @@ export default function DeliveryCenter() {
           )}
         </TabsContent>
       </Tabs>
+      </main>
+      <Footer />
     </div>
   );
 }
