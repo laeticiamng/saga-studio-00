@@ -5,12 +5,12 @@ export function useProviders() {
   return useQuery({
     queryKey: ["provider_registry"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("provider_registry")
         .select("*")
         .order("name", { ascending: true });
       if (error) throw error;
-      return data as any[];
+      return data;
     },
     staleTime: 60_000,
   });
