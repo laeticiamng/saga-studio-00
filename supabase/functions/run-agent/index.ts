@@ -321,9 +321,15 @@ async function callAI(params: {
     .replace("{{input}}", JSON.stringify(params.input, null, 2))
     .replace("{{context}}", JSON.stringify(params.context, null, 2));
 
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
+
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+    },
     body: JSON.stringify({
       model: "gemini-2.5-flash",
       messages: [
