@@ -101,8 +101,6 @@ export default function AutopilotDashboard() {
     staleTime: 30_000,
   });
 
-  if (!seriesLoading && !series) return <SeriesNotFound />;
-
   useEffect(() => {
     const channel = supabase
       .channel("autopilot-realtime")
@@ -137,6 +135,8 @@ export default function AutopilotDashboard() {
     },
     enabled: !!activeEpisodeId && !workflowRun,
   });
+
+  if (!seriesLoading && !series) return <SeriesNotFound />;
 
   const completedSteps = steps?.filter((s: { status: string }) => s.status === "completed" || s.status === "approved").length || 0;
   const totalSteps = 10;
