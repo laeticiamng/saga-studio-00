@@ -1,7 +1,7 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Film, LogOut, User, LayoutDashboard, CreditCard, Search, Menu, X } from "lucide-react";
+import { Film, LogOut, User, LayoutDashboard, CreditCard, Search, Menu, X, Tv } from "lucide-react";
 import { CreditDisplay } from "@/components/CreditDisplay";
 import CommandPalette from "@/components/CommandPalette";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -102,10 +102,14 @@ export default function Navbar() {
               {user ? (
                 <>
                   <CreditDisplay />
-                  <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="gap-2">
-                    <LayoutDashboard className="h-4 w-4" />
-                    <span className="hidden xl:inline">Mes projets</span>
-                  </Button>
+                   <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="gap-2">
+                     <LayoutDashboard className="h-4 w-4" />
+                     <span className="hidden xl:inline">Mes projets</span>
+                   </Button>
+                   <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard?tab=series")} className="gap-2">
+                     <Tv className="h-4 w-4" />
+                     <span className="hidden xl:inline">Séries</span>
+                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => navigate("/pricing")} className="gap-2">
                     <CreditCard className="h-4 w-4" />
                     <span className="hidden xl:inline">Tarifs</span>
