@@ -38,7 +38,7 @@ export default function CreateFilm() {
   const [aspectRatio, setAspectRatio] = useState("16:9");
   const [loading, setLoading] = useState(false);
   const [enriching, setEnriching] = useState(false);
-  const [enrichedData, setEnrichedData] = useState<{ synopsis?: string; characters?: string[]; visual_notes?: string } | null>(null);
+  const [enrichedData, setEnrichedData] = useState<Record<string, unknown> | null>(null);
   const [estimate, setEstimate] = useState<{ estimated_shots: number; estimated_credits: number } | null>(null);
   const [estimating, setEstimating] = useState(false);
 
