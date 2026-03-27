@@ -6,13 +6,13 @@ export function useScript(episodeId: string | undefined) {
     queryKey: ["script", episodeId],
     queryFn: async () => {
       if (!episodeId) return null;
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("scripts")
         .select("*, versions:script_versions(*)")
         .eq("episode_id", episodeId)
         .single();
       if (error && error.code !== "PGRST116") throw error;
-      return data as any;
+      return data;
     },
     enabled: !!episodeId,
   });
@@ -24,14 +24,14 @@ export function useCreateScriptVersion() {
     mutationFn: async ({ episodeId, content, changeSummary }: {
       episodeId: string; content: string; changeSummary?: string;
     }) => {
-      let { data: script } = await (supabase as any)
+      let { data: script } = await supabase
         .from("scripts")
         .select("id, current_version")
         .eq("episode_id", episodeId)
         .single();
 
       if (!script) {
-        const { data: newScript, error: createError } = await (supabase as any)
+        const { data: newScript, error: createError } = await supabase
           .from("scripts")
           .insert({ episode_id: episodeId, current_version: 1 })
           .select()
@@ -40,22 +40,22 @@ export function useCreateScriptVersion() {
         script = newScript;
       }
 
-      const newVersion = (script.current_version ?? 0) + 1;
-      const { data: version, error: versionError } = await (supabase as any)
+      const newVersion = (script!.current_version ?? 0) + 1;
+      const { data: version, error: versionError } = await supabase
         .from("script_versions")
-        .insert({ script_id: script.id, version: newVersion, content, change_summary: changeSummary })
+        .insert({ script_id: script!.id, version: newVersion, content, change_summary: changeSummary })
         .select()
         .single();
       if (versionError) throw versionError;
 
-      await (supabase as any)
+      await supabase
         .from("scripts")
         .update({ current_version: newVersion })
-        .eq("id", script.id);
+        .eq("id", script!.id);
 
       return version;
     },
-    onSuccess: (_data: any, variables: any) => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["script", variables.episodeId] });
     },
   });
