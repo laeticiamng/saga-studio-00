@@ -64,13 +64,18 @@ serve(async (req) => {
         season:seasons!episodes_season_id_fkey(
           id, series_id,
           series:series!seasons_series_id_fkey(
-            id, project_id
+            id, project_id, episode_duration_min
           )
         )
       `)
       .eq("id", episode_id)
       .single();
     if (epErr || !episode) throw new Error("Episode not found");
+
+    // Duration context for agents — 50 min episode ≈ 25-40 scenes ≈ 300-600 shots
+    const durationTargetMin = episode.duration_target_min || episode.season?.series?.episode_duration_min || 50;
+    const estimatedScenes = Math.ceil(durationTargetMin / 2); // ~2 min per scene avg
+    const estimatedShotsPerScene = Math.ceil((durationTargetMin * 60) / (estimatedScenes * 5)); // 5s per shot
 
     const currentStatus = force_step || episode.status;
     const step = PIPELINE_STEPS[currentStatus];
