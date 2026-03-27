@@ -40,6 +40,7 @@ export default function ProjectView() {
   const queryClient = useQueryClient();
   const [pipelineRunning, setPipelineRunning] = useState(false);
   const [enriching, setEnriching] = useState(false);
+  const [creditsError, setCreditsError] = useState(false);
 
   const { data: project, isLoading } = useQuery({
     queryKey: ["project", id],
