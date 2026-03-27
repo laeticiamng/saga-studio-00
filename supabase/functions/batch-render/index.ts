@@ -6,6 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const BATCH_CHUNK_SIZE = 20; // Process shots in chunks of 20
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -31,7 +33,32 @@ serve(async (req) => {
       throw new Error("episode_ids array required");
     }
 
-    // Create render batch
+    // Calculate total estimated shots for progress tracking
+    let totalEstimatedShots = 0;
+    for (const epId of episode_ids) {
+      const { count } = await supabase
+        .from("episode_shots")
+        .select("id", { count: "exact", head: true })
+        .eq("episode_id", epId);
+      totalEstimatedShots += count || 0;
+    }
+
+    // If no episode_shots yet, estimate from scenes
+    if (totalEstimatedShots === 0) {
+      for (const epId of episode_ids) {
+        const { data: ep } = await supabase
+          .from("episodes")
+          .select("duration_target_min")
+          .eq("id", epId)
+          .single();
+        // 50min episode ≈ 600 shots at 5s each
+        totalEstimatedShots += Math.ceil(((ep?.duration_target_min || 50) * 60) / 5);
+      }
+    }
+
+    // Create render batch with chunking info
+    const totalBatches = Math.ceil(totalEstimatedShots / BATCH_CHUNK_SIZE);
+
     const { data: batch, error: batchErr } = await supabase
       .from("render_batches")
       .insert({
@@ -39,29 +66,60 @@ serve(async (req) => {
         season_id: season_id || null,
         episode_ids,
         status: "processing",
-        progress: { completed: 0, total: episode_ids.length, current: null },
+        progress: {
+          completed: 0,
+          total: episode_ids.length,
+          total_shots: totalEstimatedShots,
+          total_batches: totalBatches,
+          batches_completed: 0,
+          current: null,
+        },
       })
       .select()
       .single();
     if (batchErr) throw batchErr;
 
-    // Trigger stitch-render for each episode (fire-and-forget)
+    // Trigger stitch-render for each episode in sequence
+    // For 50min episodes, shots are processed in chunks
     for (const epId of episode_ids) {
-      // Get the episode's project_id
       const { data: episode } = await supabase
         .from("episodes")
-        .select("project_id")
+        .select("project_id, duration_target_min")
         .eq("id", epId)
         .single();
 
       if (episode?.project_id) {
         supabase.functions.invoke("stitch-render", {
-          body: { project_id: episode.project_id },
+          body: {
+            project_id: episode.project_id,
+            episode_id: epId,
+            batch_id: batch.id,
+            chunk_size: BATCH_CHUNK_SIZE,
+            duration_target_min: episode.duration_target_min || 50,
+          },
         }).catch(() => { /* fire and forget */ });
       }
     }
 
-    return new Response(JSON.stringify({ batch }), {
+    // Audit
+    await supabase.from("audit_logs").insert({
+      user_id: user.id,
+      action: "batch_render_started",
+      entity_type: "render_batch",
+      entity_id: batch.id,
+      details: {
+        series_id,
+        episode_count: episode_ids.length,
+        total_estimated_shots: totalEstimatedShots,
+        total_batches: totalBatches,
+      },
+    });
+
+    return new Response(JSON.stringify({
+      batch,
+      total_estimated_shots: totalEstimatedShots,
+      chunk_size: BATCH_CHUNK_SIZE,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err: unknown) {
