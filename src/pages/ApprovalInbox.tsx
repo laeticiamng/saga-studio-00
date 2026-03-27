@@ -37,11 +37,10 @@ export default function ApprovalInbox() {
   const { id: seriesId } = useParams<{ id: string }>();
   const { data: series, isLoading: seriesLoading } = useSeries(seriesId);
   const [reasons, setReasons] = useState<Record<string, string>>({});
-
-  if (!seriesLoading && !series) return <SeriesNotFound />;
-
   const { data: approvals, isLoading } = useApprovalSteps(undefined);
   const approvalEvaluate = useApprovalEvaluate();
+
+  if (!seriesLoading && !series) return <SeriesNotFound />;
 
   const pendingApprovals = approvals?.filter(a => a.status === "pending") || [];
   const recentDecisions = approvals?.filter(a => a.status !== "pending").slice(0, 20) || [];
