@@ -164,6 +164,14 @@ Retourne un JSON avec:
       });
     }
 
+    // Store continuity report
+    await supabase.from("continuity_reports").insert({
+      episode_id: episode_id,
+      verdict: analysis.verdict || "flag",
+      summary: analysis.summary || null,
+      issues: conflicts,
+    });
+
     // Store confidence score
     await supabase.from("workflow_confidence_scores").insert({
       episode_id: episode_id,
