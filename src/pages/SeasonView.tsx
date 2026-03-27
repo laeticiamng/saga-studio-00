@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import { useState } from "react";
 import Navbar from "@/components/Navbar";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import Footer from "@/components/Footer";
 import { useSeason } from "@/hooks/useSeasons";
 import { useEpisodes, useCreateEpisode } from "@/hooks/useEpisodes";
@@ -32,7 +33,7 @@ export default function SeasonView() {
 
   usePageTitle(season ? `Saison ${season.number}` : "Saison");
 
-  const totalDuration = episodes?.reduce((sum: number, ep: any) => sum + (ep.duration_target_min || 0), 0) || 0;
+  const totalDuration = episodes?.reduce((sum: number, ep: { duration_target_min?: number | null }) => sum + (ep.duration_target_min || 0), 0) || 0;
   const nextNumber = (episodes?.length || 0) + 1;
 
   const handleCreate = async () => {
@@ -70,6 +71,11 @@ export default function SeasonView() {
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
       <main className="flex-1 container max-w-4xl py-8">
+        <Breadcrumbs items={[
+          { label: "Mes projets", href: "/dashboard" },
+          { label: String((series as Record<string, unknown>)?.project ? ((series as Record<string, unknown>).project as Record<string, unknown>)?.title || "Série" : "Série"), href: `/series/${seriesId}` },
+          { label: `Saison ${season?.number || ""}` },
+        ]} />
         <div className="flex items-center justify-between mb-2">
           <h1 className="text-2xl font-bold">
             Saison {season?.number}{season?.title ? ` — ${season.title}` : ""}
@@ -155,7 +161,7 @@ export default function SeasonView() {
 
         <div className="space-y-3">
           {episodes && episodes.length > 0 ? (
-            episodes.map((ep: any) => (
+            episodes.map((ep) => (
               <EpisodeCard key={ep.id} episode={ep} seriesId={seriesId!} />
             ))
           ) : (
