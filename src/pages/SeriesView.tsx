@@ -1,5 +1,6 @@
 import { useParams, Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -45,7 +46,7 @@ export default function SeriesView() {
     );
   }
 
-  const project = series.project as any;
+  const project = series.project as Record<string, unknown> | undefined;
 
   const handleAddSeason = async () => {
     const nextNumber = (seasons?.length ?? 0) + 1;
@@ -60,6 +61,10 @@ export default function SeriesView() {
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
       <main className="flex-1 container max-w-6xl py-8">
+        <Breadcrumbs items={[
+          { label: "Mes projets", href: "/dashboard" },
+          { label: String(project?.title || "Série") },
+        ]} />
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-2">

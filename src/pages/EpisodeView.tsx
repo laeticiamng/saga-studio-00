@@ -1,5 +1,6 @@
 import { useParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import Footer from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,12 +48,16 @@ export default function EpisodeView() {
   }
 
   const currentVersion = script?.versions
-    ?.sort((a: any, b: any) => b.version - a.version)?.[0];
+    ?.sort((a: { version: number }, b: { version: number }) => b.version - a.version)?.[0];
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
       <main className="flex-1 container max-w-5xl py-8">
+        <Breadcrumbs items={[
+          { label: "Mes projets", href: "/dashboard" },
+          { label: `Ép. ${episode.number}` },
+        ]} />
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-2">

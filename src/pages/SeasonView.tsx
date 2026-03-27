@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import { useState } from "react";
 import Navbar from "@/components/Navbar";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import Footer from "@/components/Footer";
 import { useSeason } from "@/hooks/useSeasons";
 import { useEpisodes, useCreateEpisode } from "@/hooks/useEpisodes";
@@ -70,6 +71,11 @@ export default function SeasonView() {
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
       <main className="flex-1 container max-w-4xl py-8">
+        <Breadcrumbs items={[
+          { label: "Mes projets", href: "/dashboard" },
+          { label: (series as Record<string, unknown>)?.project ? String((series as any).project?.title || "Série") : "Série", href: `/series/${seriesId}` },
+          { label: `Saison ${season?.number || ""}` },
+        ]} />
         <div className="flex items-center justify-between mb-2">
           <h1 className="text-2xl font-bold">
             Saison {season?.number}{season?.title ? ` — ${season.title}` : ""}

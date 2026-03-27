@@ -8,6 +8,7 @@ import { logger } from "@/lib/logger";
 export function CreditDisplay() {
   const { user } = useAuth();
 
+  if (!user) return null;
   const { data: balance } = useQuery({
     queryKey: ["credits", user?.id],
     queryFn: async () => {
