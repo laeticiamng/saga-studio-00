@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { SeriesNotFound } from "@/components/SeriesNotFound";
 import Footer from "@/components/Footer";
 import { useSeries } from "@/hooks/useSeries";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -59,7 +60,7 @@ const ENTITY_LABELS: Record<string, string> = {
 export default function DocumentsCenter() {
   usePageTitle("Centre documentaire");
   const { id: seriesId } = useParams<{ id: string }>();
-  const { data: series } = useSeries(seriesId);
+  const { data: series, isLoading: seriesLoading } = useSeries(seriesId);
   const { data: documents, isLoading } = useSourceDocuments(seriesId);
   const uploadDocument = useUploadDocument();
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
@@ -99,6 +100,8 @@ export default function DocumentsCenter() {
       toast.error(err instanceof Error ? err.message : "Erreur d'import");
     }
   };
+
+  if (!seriesLoading && !series) return <SeriesNotFound />;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

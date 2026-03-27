@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { SeriesNotFound } from "@/components/SeriesNotFound";
 import Footer from "@/components/Footer";
 import { useSeries } from "@/hooks/useSeries";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -28,7 +29,9 @@ const SEVERITY_COLORS: Record<string, string> = {
 export default function ContinuityCenter() {
   usePageTitle("Centre de continuité");
   const { id: seriesId } = useParams<{ id: string }>();
-  const { data: series } = useSeries(seriesId);
+  const { data: series, isLoading: seriesLoading } = useSeries(seriesId);
+
+  if (!seriesLoading && !series) return <SeriesNotFound />;
 
   const { data: nodes, isLoading: nodesLoading } = useContinuityNodes(seriesId);
   const { data: edges } = useContinuityEdges(seriesId);

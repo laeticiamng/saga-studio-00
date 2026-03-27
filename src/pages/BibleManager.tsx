@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { SeriesNotFound } from "@/components/SeriesNotFound";
 import Footer from "@/components/Footer";
 import { BibleEditor } from "@/components/series/BibleEditor";
 import { useSeries } from "@/hooks/useSeries";
@@ -23,6 +24,8 @@ export default function BibleManager() {
       </div>
     );
   }
+
+  if (!series) return <SeriesNotFound />;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { SeriesNotFound } from "@/components/SeriesNotFound";
 import Footer from "@/components/Footer";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useWorkflowRun, useWorkflowSteps, useConfidenceScores, useStartAutopilot, usePauseWorkflow, useResumeWorkflow, useCancelWorkflow } from "@/hooks/useWorkflow";
@@ -80,10 +81,12 @@ function useSeriesEpisodes(seriesId: string | undefined) {
 export default function AutopilotDashboard() {
   usePageTitle("Autopilot");
   const { id: seriesId } = useParams<{ id: string }>();
-  const { data: series } = useSeries(seriesId);
+  const { data: series, isLoading: seriesLoading } = useSeries(seriesId);
   const { data: episodes } = useSeriesEpisodes(seriesId);
   const [selectedEpisodeId, setSelectedEpisodeId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+
+  if (!seriesLoading && !series) return <SeriesNotFound />;
 
   useEffect(() => {
     const channel = supabase

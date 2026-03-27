@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { SeriesNotFound } from "@/components/SeriesNotFound";
 import Footer from "@/components/Footer";
 import { useCharacterProfiles } from "@/hooks/useCharacterProfiles";
 import { CharacterProfileCard } from "@/components/series/CharacterProfileCard";
@@ -11,11 +12,11 @@ import { getSeriesProjectTitle } from "@/lib/series-helpers";
 
 export default function CharacterGallery() {
   const { id } = useParams<{ id: string }>();
-  const { data: series } = useSeries(id);
+  const { data: series, isLoading: seriesLoading } = useSeries(id);
   const { data: characters, isLoading } = useCharacterProfiles(id);
   usePageTitle("Personnages");
 
-  if (isLoading) {
+  if (isLoading || seriesLoading) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <Navbar />
@@ -25,6 +26,8 @@ export default function CharacterGallery() {
       </div>
     );
   }
+
+  if (!series) return <SeriesNotFound />;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

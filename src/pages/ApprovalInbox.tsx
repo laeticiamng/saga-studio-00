@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { SeriesNotFound } from "@/components/SeriesNotFound";
 import Footer from "@/components/Footer";
 import { useSeries } from "@/hooks/useSeries";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -34,11 +35,12 @@ const STEP_LABELS: Record<string, string> = {
 export default function ApprovalInbox() {
   usePageTitle("Approbations");
   const { id: seriesId } = useParams<{ id: string }>();
-  const { data: series } = useSeries(seriesId);
+  const { data: series, isLoading: seriesLoading } = useSeries(seriesId);
   const [reasons, setReasons] = useState<Record<string, string>>({});
-
   const { data: approvals, isLoading } = useApprovalSteps(undefined);
   const approvalEvaluate = useApprovalEvaluate();
+
+  if (!seriesLoading && !series) return <SeriesNotFound />;
 
   const pendingApprovals = approvals?.filter(a => a.status === "pending") || [];
   const recentDecisions = approvals?.filter(a => a.status !== "pending").slice(0, 20) || [];

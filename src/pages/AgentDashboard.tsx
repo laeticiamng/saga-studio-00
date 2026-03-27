@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { SeriesNotFound } from "@/components/SeriesNotFound";
 import Footer from "@/components/Footer";
 import { useSeries } from "@/hooks/useSeries";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,10 +13,12 @@ import { getSeriesProjectTitle } from "@/lib/series-helpers";
 
 export default function AgentDashboard() {
   const { id: seriesId } = useParams<{ id: string }>();
-  const { data: series } = useSeries(seriesId);
+  const { data: series, isLoading: seriesLoading } = useSeries(seriesId);
   const { data: agentRuns, isLoading } = useAgentRuns({ seriesId });
   const { data: agents } = useAgentRegistry();
   usePageTitle("Agents");
+
+  if (!seriesLoading && !series) return <SeriesNotFound />;
 
   const stats = {
     total: agentRuns?.length ?? 0,
