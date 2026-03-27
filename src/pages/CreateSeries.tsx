@@ -145,6 +145,20 @@ export default function CreateSeries() {
               </div>
 
               <div className="space-y-2">
+                <Label>Style visuel</Label>
+                <Select value={stylePreset} onValueChange={setStylePreset}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un style" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STYLES.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="audience">Public cible</Label>
                 <Input
                   id="audience"
