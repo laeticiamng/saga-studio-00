@@ -195,7 +195,6 @@ export default function Navbar() {
                      <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.22 }} onClick={() => mobileNav("/dashboard?tab=series")} className="flex items-center gap-3 px-4 py-3.5 rounded-lg hover:bg-muted/50 active:bg-muted/70 transition-colors min-h-[44px]">
                        <Tv className="h-4 w-4 text-primary" /> Séries
                      </motion.button>
-                    </motion.button>
                     <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.25 }} onClick={() => mobileNav("/pricing")} className="flex items-center gap-3 px-4 py-3.5 rounded-lg hover:bg-muted/50 active:bg-muted/70 transition-colors min-h-[44px]">
                       <CreditCard className="h-4 w-4 text-primary" /> Tarifs
                     </motion.button>
