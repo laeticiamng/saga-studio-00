@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Play, Film, RefreshCw, Music, Palette, List, Share2, Eye, ArrowLeft, Clock, Clapperboard, Info, Wand2, Activity } from "lucide-react";
+import { logger } from "@/lib/logger";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -177,7 +178,7 @@ export default function ProjectView() {
         });
       }
     } catch (err: unknown) {
-      console.error("[enhance-synopsis]", err);
+      logger.error("enhance-synopsis", err);
       const message = err instanceof Error ? err.message : "Une erreur inattendue s'est produite";
       toast({ title: "Erreur IA", description: message, variant: "destructive" });
     } finally {

@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import StylePresetPicker from "@/components/StylePresetPicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Upload, Music, ArrowRight, ArrowLeft, Coins, Loader2, Cpu, Sparkles, ImagePlus, Video, X, Check, Palette } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { logger } from "@/lib/logger";
 
 const STEPS = [
   { label: "Médias", shortLabel: "1", description: "Musique & visuels" },
@@ -68,7 +70,7 @@ export default function CreateClip() {
       });
       if (data) setEstimate(data);
     } catch (err: unknown) {
-      console.warn("[CreateClip] Cost estimate failed, using fallback:", err);
+      logger.warn("CreateClip", "Cost estimate failed, using fallback:", err);
     } finally {
       setEstimating(false);
     }
@@ -132,7 +134,7 @@ export default function CreateClip() {
       toast({ title: "🎬 C'est parti !", description: "Votre clip est en cours de création. Suivez l'avancement en temps réel." });
       navigate(`/project/${project.id}`);
 
-      supabase.functions.invoke("pipeline-worker", { body: { project_id: project.id } }).catch(console.error);
+      supabase.functions.invoke("pipeline-worker", { body: { project_id: project.id } }).catch((e: unknown) => logger.error("CreateClip", "pipeline-worker failed", e));
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Une erreur inattendue s'est produite";
       toast({ title: "Erreur", description: message, variant: "destructive" });
@@ -145,6 +147,7 @@ export default function CreateClip() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="container mx-auto max-w-2xl px-4 py-10 md:py-16">
+        <Breadcrumbs items={[{ label: "Nouveau clip" }]} />
         {/* Page Header */}
         <div className="mb-10">
           <h1 className="text-3xl md:text-4xl font-bold mb-3">Générer un clip</h1>

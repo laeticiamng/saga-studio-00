@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import StylePresetPicker from "@/components/StylePresetPicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Film, Coins, Loader2, Cpu, Sparkles, Wand2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { logger } from "@/lib/logger";
 
 const PROVIDER_LABELS: Record<string, string> = {
   auto: "Auto (recommandé)",
@@ -36,7 +38,7 @@ export default function CreateFilm() {
   const [aspectRatio, setAspectRatio] = useState("16:9");
   const [loading, setLoading] = useState(false);
   const [enriching, setEnriching] = useState(false);
-  const [enrichedData, setEnrichedData] = useState<any>(null);
+  const [enrichedData, setEnrichedData] = useState<{ synopsis?: string; characters?: string[]; visual_notes?: string } | null>(null);
   const [estimate, setEstimate] = useState<{ estimated_shots: number; estimated_credits: number } | null>(null);
   const [estimating, setEstimating] = useState(false);
 
@@ -49,7 +51,7 @@ export default function CreateFilm() {
       });
       if (data) setEstimate(data);
     } catch (err: unknown) {
-      console.warn("[CreateFilm] Cost estimate failed, using fallback:", err);
+      logger.warn("CreateFilm", "Cost estimate failed, using fallback:", err);
     } finally {
       setEstimating(false);
     }
@@ -112,7 +114,7 @@ export default function CreateFilm() {
       toast({ title: "🎬 C'est parti !", description: "Votre film est en cours de création. Suivez l'avancement en temps réel." });
       navigate(`/project/${project.id}`);
 
-      supabase.functions.invoke("pipeline-worker", { body: { project_id: project.id } }).catch(console.error);
+      supabase.functions.invoke("pipeline-worker", { body: { project_id: project.id } }).catch((e: unknown) => logger.error("CreateFilm", "pipeline-worker failed", e));
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Une erreur inattendue s'est produite";
       toast({ title: "Erreur", description: message, variant: "destructive" });
@@ -127,6 +129,7 @@ export default function CreateFilm() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="container mx-auto max-w-2xl px-4 py-10 md:py-16">
+        <Breadcrumbs items={[{ label: "Nouveau film" }]} />
         {/* Page Header */}
         <div className="mb-10">
           <h1 className="text-3xl md:text-4xl font-bold mb-3">Générer un film</h1>

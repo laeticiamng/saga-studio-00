@@ -154,9 +154,16 @@ export default function EpisodeView() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground py-4 text-center">
-                Aucune exécution d'agent pour cet épisode.
-              </p>
+              <div className="text-center py-8 space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Aucune exécution d'agent pour cet épisode.
+                </p>
+                {seasonData && (
+                  <p className="text-xs text-muted-foreground">
+                    Lancez l'<a href={`/series/${seasonData.series_id}/autopilot`} className="text-primary hover:underline">Autopilot</a> pour déclencher les agents automatiquement.
+                  </p>
+                )}
+              </div>
             )}
           </TabsContent>
 

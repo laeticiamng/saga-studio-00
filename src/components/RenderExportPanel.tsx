@@ -99,7 +99,7 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
 
       toast({ title: "Vidéo assemblée !", description: "Cliquez sur Télécharger pour récupérer le MP4" });
     } catch (err: unknown) {
-      console.error("Client render error:", err);
+      logger.error("RenderExportPanel", "Client render error:", err);
       const message = err instanceof Error ? err.message : "Une erreur inattendue s'est produite";
       if (message === "Assemblage annulé") {
         setRenderProgress(null);
