@@ -128,14 +128,21 @@ export default function ProjectView() {
   const startPipeline = async () => {
     if (!project || !session) return;
     setPipelineRunning(true);
+    setCreditsError(false);
     try {
       await supabase.from("projects").update({ status: "analyzing" as const }).eq("id", project.id);
       toast({ title: "Pipeline lancé", description: "Traitement de votre projet en cours…" });
       await callEdgeFunction("pipeline-worker", { project_id: project.id });
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Une erreur inattendue s'est produite";
-      toast({ title: "Erreur du pipeline", description: message, variant: "destructive" });
-      await supabase.from("projects").update({ status: "failed" as const }).eq("id", project.id);
+      if (isInsufficientCreditsError(err)) {
+        setCreditsError(true);
+        toast({ title: "Crédits insuffisants", description: "Rechargez vos crédits pour lancer le pipeline.", variant: "destructive" });
+        await supabase.from("projects").update({ status: "draft" as const }).eq("id", project.id);
+      } else {
+        const message = err instanceof Error ? err.message : "Une erreur inattendue s'est produite";
+        toast({ title: "Erreur du pipeline", description: message, variant: "destructive" });
+        await supabase.from("projects").update({ status: "failed" as const }).eq("id", project.id);
+      }
     } finally {
       setPipelineRunning(false);
     }
