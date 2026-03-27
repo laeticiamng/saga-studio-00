@@ -10,6 +10,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminRoute from "@/components/AdminRoute";
 import CookieBanner from "@/components/CookieBanner";
+import { NetworkStatus } from "@/components/NetworkStatus";
 import { Loader2 } from "lucide-react";
 
 // Eager: landing page (critical path)
@@ -75,6 +76,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <AuthProvider>
+            <NetworkStatus />
             <GlobalNotifications />
             <CookieBanner />
             <Suspense fallback={<PageLoader />}>

@@ -224,12 +224,10 @@ export default function ProjectView() {
       <Navbar />
       <main className="container mx-auto max-w-5xl px-4 py-8 md:py-12">
         {/* Breadcrumb */}
-        <button
-          onClick={() => navigate("/dashboard")}
-          className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors group"
-        >
-          <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" /> Retour au tableau de bord
-        </button>
+        <Breadcrumbs items={[
+          { label: "Mes projets", href: "/dashboard" },
+          { label: project.title },
+        ]} />
 
         {/* Project Header */}
         <div className="mb-8">

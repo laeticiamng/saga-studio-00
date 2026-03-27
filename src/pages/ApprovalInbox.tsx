@@ -6,15 +6,14 @@ import { useSeries } from "@/hooks/useSeries";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useApprovalSteps } from "@/hooks/useApprovals";
 import { useApprovalEvaluate } from "@/hooks/useWorkflow";
-import { useConfidenceScores } from "@/hooks/useWorkflow";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { CheckCircle, XCircle, RotateCcw, Shield, Scale, Brain, Eye, Clapperboard } from "lucide-react";
 import { useState } from "react";
+import { getSeriesProjectTitle } from "@/lib/series-helpers";
 
 const STEP_ICONS: Record<string, React.ReactNode> = {
   psychology_review: <Brain className="h-5 w-5" />,
@@ -38,11 +37,9 @@ export default function ApprovalInbox() {
   const { data: series } = useSeries(seriesId);
   const [reasons, setReasons] = useState<Record<string, string>>({});
 
-  // Fetch all pending approvals across episodes for this series
   const { data: approvals, isLoading } = useApprovalSteps(undefined);
   const approvalEvaluate = useApprovalEvaluate();
 
-  // Filter to pending only
   const pendingApprovals = approvals?.filter(a => a.status === "pending") || [];
   const recentDecisions = approvals?.filter(a => a.status !== "pending").slice(0, 20) || [];
 
@@ -69,14 +66,13 @@ export default function ApprovalInbox() {
       <main className="flex-1 container mx-auto py-8 max-w-4xl">
       <Breadcrumbs items={[
         { label: "Mes projets", href: "/dashboard" },
-        { label: String((series?.project as any)?.title || "Série"), href: `/series/${seriesId}` },
+        { label: getSeriesProjectTitle(series), href: `/series/${seriesId}` },
         { label: "Approbations" },
       ]} />
       <h1 className="text-3xl font-bold flex items-center gap-2 mb-6">
         <Shield className="h-8 w-8" /> Boîte d'approbation
       </h1>
 
-      {/* Pending approvals */}
       <div className="mb-8">
         <h2 className="text-xl font-semibold mb-4">
           En attente ({pendingApprovals.length})
@@ -153,7 +149,6 @@ export default function ApprovalInbox() {
         </div>
       </div>
 
-      {/* Recent decisions */}
       {recentDecisions.length > 0 && (
         <div>
           <h2 className="text-xl font-semibold mb-4">Décisions récentes</h2>

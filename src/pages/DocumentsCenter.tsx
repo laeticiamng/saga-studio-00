@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { FileText, Upload, CheckCircle, XCircle, AlertTriangle, Eye, Loader2, FileUp, BookOpen, Users, Tv, MapPin, Music } from "lucide-react";
+import { getSeriesProjectTitle } from "@/lib/series-helpers";
 
 const ENTITY_ICONS: Record<string, React.ReactNode> = {
   character: <Users className="h-4 w-4" />,
@@ -105,7 +106,7 @@ export default function DocumentsCenter() {
       <main className="flex-1 container mx-auto py-8 max-w-6xl">
         <Breadcrumbs items={[
           { label: "Mes projets", href: "/dashboard" },
-          { label: String((series?.project as any)?.title || "Série"), href: `/series/${seriesId}` },
+          { label: getSeriesProjectTitle(series), href: `/series/${seriesId}` },
           { label: "Documents" },
         ]} />
         <h1 className="text-3xl font-bold flex items-center gap-2 mb-6">

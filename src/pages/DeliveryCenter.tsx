@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Package, CheckCircle, XCircle, Download, FileCheck, AlertTriangle } from "lucide-react";
+import { getSeriesProjectTitle } from "@/lib/series-helpers";
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "Brouillon",
@@ -73,7 +74,7 @@ export default function DeliveryCenter() {
       <main className="flex-1 container mx-auto py-8 max-w-6xl">
       <Breadcrumbs items={[
         { label: "Mes projets", href: "/dashboard" },
-        { label: String((series?.project as any)?.title || "Série"), href: `/series/${seriesId}` },
+        { label: getSeriesProjectTitle(series), href: `/series/${seriesId}` },
         { label: "Livraison" },
       ]} />
       <h1 className="text-3xl font-bold flex items-center gap-2 mb-6">
