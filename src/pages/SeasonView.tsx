@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Loader2, Plus, Clock } from "lucide-react";
+import { getSeriesProjectTitle } from "@/lib/series-helpers";
 
 export default function SeasonView() {
   const { id: seriesId, seasonId } = useParams<{ id: string; seasonId: string }>();
@@ -73,7 +74,7 @@ export default function SeasonView() {
       <main className="flex-1 container max-w-4xl py-8">
         <Breadcrumbs items={[
           { label: "Mes projets", href: "/dashboard" },
-          { label: String((series as Record<string, unknown>)?.project ? ((series as Record<string, unknown>).project as Record<string, unknown>)?.title || "Série" : "Série"), href: `/series/${seriesId}` },
+          { label: getSeriesProjectTitle(series), href: `/series/${seriesId}` },
           { label: `Saison ${season?.number || ""}` },
         ]} />
         <div className="flex items-center justify-between mb-2">

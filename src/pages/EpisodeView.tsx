@@ -13,10 +13,14 @@ import { EpisodePipeline } from "@/components/series/EpisodePipeline";
 import { SceneBreakdown } from "@/components/series/SceneBreakdown";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { Loader2, FileText, Layers, Play, Activity, Shield, Brain, Scale, Eye, CheckCircle, AlertTriangle, Clock } from "lucide-react";
+import { useSeries } from "@/hooks/useSeries";
 
 export default function EpisodeView() {
   const { episodeId } = useParams<{ episodeId: string }>();
   const { data: episode, isLoading } = useEpisode(episodeId);
+  const seasonData = episode?.season as { id: string; number: number; title: string | null; series_id: string } | null;
+  const { data: series } = useSeries(seasonData?.series_id);
+  const seriesProject = series?.project as Record<string, unknown> | null;
   const { data: script } = useScript(episodeId);
   const { data: agentRuns } = useAgentRuns({ episodeId });
   const { data: psychReviews } = usePsychologyReviews(episodeId);
@@ -56,9 +60,9 @@ export default function EpisodeView() {
       <main className="flex-1 container max-w-5xl py-8">
         <Breadcrumbs items={[
           { label: "Mes projets", href: "/dashboard" },
-          ...(episode.season ? [
-            { label: String((episode.season as any).series?.title || "Série"), href: `/series/${(episode.season as any).series_id}` },
-            { label: `Saison ${(episode.season as any).number}`, href: `/series/${(episode.season as any).series_id}/season/${(episode.season as any).id}` },
+          ...(seasonData ? [
+            { label: String(seriesProject?.title || "Série"), href: `/series/${seasonData.series_id}` },
+            { label: `Saison ${seasonData.number}`, href: `/series/${seasonData.series_id}/season/${seasonData.id}` },
           ] : []),
           { label: `Ép. ${episode.number} — ${episode.title}` },
         ]} />

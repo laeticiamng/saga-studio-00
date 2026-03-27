@@ -3,7 +3,6 @@ import Navbar from "@/components/Navbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import Footer from "@/components/Footer";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { useEpisodes } from "@/hooks/useEpisodes";
 import { useWorkflowRun, useWorkflowSteps, useConfidenceScores, useStartAutopilot, usePauseWorkflow, useResumeWorkflow, useCancelWorkflow } from "@/hooks/useWorkflow";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +14,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSeries } from "@/hooks/useSeries";
+import { getSeriesProjectTitle } from "@/lib/series-helpers";
 
 const STEP_LABELS: Record<string, string> = {
   story_development: "Développement narratif",
@@ -40,18 +40,31 @@ const STATUS_COLORS: Record<string, string> = {
   skipped: "bg-gray-300",
 };
 
+interface SeriesEpisode {
+  id: string;
+  number: number;
+  title: string;
+  status: string;
+  season_id: string;
+  synopsis: string | null;
+  duration_target_min: number | null;
+  created_at: string;
+  updated_at: string;
+  project_id: string | null;
+  workflow_run_id: string | null;
+}
+
 function useSeriesEpisodes(seriesId: string | undefined) {
   return useQuery({
     queryKey: ["series_episodes", seriesId],
     enabled: !!seriesId,
     queryFn: async () => {
-      // Episodes don't have series_id — go through seasons
       const { data: seasons, error: sErr } = await supabase
         .from("seasons")
         .select("id")
         .eq("series_id", seriesId!);
       if (sErr) throw sErr;
-      if (!seasons || seasons.length === 0) return [];
+      if (!seasons || seasons.length === 0) return [] as SeriesEpisode[];
       const seasonIds = seasons.map((s) => s.id);
       const { data, error } = await supabase
         .from("episodes")
@@ -59,7 +72,7 @@ function useSeriesEpisodes(seriesId: string | undefined) {
         .in("season_id", seasonIds)
         .order("number", { ascending: true });
       if (error) throw error;
-      return data;
+      return data as SeriesEpisode[];
     },
   });
 }
@@ -72,7 +85,6 @@ export default function AutopilotDashboard() {
   const [selectedEpisodeId, setSelectedEpisodeId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  // Realtime: auto-invalidate on workflow_runs / workflow_steps changes
   useEffect(() => {
     const channel = supabase
       .channel("autopilot-realtime")
@@ -87,7 +99,7 @@ export default function AutopilotDashboard() {
   }, [queryClient]);
 
   const activeEpisodeId = selectedEpisodeId || episodes?.[0]?.id;
-  const { data: workflowRun, isLoading: wrLoading } = useWorkflowRun(activeEpisodeId);
+  const { data: workflowRun } = useWorkflowRun(activeEpisodeId);
   const { data: steps } = useWorkflowSteps(workflowRun?.id);
   const { data: confidenceScores } = useConfidenceScores(activeEpisodeId);
 
@@ -95,7 +107,7 @@ export default function AutopilotDashboard() {
   const pauseWorkflow = usePauseWorkflow();
   const resumeWorkflow = useResumeWorkflow();
   const cancelWorkflow = useCancelWorkflow();
-  // Cost estimation
+
   const { data: costEstimate } = useQuery({
     queryKey: ["cost_estimate", activeEpisodeId],
     queryFn: async () => {
@@ -108,7 +120,7 @@ export default function AutopilotDashboard() {
     enabled: !!activeEpisodeId && !workflowRun,
   });
 
-  const completedSteps = steps?.filter((s: any) => s.status === "completed" || s.status === "approved").length || 0;
+  const completedSteps = steps?.filter((s: { status: string }) => s.status === "completed" || s.status === "approved").length || 0;
   const totalSteps = 10;
   const progress = (completedSteps / totalSteps) * 100;
 
@@ -157,7 +169,7 @@ export default function AutopilotDashboard() {
       <main className="flex-1 container mx-auto py-8 max-w-6xl">
       <Breadcrumbs items={[
         { label: "Mes projets", href: "/dashboard" },
-        { label: String((series?.project as any)?.title || "Série"), href: `/series/${seriesId}` },
+        { label: getSeriesProjectTitle(series), href: `/series/${seriesId}` },
         { label: "Autopilot" },
       ]} />
       <div className="flex items-center justify-between mb-6">
@@ -185,7 +197,7 @@ export default function AutopilotDashboard() {
 
       {/* Episode selector */}
       <div className="flex gap-2 mb-6 flex-wrap">
-        {episodes?.map((ep: any) => (
+        {episodes?.map((ep) => (
           <Button
             key={ep.id}
             variant={activeEpisodeId === ep.id ? "default" : "outline"}
@@ -249,9 +261,9 @@ export default function AutopilotDashboard() {
         <CardContent>
           <div className="space-y-3">
             {Object.entries(STEP_LABELS).map(([key, label], idx) => {
-              const step = steps?.find((s: any) => s.step_key === key);
+              const step = steps?.find((s: { step_key: string }) => s.step_key === key);
               const status = step?.status || "pending";
-              const confidence = confidenceScores?.find((s: any) => s.dimension === key || s.dimension?.includes(key));
+              const confidence = confidenceScores?.find((s: { dimension: string }) => s.dimension === key || s.dimension?.includes(key));
 
               return (
                 <div key={key} className="flex items-center gap-3 p-3 rounded-lg border">
@@ -302,7 +314,7 @@ export default function AutopilotDashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {confidenceScores.map((score: any) => (
+              {confidenceScores.map((score: { id: string; dimension: string; score: number }) => (
                 <div key={score.id} className="p-3 border rounded-lg">
                   <p className="text-sm font-medium capitalize">{score.dimension?.replace(/_/g, " ")}</p>
                   <div className="flex items-center gap-2 mt-1">

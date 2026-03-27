@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -12,6 +13,7 @@ import { useCharacterProfiles } from "@/hooks/useCharacterProfiles";
 import { SeasonPanel } from "@/components/series/SeasonPanel";
 import { BibleEditor } from "@/components/series/BibleEditor";
 import { CharacterProfileCard } from "@/components/series/CharacterProfileCard";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { toast } from "sonner";
 import { Loader2, Tv, Plus, Users, BookOpen, Zap, Shield, Network, Package, Bot, ClipboardList, Trash2 } from "lucide-react";
@@ -24,6 +26,7 @@ export default function SeriesView() {
   const { data: characters } = useCharacterProfiles(id);
   const createSeason = useCreateSeason();
   const deleteSeries = useDeleteSeries();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   usePageTitle(series?.project?.title || "Série");
 
@@ -61,10 +64,10 @@ export default function SeriesView() {
   };
 
   const handleDeleteSeries = async () => {
-    if (!confirm("Supprimer cette série et tous ses contenus (saisons, épisodes, etc.) ?")) return;
     try {
       await deleteSeries.mutateAsync(id!);
       toast.success("Série supprimée");
+      setConfirmOpen(false);
       navigate("/dashboard");
     } catch {
       toast.error("Erreur lors de la suppression");
@@ -86,8 +89,15 @@ export default function SeriesView() {
             <h1 className="text-2xl font-bold">{String(project?.title || "Série")}</h1>
             <Badge variant="secondary">{series.genre || "Série"}</Badge>
             {series.tone && <Badge variant="outline">{series.tone}</Badge>}
-            <Button variant="ghost" size="sm" className="ml-auto text-muted-foreground hover:text-destructive" onClick={handleDeleteSeries}>
-              <Trash2 className="h-4 w-4 mr-1" /> Supprimer
+            <Button
+              variant="ghost"
+              size="sm"
+              className="ml-auto text-muted-foreground hover:text-destructive"
+              disabled={deleteSeries.isPending}
+              onClick={() => setConfirmOpen(true)}
+            >
+              {deleteSeries.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Trash2 className="h-4 w-4 mr-1" />}
+              Supprimer
             </Button>
           </div>
           {series.logline && (
@@ -180,6 +190,15 @@ export default function SeriesView() {
         </Tabs>
       </main>
       <Footer />
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Supprimer cette série ?"
+        description="Tous les contenus (saisons, épisodes, bibles, personnages) seront définitivement supprimés."
+        confirmLabel="Supprimer"
+        onConfirm={handleDeleteSeries}
+        isPending={deleteSeries.isPending}
+      />
     </div>
   );
 }

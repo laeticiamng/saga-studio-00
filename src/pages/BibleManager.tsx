@@ -1,10 +1,12 @@
 import { useParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import Footer from "@/components/Footer";
 import { BibleEditor } from "@/components/series/BibleEditor";
 import { useSeries } from "@/hooks/useSeries";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { Loader2 } from "lucide-react";
+import { getSeriesProjectTitle } from "@/lib/series-helpers";
 
 export default function BibleManager() {
   const { id } = useParams<{ id: string }>();
@@ -26,6 +28,11 @@ export default function BibleManager() {
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
       <main className="flex-1 container max-w-4xl py-8">
+        <Breadcrumbs items={[
+          { label: "Mes projets", href: "/dashboard" },
+          { label: getSeriesProjectTitle(series), href: `/series/${id}` },
+          { label: "Bibles" },
+        ]} />
         <h1 className="text-2xl font-bold mb-6">Bibles de la série</h1>
         {id && <BibleEditor seriesId={id} />}
       </main>

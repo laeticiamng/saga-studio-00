@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAgentRuns, useAgentRegistry } from "@/hooks/useAgentRuns";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { Loader2, Activity, Cpu, Clock, Coins } from "lucide-react";
+import { getSeriesProjectTitle } from "@/lib/series-helpers";
 
 export default function AgentDashboard() {
   const { id: seriesId } = useParams<{ id: string }>();
@@ -33,7 +34,7 @@ export default function AgentDashboard() {
       <main className="flex-1 container max-w-5xl py-8">
         <Breadcrumbs items={[
           { label: "Mes projets", href: "/dashboard" },
-          { label: String((series?.project as any)?.title || "Série"), href: `/series/${seriesId}` },
+          { label: getSeriesProjectTitle(series), href: `/series/${seriesId}` },
           { label: "Agents" },
         ]} />
         <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
