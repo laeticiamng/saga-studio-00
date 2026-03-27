@@ -66,8 +66,6 @@ export default function DocumentsCenter() {
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
-  if (!seriesLoading && !series) return <SeriesNotFound />;
-
   const selectedDoc = documents?.find(d => d.id === selectedDocId) || documents?.[0];
 
   const handleDrop = useCallback(async (e: React.DragEvent) => {

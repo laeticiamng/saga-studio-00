@@ -201,26 +201,26 @@ export default function CreateFilm() {
                 {enrichedData.logline && (
                   <div>
                     <span className="text-muted-foreground text-xs">Logline :</span>
-                    <p className="text-foreground italic">{enrichedData.logline}</p>
+                    <p className="text-foreground italic">{String(enrichedData.logline)}</p>
                   </div>
                 )}
-                {enrichedData.characters?.length > 0 && (
+                {Array.isArray(enrichedData.characters) && enrichedData.characters.length > 0 && (
                   <div>
                     <span className="text-muted-foreground text-xs">Personnages :</span>
                     <div className="space-y-1 mt-1">
-                      {enrichedData.characters.map((c: any, i: number) => (
+                      {(enrichedData.characters as Array<Record<string, unknown>>).map((c, i) => (
                         <p key={i} className="text-foreground text-xs">
-                          <span className="font-medium">{c.name}</span> ({c.role}) — {c.want}
+                          <span className="font-medium">{String(c.name)}</span> ({String(c.role)}) — {String(c.want)}
                         </p>
                       ))}
                     </div>
                   </div>
                 )}
-                {enrichedData.ambiance && (
+                {enrichedData.ambiance && typeof enrichedData.ambiance === "object" && (
                   <div>
                     <span className="text-muted-foreground text-xs">Ambiance :</span>
                     <p className="text-foreground text-xs">
-                      {enrichedData.ambiance.mood} · {enrichedData.ambiance.lighting} · Palette : {enrichedData.ambiance.palette?.join(", ")}
+                      {String((enrichedData.ambiance as Record<string, unknown>).mood)} · {String((enrichedData.ambiance as Record<string, unknown>).lighting)} · Palette : {Array.isArray((enrichedData.ambiance as Record<string, unknown>).palette) ? ((enrichedData.ambiance as Record<string, unknown>).palette as string[]).join(", ") : ""}
                     </p>
                   </div>
                 )}
