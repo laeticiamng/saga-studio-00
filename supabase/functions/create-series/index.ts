@@ -120,6 +120,21 @@ serve(async (req) => {
       .single();
     if (seasonErr) throw seasonErr;
 
+    // Create initial episodes with duration targets
+    const episodeInserts = [];
+    for (let i = 1; i <= Math.min(epPerSeason, 50); i++) {
+      episodeInserts.push({
+        season_id: season.id,
+        number: i,
+        title: `Épisode ${i}`,
+        status: "draft",
+        duration_target_min: epDuration,
+      });
+    }
+    if (episodeInserts.length > 0) {
+      await supabase.from("episodes").insert(episodeInserts);
+    }
+
     return new Response(JSON.stringify({ project, series, season }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
