@@ -34,11 +34,17 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Validate JWT
+    // Validate JWT — accept both user tokens and service role key (for internal chaining from run-agent)
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("No authorization header");
-    const { data: { user }, error: authErr } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
-    if (authErr || !user) throw new Error("Unauthorized");
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const token = authHeader?.replace("Bearer ", "");
+    const isServiceRole = token === serviceRoleKey;
+
+    if (!isServiceRole) {
+      if (!authHeader) throw new Error("No authorization header");
+      const { data: { user }, error: authErr } = await supabase.auth.getUser(token!);
+      if (authErr || !user) throw new Error("Unauthorized");
+    }
 
     const body = await req.json();
     const { episode_id, force_step, idempotency_key } = body;

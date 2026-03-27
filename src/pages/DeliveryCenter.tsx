@@ -1,6 +1,8 @@
 import { useParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import Footer from "@/components/Footer";
+import { useSeries } from "@/hooks/useSeries";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useDeliveryManifests, useQCReports, useExportJobs } from "@/hooks/useContinuity";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +26,7 @@ const STATUS_LABELS: Record<string, string> = {
 export default function DeliveryCenter() {
   usePageTitle("Centre de livraison");
   const { id: seriesId } = useParams<{ id: string }>();
+  const { data: series } = useSeries(seriesId);
 
   const { data: manifests, isLoading } = useDeliveryManifests(seriesId);
   const { data: exportJobs } = useExportJobs(seriesId);
@@ -68,6 +71,11 @@ export default function DeliveryCenter() {
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
       <main className="flex-1 container mx-auto py-8 max-w-6xl">
+      <Breadcrumbs items={[
+        { label: "Mes projets", href: "/dashboard" },
+        { label: String((series?.project as any)?.title || "Série"), href: `/series/${seriesId}` },
+        { label: "Livraison" },
+      ]} />
       <h1 className="text-3xl font-bold flex items-center gap-2 mb-6">
         <Package className="h-8 w-8" /> Centre de livraison
       </h1>

@@ -1,6 +1,8 @@
 import { useParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import Footer from "@/components/Footer";
+import { useSeries } from "@/hooks/useSeries";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useContinuityNodes, useContinuityEdges, useContinuityConflicts } from "@/hooks/useContinuity";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +27,7 @@ const SEVERITY_COLORS: Record<string, string> = {
 export default function ContinuityCenter() {
   usePageTitle("Centre de continuité");
   const { id: seriesId } = useParams<{ id: string }>();
+  const { data: series } = useSeries(seriesId);
 
   const { data: nodes, isLoading: nodesLoading } = useContinuityNodes(seriesId);
   const { data: edges } = useContinuityEdges(seriesId);
@@ -43,6 +46,11 @@ export default function ContinuityCenter() {
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
       <main className="flex-1 container mx-auto py-8 max-w-6xl">
+      <Breadcrumbs items={[
+        { label: "Mes projets", href: "/dashboard" },
+        { label: String((series?.project as any)?.title || "Série"), href: `/series/${seriesId}` },
+        { label: "Continuité" },
+      ]} />
       <h1 className="text-3xl font-bold flex items-center gap-2 mb-6">
         <Network className="h-8 w-8" /> Centre de continuité
       </h1>

@@ -1,6 +1,8 @@
 import { useParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import Footer from "@/components/Footer";
+import { useSeries } from "@/hooks/useSeries";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useApprovalSteps } from "@/hooks/useApprovals";
 import { useApprovalEvaluate } from "@/hooks/useWorkflow";
@@ -33,6 +35,7 @@ const STEP_LABELS: Record<string, string> = {
 export default function ApprovalInbox() {
   usePageTitle("Approbations");
   const { id: seriesId } = useParams<{ id: string }>();
+  const { data: series } = useSeries(seriesId);
   const [reasons, setReasons] = useState<Record<string, string>>({});
 
   // Fetch all pending approvals across episodes for this series
@@ -64,6 +67,11 @@ export default function ApprovalInbox() {
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
       <main className="flex-1 container mx-auto py-8 max-w-4xl">
+      <Breadcrumbs items={[
+        { label: "Mes projets", href: "/dashboard" },
+        { label: String((series?.project as any)?.title || "Série"), href: `/series/${seriesId}` },
+        { label: "Approbations" },
+      ]} />
       <h1 className="text-3xl font-bold flex items-center gap-2 mb-6">
         <Shield className="h-8 w-8" /> Boîte d'approbation
       </h1>

@@ -1,6 +1,8 @@
 import { useParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import Footer from "@/components/Footer";
+import { useSeries } from "@/hooks/useSeries";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAgentRuns, useAgentRegistry } from "@/hooks/useAgentRuns";
@@ -9,6 +11,7 @@ import { Loader2, Activity, Cpu, Clock, Coins } from "lucide-react";
 
 export default function AgentDashboard() {
   const { id: seriesId } = useParams<{ id: string }>();
+  const { data: series } = useSeries(seriesId);
   const { data: agentRuns, isLoading } = useAgentRuns({ seriesId });
   const { data: agents } = useAgentRegistry();
   usePageTitle("Agents");
@@ -28,6 +31,11 @@ export default function AgentDashboard() {
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
       <main className="flex-1 container max-w-5xl py-8">
+        <Breadcrumbs items={[
+          { label: "Mes projets", href: "/dashboard" },
+          { label: String((series?.project as any)?.title || "Série"), href: `/series/${seriesId}` },
+          { label: "Agents" },
+        ]} />
         <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
           <Activity className="h-6 w-6" />
           Tableau de bord des agents
