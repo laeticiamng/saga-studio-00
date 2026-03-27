@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import Footer from "@/components/Footer";
@@ -6,21 +6,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useSeries } from "@/hooks/useSeries";
+import { useSeries, useDeleteSeries } from "@/hooks/useSeries";
 import { useSeasons, useCreateSeason } from "@/hooks/useSeasons";
 import { useCharacterProfiles } from "@/hooks/useCharacterProfiles";
 import { SeasonPanel } from "@/components/series/SeasonPanel";
 import { BibleEditor } from "@/components/series/BibleEditor";
 import { CharacterProfileCard } from "@/components/series/CharacterProfileCard";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { Loader2, Tv, Plus, Users, BookOpen, Zap, Shield, Network, Package, Bot, ClipboardList } from "lucide-react";
+import { toast } from "sonner";
+import { Loader2, Tv, Plus, Users, BookOpen, Zap, Shield, Network, Package, Bot, ClipboardList, Trash2 } from "lucide-react";
 
 export default function SeriesView() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { data: series, isLoading } = useSeries(id);
   const { data: seasons } = useSeasons(id);
   const { data: characters } = useCharacterProfiles(id);
   const createSeason = useCreateSeason();
+  const deleteSeries = useDeleteSeries();
 
   usePageTitle(series?.project?.title || "Série");
 
@@ -57,6 +60,17 @@ export default function SeriesView() {
     });
   };
 
+  const handleDeleteSeries = async () => {
+    if (!confirm("Supprimer cette série et tous ses contenus (saisons, épisodes, etc.) ?")) return;
+    try {
+      await deleteSeries.mutateAsync(id!);
+      toast.success("Série supprimée");
+      navigate("/dashboard");
+    } catch {
+      toast.error("Erreur lors de la suppression");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
@@ -72,6 +86,9 @@ export default function SeriesView() {
             <h1 className="text-2xl font-bold">{String(project?.title || "Série")}</h1>
             <Badge variant="secondary">{series.genre || "Série"}</Badge>
             {series.tone && <Badge variant="outline">{series.tone}</Badge>}
+            <Button variant="ghost" size="sm" className="ml-auto text-muted-foreground hover:text-destructive" onClick={handleDeleteSeries}>
+              <Trash2 className="h-4 w-4 mr-1" /> Supprimer
+            </Button>
           </div>
           {series.logline && (
             <p className="text-muted-foreground max-w-2xl">{series.logline}</p>

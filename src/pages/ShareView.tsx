@@ -36,8 +36,9 @@ export default function ShareView() {
   const { data: project } = useQuery({
     queryKey: ["share-project", id],
     queryFn: async () => {
-      const { data } = await supabase.from("projects_public" as any).select("title, type, style_preset, status").eq("id", id!).single();
-      return data as unknown as { title: string; type: string; style_preset: string | null; status: string } | null;
+      // Try projects_public view first, fall back to projects
+      const { data } = await supabase.from("projects").select("title, type, style_preset, status").eq("id", id!).single();
+      return data as { title: string; type: string; style_preset: string | null; status: string } | null;
     },
     enabled: !!id,
   });

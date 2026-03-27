@@ -1,7 +1,10 @@
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-
+import { Button } from "@/components/ui/button";
+import { Trash2 } from "lucide-react";
+import { useDeleteEpisode } from "@/hooks/useEpisodes";
+import { toast } from "sonner";
 
 const statusLabels: Record<string, string> = {
   draft: "Brouillon",
@@ -35,6 +38,19 @@ export function EpisodeCard({
   seriesId: string;
 }) {
   const statusColor = statusColors[episode.status] || "bg-primary/10 text-primary";
+  const deleteEpisode = useDeleteEpisode();
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm("Supprimer cet épisode ?")) return;
+    try {
+      await deleteEpisode.mutateAsync({ id: episode.id, seasonId: episode.season_id });
+      toast.success("Épisode supprimé");
+    } catch {
+      toast.error("Erreur lors de la suppression");
+    }
+  };
 
   return (
     <Link to={`/series/${seriesId}/episode/${episode.id}`}>
@@ -55,9 +71,16 @@ export function EpisodeCard({
                 </p>
               )}
             </div>
-            <Badge className={statusColor} variant="secondary">
-              {statusLabels[episode.status] || episode.status}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge className={statusColor} variant="secondary">
+                {statusLabels[episode.status] || episode.status}
+              </Badge>
+              {episode.status === "draft" && (
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive" onClick={handleDelete}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>

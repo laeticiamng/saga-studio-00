@@ -23,6 +23,19 @@ const TONES = [
   "Intimiste", "Suspense", "Onirique", "Réaliste", "Poétique",
 ];
 
+const STYLES = [
+  { value: "cinematic", label: "Cinématique" },
+  { value: "anime", label: "Anime" },
+  { value: "watercolor", label: "Aquarelle" },
+  { value: "3d_render", label: "Rendu 3D" },
+  { value: "noir", label: "Noir" },
+  { value: "vintage", label: "Vintage" },
+  { value: "neon", label: "Néon" },
+  { value: "realistic", label: "Réaliste" },
+  { value: "documentary", label: "Documentaire" },
+  { value: "fantasy", label: "Fantaisie" },
+];
+
 export default function CreateSeries() {
   usePageTitle("Créer une série");
   const navigate = useNavigate();
@@ -36,6 +49,7 @@ export default function CreateSeries() {
   const [targetAudience, setTargetAudience] = useState("");
   const [totalSeasons, setTotalSeasons] = useState(1);
   const [episodeDuration, setEpisodeDuration] = useState(50);
+  const [stylePreset, setStylePreset] = useState("");
   const [episodesPerSeason, setEpisodesPerSeason] = useState(10);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -53,6 +67,7 @@ export default function CreateSeries() {
         tone: tone || undefined,
         target_audience: targetAudience.trim() || undefined,
         total_seasons: totalSeasons,
+        style_preset: stylePreset || undefined,
         episode_duration_min: episodeDuration,
         episodes_per_season: episodesPerSeason,
       });
@@ -127,6 +142,20 @@ export default function CreateSeries() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Style visuel</Label>
+                <Select value={stylePreset} onValueChange={setStylePreset}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un style" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STYLES.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">

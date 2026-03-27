@@ -1,5 +1,6 @@
 import { useParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import Footer from "@/components/Footer";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useEpisodes } from "@/hooks/useEpisodes";
@@ -10,9 +11,10 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { Play, Pause, RotateCcw, X, CheckCircle, Clock, AlertTriangle, Zap } from "lucide-react";
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useSeries } from "@/hooks/useSeries";
 
 const STEP_LABELS: Record<string, string> = {
   story_development: "Développement narratif",
@@ -65,8 +67,24 @@ function useSeriesEpisodes(seriesId: string | undefined) {
 export default function AutopilotDashboard() {
   usePageTitle("Autopilot");
   const { id: seriesId } = useParams<{ id: string }>();
+  const { data: series } = useSeries(seriesId);
   const { data: episodes } = useSeriesEpisodes(seriesId);
   const [selectedEpisodeId, setSelectedEpisodeId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  // Realtime: auto-invalidate on workflow_runs / workflow_steps changes
+  useEffect(() => {
+    const channel = supabase
+      .channel("autopilot-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "workflow_runs" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["workflow_run"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "workflow_steps" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["workflow_steps"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
 
   const activeEpisodeId = selectedEpisodeId || episodes?.[0]?.id;
   const { data: workflowRun, isLoading: wrLoading } = useWorkflowRun(activeEpisodeId);
@@ -77,6 +95,18 @@ export default function AutopilotDashboard() {
   const pauseWorkflow = usePauseWorkflow();
   const resumeWorkflow = useResumeWorkflow();
   const cancelWorkflow = useCancelWorkflow();
+  // Cost estimation
+  const { data: costEstimate } = useQuery({
+    queryKey: ["cost_estimate", activeEpisodeId],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("estimate-cost", {
+        body: { episode_id: activeEpisodeId, mode: "series" },
+      });
+      if (error) return null;
+      return data as { total_credits: number; breakdown: Record<string, number> } | null;
+    },
+    enabled: !!activeEpisodeId && !workflowRun,
+  });
 
   const completedSteps = steps?.filter((s: any) => s.status === "completed" || s.status === "approved").length || 0;
   const totalSteps = 10;
@@ -125,6 +155,11 @@ export default function AutopilotDashboard() {
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
       <main className="flex-1 container mx-auto py-8 max-w-6xl">
+      <Breadcrumbs items={[
+        { label: "Mes projets", href: "/dashboard" },
+        { label: String((series?.project as any)?.title || "Série"), href: `/series/${seriesId}` },
+        { label: "Autopilot" },
+      ]} />
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold flex items-center gap-2">
           <Zap className="h-8 w-8" /> Autopilot
@@ -184,10 +219,24 @@ export default function AutopilotDashboard() {
           </p>
 
           {!workflowRun && activeEpisodeId && (
-            <Button onClick={() => handleStart(activeEpisodeId)} className="mt-4" disabled={startAutopilot.isPending}>
-              <Play className="h-4 w-4 mr-2" />
-              {startAutopilot.isPending ? "Démarrage..." : "Démarrer l'autopilot"}
-            </Button>
+            <div className="mt-4 space-y-3">
+              {costEstimate && (
+                <div className="p-3 bg-muted/50 rounded-lg">
+                  <p className="text-sm font-medium">Coût estimé : {costEstimate.total_credits} crédits</p>
+                  {costEstimate.breakdown && (
+                    <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
+                      {Object.entries(costEstimate.breakdown).map(([k, v]) => (
+                        <span key={k}>{k}: {v}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              <Button onClick={() => handleStart(activeEpisodeId)} disabled={startAutopilot.isPending}>
+                <Play className="h-4 w-4 mr-2" />
+                {startAutopilot.isPending ? "Démarrage..." : "Démarrer l'autopilot"}
+              </Button>
+            </div>
           )}
         </CardContent>
       </Card>

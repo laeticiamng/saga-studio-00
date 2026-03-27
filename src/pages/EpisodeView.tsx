@@ -56,7 +56,11 @@ export default function EpisodeView() {
       <main className="flex-1 container max-w-5xl py-8">
         <Breadcrumbs items={[
           { label: "Mes projets", href: "/dashboard" },
-          { label: `Ép. ${episode.number}` },
+          ...(episode.season ? [
+            { label: String((episode.season as any).series?.title || "Série"), href: `/series/${(episode.season as any).series_id}` },
+            { label: `Saison ${(episode.season as any).number}`, href: `/series/${(episode.season as any).series_id}/season/${(episode.season as any).id}` },
+          ] : []),
+          { label: `Ép. ${episode.number} — ${episode.title}` },
         ]} />
         {/* Header */}
         <div className="mb-6">

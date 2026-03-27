@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import type { Database } from "@/integrations/supabase/types";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -62,7 +63,9 @@ export default function Dashboard() {
   usePageTitle("Mes projets");
   const seriesEnabled = useFeatureFlag("series_enabled");
 
-  const { data: projects, isLoading, isError, refetch } = useQuery({
+  type ProjectWithSeries = Database["public"]["Tables"]["projects"]["Row"] & { _seriesId: string | null };
+
+  const { data: projects, isLoading, isError, refetch } = useQuery<ProjectWithSeries[]>({
     queryKey: ["projects", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -167,8 +170,8 @@ export default function Dashboard() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {projects.map((project) => {
-              const linkTo = project.type === "series" && (project as any)._seriesId
-                ? `/series/${(project as any)._seriesId}`
+              const linkTo = project.type === "series" && project._seriesId
+                ? `/series/${project._seriesId}`
                 : `/project/${project.id}`;
               return (
               <Link key={project.id} to={linkTo}>

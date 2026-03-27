@@ -76,3 +76,17 @@ export function useUpdateEpisode() {
     },
   });
 }
+
+export function useDeleteEpisode() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, seasonId }: { id: string; seasonId: string }) => {
+      const { error } = await supabase.from("episodes").delete().eq("id", id);
+      if (error) throw error;
+      return { seasonId };
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["episodes", variables.seasonId] });
+    },
+  });
+}
