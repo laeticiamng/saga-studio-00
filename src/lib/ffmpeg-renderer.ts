@@ -84,6 +84,7 @@ async function getFFmpeg(onProgress: (p: Partial<RenderProgress>) => void): Prom
 
   ffmpeg.on("log", ({ message }) => {
     logger.debug("ffmpeg", message);
+  });
 
   const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm";
 
