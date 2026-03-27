@@ -1,86 +1,79 @@
 
 
-# Audit technique — Saga Studio (27 mars 2026, v3)
+
+# Audit technique — Saga Studio (27 mars 2026, v4)
 
 ## Résumé
 
-Après les corrections v2 (breadcrumbs, ConfirmDialog, NetworkStatus, typage SeasonPanel/EpisodeCard), voici les lacunes résiduelles.
+Après les corrections v3 (suppression de 22 `as any`, breadcrumbs Settings, ConfirmDialog webhooks, CTA crédits, ShareView series, Dashboard empty state), voici les lacunes résiduelles.
 
 ---
 
-## IMPORTANT (fonctionnel / type-safety)
+## IMPORTANT (fonctionnel / robustesse)
 
-### 1. `as any` résiduels dans les `.map()` de 5 fichiers
-Les données venant de Supabase sont typées automatiquement, mais les `.map()` les castent encore en `any` :
-- `EpisodeView.tsx` : `(run: any)` l.136, `(r: any)` l.172/196/222, `(a: any)` l.180, `(f: any)` l.204, `(issue: any)` l.230
-- `AgentDashboard.tsx` : `(run: any)` l.109
-- `DocumentsCenter.tsx` : `(entity: any)` l.275, `(m: any)` l.316, `entitiesByType: Record<string, any[]>` l.212
-- `Settings.tsx` : `(wh: any)` l.228
-- `EpisodePipeline.tsx` : `(s: any)` l.66
+### 1. Pages création sans Breadcrumbs
+`CreateClip.tsx`, `CreateFilm.tsx` et `CreateSeries.tsx` n'utilisent pas le composant `<Breadcrumbs>`.
+**Correction** : ajouter `<Breadcrumbs items={[{ label: "Nouveau clip/film/série" }]} />`.
 
-**Correction** : supprimer les casts `any` — les types Supabase sont suffisants (ou utiliser des types intermédiaires).
+### 2. Pas de gestion "série supprimée" dans les pages studio
+Si une série est supprimée alors que l'utilisateur est sur `/series/:id/autopilot`, `/series/:id/agents`, etc., la page affiche des données vides sans redirection ni message.
+**Pages concernées** : `AutopilotDashboard`, `ApprovalInbox`, `ContinuityCenter`, `DeliveryCenter`, `DocumentsCenter`, `AgentDashboard`, `BibleManager`, `CharacterGallery`.
+**Correction** : dans chaque page, après le chargement, si `series` est null, afficher un message "Série non trouvée" avec un lien retour Dashboard.
 
-### 2. `as any` structurels dans 3 fichiers
-- `ProjectView.tsx` l.218-220 : `plan?.shotlist_json as any[]`, `plan?.style_bible_json as Record<string, any>`, `audioAnalysis?.sections_json as any[]` — les types JSON de Supabase renvoient `Json`, qui doit être casté vers des interfaces.
-- `useFeatureFlag.ts` l.15/20 : `.from("feature_flags" as any)` — `feature_flags` est dans le schéma, le cast est inutile.
-- `ShotGrid.tsx` l.37 : `"regenerating" as any` — le status enum ne contient peut-être pas cette valeur.
+### 3. Onglet "Agents" dans EpisodeView sans guidance
+L'onglet affiche "Aucune exécution d'agent pour cet épisode." sans expliquer comment en déclencher.
+**Correction** : ajouter un lien vers l'Autopilot de la série parente.
 
-**Correction** : définir des interfaces pour les payloads JSON, supprimer les casts inutiles.
+### 4. `as any` résiduels côté edge functions
+5 fichiers edge functions utilisent encore `as any` :
+- `stitch-render/index.ts` : `as any[]` pour beats/sections/energy JSON
+- `export-assets/index.ts` : `(e.season as any)?.series_id`
+- `generate-shots/index.ts` : `status as any`, `as Record<string, any>`, `as any[]`
+- `plan-project/index.ts` : `sections as any[]`
+- `stripe-webhook/index.ts` : `(customer as any).deleted`
 
-### 3. Settings sans breadcrumbs
-La page Settings n'utilise pas le composant `<Breadcrumbs>`.
-**Correction** : ajouter `<Breadcrumbs items={[{ label: "Paramètres" }]} />`.
-
-### 4. Pas de lien vers Settings depuis la Navbar
-L'utilisateur doit deviner l'URL `/settings`. Il n'y a aucun lien dans le menu/profil.
-**Correction** : vérifier la Navbar et ajouter un lien vers les paramètres dans le menu utilisateur.
+**Note** : les edge functions n'ont pas les types générés Supabase. Ces casts sont nécessaires ou tolérés. **Pas d'action requise** sauf si on copie les types dans les edge functions.
 
 ---
 
 ## AMÉLIORATIONS (UX / dette technique)
 
-### 5. Dashboard sans état vide pour les séries
-Quand `seriesEnabled` est true mais qu'il n'y a aucune série, le CTA "Nouvelle série" existe mais l'état vide ne le mentionne pas.
-**Correction** : ajouter un bouton "Créer une série" dans l'état vide quand le feature flag est actif.
+### 5. Console.log/warn/error dans le code client
+9 fichiers client contiennent des `console.*` directs (hors `logger.ts`) :
+- `CreateClip.tsx`, `CreateFilm.tsx`, `RenderExportPanel.tsx`, `ProjectView.tsx`, `NotFound.tsx`, `ffmpeg-renderer.ts`, `main.tsx`, `ErrorBoundary.tsx`
+**Correction** : remplacer par le `logger` centralisé pour une meilleure observabilité.
 
-### 6. Pas d'empty state informatif sur EpisodeView onglet "Agents"
-L'onglet Agents affiche juste "Aucune exécution d'agent" sans expliquer comment en déclencher.
-**Correction** : ajouter un message explicatif et un lien vers l'Autopilot.
+### 6. Duplication des constantes label/style
+`statusLabels`, `typeLabels`, `styleLabels` sont dupliqués dans `Dashboard.tsx`, `ProjectView.tsx`, `ShareView.tsx`, `Admin.tsx`.
+**Correction** : extraire dans `src/lib/labels.ts` pour centralisation.
 
-### 7. Webhooks : pas de confirmation avant suppression
-`Settings.tsx` l.132 supprime un webhook sans demander confirmation.
-**Correction** : utiliser `<ConfirmDialog>` comme pour les séries/saisons/épisodes.
+### 7. Pas de favicon réel
+`index.html` référence `/favicon.ico` mais le fichier n'existe pas dans `/public`. Seul `placeholder.svg` est présent.
+**Correction** : générer un favicon ou le remplacer par le SVG existant.
 
-### 8. `ShareView` n'affiche pas les séries
-`ShareView` ne gère que `clip` et `film` dans `typeLabels`. Si un utilisateur partage un projet de type `series`, le label sera brut.
-**Correction** : ajouter `series: "Série"` au mapping.
+### 8. OG image manquante
+`index.html` référence `/og-image.jpg` qui n'existe pas dans le dossier public.
+**Correction** : générer une image OG 1200x630 ou supprimer la meta.
 
-### 9. Credits : pas de lien vers la page Pricing depuis Settings
-Le solde de crédits est affiché mais aucun CTA ne permet d'acheter des crédits supplémentaires.
-**Correction** : ajouter un bouton "Acheter des crédits" qui redirige vers `/pricing`.
+### 9. Pages protégées sans meta description dynamique
+Les pages du studio (`ProjectView`, `EpisodeView`, etc.) n'ont pas de meta description SEO. Elles héritent de la meta de la landing page.
+**Pas bloquant** pour les pages protégées (non indexées).
 
-### 10. Accessibilité : onglets EpisodeView sans labels complets
-Les `TabsTrigger` utilisent des icônes mais pas de texte visible sur mobile (ils sont visibles, mais petits).
-Pas bloquant mais améliore l'UX mobile.
-
-### 11. Pas de gestion du cas "série supprimée" dans les pages studio
-Si une série est supprimée alors que l'utilisateur est sur `/series/:id/autopilot`, la page affiche des données vides sans redirection ni message.
-**Correction** : ajouter un redirect ou un message "Série non trouvée" dans les pages studio quand `series` est null après le chargement.
+### 10. Pas de page 404 stylisée pour les routes `/series/:id/*` inexistantes
+Si un utilisateur tape une route studio invalide (ex: `/series/abc/foo`), c'est le `NotFound` générique qui s'affiche.
+**Peu prioritaire** car protégé par l'auth.
 
 ---
 
 ## Plan d'implémentation
 
-| # | Action | Fichiers |
-|---|--------|----------|
-| 1 | Supprimer les casts `any` des `.map()` (EpisodeView, AgentDashboard, DocumentsCenter, Settings, EpisodePipeline) | 5 fichiers |
-| 2 | Interfaces JSON pour ProjectView (shotlist, styleBible, sections) + fix useFeatureFlag/ShotGrid | 3 fichiers |
-| 3 | Breadcrumbs dans Settings | `Settings.tsx` |
-| 4 | Lien Settings dans la Navbar (si manquant) | `Navbar.tsx` |
-| 5 | CTA série dans l'état vide du Dashboard | `Dashboard.tsx` |
-| 6 | ConfirmDialog pour suppression webhook | `Settings.tsx` |
-| 7 | `series: "Série"` dans ShareView | `ShareView.tsx` |
-| 8 | Bouton "Acheter des crédits" dans Settings | `Settings.tsx` |
-| 9 | Gestion "Série non trouvée" dans les pages studio | 6 fichiers |
+| # | Action | Fichiers | Priorité |
+|---|--------|----------|----------|
+| 1 | Breadcrumbs dans CreateClip, CreateFilm, CreateSeries | 3 fichiers | Moyenne |
+| 2 | Gestion "série non trouvée" dans 8 pages studio | 8 fichiers | Haute |
+| 3 | Guidance onglet Agents vide dans EpisodeView | 1 fichier | Moyenne |
+| 4 | Centraliser les labels dupliqués | 5+ fichiers | Basse |
+| 5 | Remplacer console.* par logger | 6 fichiers | Basse |
+| 6 | Favicon + OG image | 2 assets | Basse |
 
-Priorité recommandée : **#1-2** (type-safety), puis **#3-4** (navigation), puis **#5-9** (UX polish).
+Priorité recommandée : **#2** (robustesse), puis **#1 + #3** (navigation/UX), puis **#4-6** (dette technique).
