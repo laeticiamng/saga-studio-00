@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { PipelineProgress } from "@/components/PipelineProgress";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { ShotGrid } from "@/components/ShotGrid";
 import { ShotPreviewPlayer } from "@/components/ShotPreviewPlayer";
 import { RenderExportPanel } from "@/components/RenderExportPanel";
