@@ -1,6 +1,7 @@
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { toBlobURL, fetchFile } from "@ffmpeg/util";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 /** Fetch a file, proxying external URLs through the edge function to avoid CORS */
 async function fetchFileProxy(url: string): Promise<Uint8Array> {
@@ -82,7 +83,7 @@ async function getFFmpeg(onProgress: (p: Partial<RenderProgress>) => void): Prom
   ffmpeg = new FFmpeg();
 
   ffmpeg.on("log", ({ message }) => {
-    console.log("[ffmpeg]", message);
+    logger.debug("ffmpeg", message);
   });
 
   const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm";
@@ -177,7 +178,7 @@ export async function renderVideo(
       await ff.writeFile(filename, data);
     } catch (err: unknown) {
       downloadFailures++;
-      console.error(`Failed to download shot ${i}:`, err);
+      logger.error("ffmpeg", `Failed to download shot ${i}:`, err);
       // Mark this shot as failed but continue — we'll check threshold after
       if (downloadFailures > validShots.length * 0.5) {
         throw new Error(`Trop d'échecs de téléchargement (${downloadFailures}/${validShots.length}). Vérifiez que les URLs des shots sont accessibles.`);
@@ -199,7 +200,7 @@ export async function renderVideo(
       const audioData = await fetchFileProxy(audioUrl);
       await ff.writeFile("audio.mp3", audioData);
     } catch (err) {
-      console.warn("Failed to download audio:", err);
+      logger.warn("ffmpeg", "Failed to download audio:", err);
     }
   }
 

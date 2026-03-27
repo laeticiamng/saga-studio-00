@@ -21,23 +21,7 @@ import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
-const statusLabels: Record<string, string> = {
-  draft: "Brouillon", analyzing: "Analyse…", planning: "Planification…",
-  generating: "Génération…", stitching: "Assemblage…", completed: "Terminé",
-  failed: "Échoué", cancelled: "Annulé",
-};
-const statusVariants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  draft: "outline", analyzing: "secondary", planning: "secondary",
-  generating: "secondary", stitching: "secondary", completed: "default",
-  failed: "destructive", cancelled: "outline",
-};
-const typeLabels: Record<string, string> = { clip: "Clip vidéo", film: "Court-métrage" };
-const styleLabels: Record<string, string> = {
-  cinematic: "Cinématique", anime: "Anime", watercolor: "Aquarelle",
-  "3d_render": "Rendu 3D", noir: "Noir", vintage: "Vintage", neon: "Néon", realistic: "Réaliste",
-  hyperpop: "Hyperpop", afrofuturism: "Afrofuturisme", synthwave: "Synthwave",
-  documentary: "Documentaire", fantasy: "Fantaisie",
-};
+import { statusLabels, statusVariants, typeLabels, styleLabels } from "@/lib/labels";
 const modeLabels: Record<string, string> = {
   story: "Narratif", performance: "Performance", abstract: "Abstrait",
 };

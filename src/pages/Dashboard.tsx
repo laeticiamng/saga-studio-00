@@ -12,40 +12,7 @@ import { Film, Music, Plus, Clock, CheckCircle, AlertCircle, Loader2, Tv } from 
 import { OnboardingTour } from "@/components/OnboardingTour";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useFeatureFlag } from "@/hooks/useFeatureFlag";
-
-const statusLabels: Record<string, string> = {
-  draft: "Brouillon",
-  analyzing: "Analyse…",
-  planning: "Planification…",
-  generating: "Génération…",
-  stitching: "Assemblage…",
-  completed: "Terminé",
-  failed: "Échoué",
-  cancelled: "Annulé",
-  in_production: "En production",
-};
-
-const typeLabels: Record<string, string> = {
-  clip: "Clip",
-  film: "Film",
-  series: "Série",
-};
-
-const styleLabels: Record<string, string> = {
-  cinematic: "Cinématique",
-  anime: "Anime",
-  watercolor: "Aquarelle",
-  "3d_render": "Rendu 3D",
-  noir: "Noir",
-  vintage: "Vintage",
-  neon: "Néon",
-  realistic: "Réaliste",
-  hyperpop: "Hyperpop",
-  afrofuturism: "Afrofuturisme",
-  synthwave: "Synthwave",
-  documentary: "Documentaire",
-  fantasy: "Fantaisie",
-};
+import { statusLabels, typeLabels, styleLabels } from "@/lib/labels";
 
 const statusIcons: Record<string, React.ReactNode> = {
   draft: <Clock className="h-4 w-4" />,
