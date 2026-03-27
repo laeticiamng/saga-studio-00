@@ -60,6 +60,12 @@ export default function EpisodeView() {
               Épisode {episode.number} — {episode.title}
             </h1>
             <Badge variant="secondary">{episode.status}</Badge>
+            {episode.duration_target_min && (
+              <Badge variant="outline" className="gap-1">
+                <Clock className="h-3 w-3" />
+                {episode.duration_target_min} min
+              </Badge>
+            )}
           </div>
           {episode.synopsis && (
             <p className="text-muted-foreground max-w-2xl">{episode.synopsis}</p>
@@ -108,7 +114,7 @@ export default function EpisodeView() {
           </TabsContent>
 
           <TabsContent value="scenes">
-            <SceneBreakdown episodeId={episode.id} />
+            <SceneBreakdown episodeId={episode.id} durationTargetMin={episode.duration_target_min} />
           </TabsContent>
 
           <TabsContent value="agents">
