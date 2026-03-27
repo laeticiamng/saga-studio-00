@@ -15,6 +15,23 @@ export const statusLabels: Record<string, string> = {
   reviewed: "Examiné",
 };
 
+export const statusVariants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  draft: "outline",
+  analyzing: "secondary",
+  planning: "secondary",
+  generating: "secondary",
+  stitching: "secondary",
+  completed: "default",
+  failed: "destructive",
+  cancelled: "outline",
+  in_production: "secondary",
+  processing: "secondary",
+  pending: "outline",
+  resolved: "default",
+  dismissed: "outline",
+  reviewed: "default",
+};
+
 export const typeLabels: Record<string, string> = {
   clip: "Clip",
   film: "Film",
