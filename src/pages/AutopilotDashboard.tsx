@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { SeriesNotFound } from "@/components/SeriesNotFound";
@@ -16,6 +16,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSeries } from "@/hooks/useSeries";
 import { getSeriesProjectTitle } from "@/lib/series-helpers";
+import { useAuth } from "@/contexts/AuthContext";
+import { InsufficientCreditsAlert, isInsufficientCreditsError } from "@/components/InsufficientCreditsAlert";
 
 const STEP_LABELS: Record<string, string> = {
   story_development: "Développement narratif",
@@ -81,10 +83,23 @@ function useSeriesEpisodes(seriesId: string | undefined) {
 export default function AutopilotDashboard() {
   usePageTitle("Autopilot");
   const { id: seriesId } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const { data: series, isLoading: seriesLoading } = useSeries(seriesId);
   const { data: episodes } = useSeriesEpisodes(seriesId);
   const [selectedEpisodeId, setSelectedEpisodeId] = useState<string | null>(null);
+  const [creditsError, setCreditsError] = useState(false);
   const queryClient = useQueryClient();
+
+  const { data: balance } = useQuery({
+    queryKey: ["credits", user?.id],
+    queryFn: async () => {
+      if (!user) return 0;
+      const { data } = await supabase.from("credit_wallets").select("balance").eq("id", user.id).single();
+      return data?.balance ?? 0;
+    },
+    enabled: !!user,
+    staleTime: 30_000,
+  });
 
   if (!seriesLoading && !series) return <SeriesNotFound />;
 
@@ -128,11 +143,17 @@ export default function AutopilotDashboard() {
   const progress = (completedSteps / totalSteps) * 100;
 
   const handleStart = async (episodeId: string) => {
+    setCreditsError(false);
     try {
       await startAutopilot.mutateAsync({ episodeId });
       toast.success("Autopilot démarré");
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Erreur au démarrage");
+      if (isInsufficientCreditsError(err)) {
+        setCreditsError(true);
+        toast.error("Crédits insuffisants pour lancer le pipeline");
+      } else {
+        toast.error(err instanceof Error ? err.message : "Erreur au démarrage");
+      }
     }
   };
 
