@@ -4,8 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EpisodeCard } from "./EpisodeCard";
 import { useEpisodes, useCreateEpisode } from "@/hooks/useEpisodes";
-
-import { Plus, Loader2 } from "lucide-react";
+import { useDeleteSeason } from "@/hooks/useSeasons";
+import { toast } from "sonner";
+import { Plus, Loader2, Trash2 } from "lucide-react";
 
 export function SeasonPanel({
   season,
@@ -16,8 +17,19 @@ export function SeasonPanel({
 }) {
   const { data: episodes, isLoading } = useEpisodes(season.id);
   const createEpisode = useCreateEpisode();
+  const deleteSeason = useDeleteSeason();
   const [newTitle, setNewTitle] = useState("");
   const [isAdding, setIsAdding] = useState(false);
+
+  const handleDeleteSeason = async () => {
+    if (!confirm("Supprimer cette saison et tous ses épisodes ?")) return;
+    try {
+      await deleteSeason.mutateAsync({ id: season.id, seriesId });
+      toast.success("Saison supprimée");
+    } catch {
+      toast.error("Erreur lors de la suppression");
+    }
+  };
 
   const handleAddEpisode = async () => {
     if (!newTitle.trim()) return;
@@ -34,9 +46,14 @@ export function SeasonPanel({
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg">
-          Saison {season.number}{season.title ? ` — ${season.title}` : ""}
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg">
+            Saison {season.number}{season.title ? ` — ${season.title}` : ""}
+          </CardTitle>
+          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive" onClick={handleDeleteSeason}>
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
         {season.arc_summary && (
           <p className="text-sm text-muted-foreground">{season.arc_summary}</p>
         )}

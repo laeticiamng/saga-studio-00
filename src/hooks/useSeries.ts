@@ -102,3 +102,30 @@ export function useUpdateSeries() {
     },
   });
 }
+
+export function useDeleteSeries() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (seriesId: string) => {
+      // Delete the series (cascade should handle seasons/episodes)
+      const { data: series, error: fetchErr } = await supabase
+        .from("series")
+        .select("project_id")
+        .eq("id", seriesId)
+        .single();
+      if (fetchErr) throw fetchErr;
+
+      const { error } = await supabase.from("series").delete().eq("id", seriesId);
+      if (error) throw error;
+
+      // Also delete the parent project
+      if (series?.project_id) {
+        await supabase.from("projects").delete().eq("id", series.project_id);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["series"] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+  });
+}
