@@ -33,7 +33,7 @@ export default function SeasonView() {
 
   usePageTitle(season ? `Saison ${season.number}` : "Saison");
 
-  const totalDuration = episodes?.reduce((sum: number, ep: any) => sum + (ep.duration_target_min || 0), 0) || 0;
+  const totalDuration = episodes?.reduce((sum: number, ep: { duration_target_min?: number | null }) => sum + (ep.duration_target_min || 0), 0) || 0;
   const nextNumber = (episodes?.length || 0) + 1;
 
   const handleCreate = async () => {
