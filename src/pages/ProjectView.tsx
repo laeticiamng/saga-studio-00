@@ -117,7 +117,7 @@ export default function ProjectView() {
     return () => { supabase.removeChannel(channel); };
   }, [id, queryClient, toast]);
 
-  const callEdgeFunction = useCallback(async (name: string, body: any) => {
+  const callEdgeFunction = useCallback(async (name: string, body: Record<string, unknown>) => {
     const res = await supabase.functions.invoke(name, { body });
     if (res.error) throw res.error;
     return res.data;

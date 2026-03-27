@@ -9,10 +9,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { renderVideo, type RenderProgress } from "@/lib/ffmpeg-renderer";
 import { logger } from "@/lib/logger";
+import type { Database } from "@/integrations/supabase/types";
+
+type Render = Database["public"]["Tables"]["renders"]["Row"];
 
 interface RenderExportPanelProps {
   projectId: string;
-  render: any;
+  render: Render | null;
   projectStatus: string;
 }
 
