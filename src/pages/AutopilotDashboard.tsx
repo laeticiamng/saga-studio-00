@@ -95,6 +95,18 @@ export default function AutopilotDashboard() {
   const pauseWorkflow = usePauseWorkflow();
   const resumeWorkflow = useResumeWorkflow();
   const cancelWorkflow = useCancelWorkflow();
+  // Cost estimation
+  const { data: costEstimate } = useQuery({
+    queryKey: ["cost_estimate", activeEpisodeId],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("estimate-cost", {
+        body: { episode_id: activeEpisodeId, mode: "series" },
+      });
+      if (error) return null;
+      return data as { total_credits: number; breakdown: Record<string, number> } | null;
+    },
+    enabled: !!activeEpisodeId && !workflowRun,
+  });
 
   const completedSteps = steps?.filter((s: any) => s.status === "completed" || s.status === "approved").length || 0;
   const totalSteps = 10;
