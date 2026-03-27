@@ -73,7 +73,7 @@ export default function SeasonView() {
       <main className="flex-1 container max-w-4xl py-8">
         <Breadcrumbs items={[
           { label: "Mes projets", href: "/dashboard" },
-          { label: (series as Record<string, unknown>)?.project ? String((series as any).project?.title || "Série") : "Série", href: `/series/${seriesId}` },
+          { label: String((series as Record<string, unknown>)?.project ? ((series as Record<string, unknown>).project as Record<string, unknown>)?.title || "Série" : "Série"), href: `/series/${seriesId}` },
           { label: `Saison ${season?.number || ""}` },
         ]} />
         <div className="flex items-center justify-between mb-2">
