@@ -35,6 +35,8 @@ export default function CreateSeries() {
   const [tone, setTone] = useState("");
   const [targetAudience, setTargetAudience] = useState("");
   const [totalSeasons, setTotalSeasons] = useState(1);
+  const [episodeDuration, setEpisodeDuration] = useState(50);
+  const [episodesPerSeason, setEpisodesPerSeason] = useState(10);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +53,8 @@ export default function CreateSeries() {
         tone: tone || undefined,
         target_audience: targetAudience.trim() || undefined,
         total_seasons: totalSeasons,
+        episode_duration_min: episodeDuration,
+        episodes_per_season: episodesPerSeason,
       });
       toast({ title: "Série créée avec succès" });
       navigate(`/series/${result.series.id}`);
@@ -135,16 +139,49 @@ export default function CreateSeries() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="seasons">Nombre de saisons prévues</Label>
-                <Input
-                  id="seasons"
-                  type="number"
-                  min={1}
-                  max={20}
-                  value={totalSeasons}
-                  onChange={(e) => setTotalSeasons(Number(e.target.value))}
-                />
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="seasons">Saisons prévues</Label>
+                  <Input
+                    id="seasons"
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={totalSeasons}
+                    onChange={(e) => setTotalSeasons(Number(e.target.value))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="epDuration">Durée épisode (min)</Label>
+                  <Select value={String(episodeDuration)} onValueChange={(v) => setEpisodeDuration(Number(v))}>
+                    <SelectTrigger id="epDuration">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5">5 min</SelectItem>
+                      <SelectItem value="10">10 min</SelectItem>
+                      <SelectItem value="22">22 min</SelectItem>
+                      <SelectItem value="30">30 min</SelectItem>
+                      <SelectItem value="45">45 min</SelectItem>
+                      <SelectItem value="50">50 min</SelectItem>
+                      <SelectItem value="60">60 min</SelectItem>
+                      <SelectItem value="90">90 min</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="epCount">Épisodes/saison</Label>
+                  <Input
+                    id="epCount"
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={episodesPerSeason}
+                    onChange={(e) => setEpisodesPerSeason(Number(e.target.value))}
+                  />
+                </div>
               </div>
 
               <Button
