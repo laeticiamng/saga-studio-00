@@ -11,7 +11,7 @@ import { usePsychologyReviews, useLegalEthicsReviews, useContinuityReports } fro
 import { EpisodePipeline } from "@/components/series/EpisodePipeline";
 import { SceneBreakdown } from "@/components/series/SceneBreakdown";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { Loader2, FileText, Layers, Play, Activity, Shield, Brain, Scale, Eye, CheckCircle, AlertTriangle } from "lucide-react";
+import { Loader2, FileText, Layers, Play, Activity, Shield, Brain, Scale, Eye, CheckCircle, AlertTriangle, Clock } from "lucide-react";
 
 export default function EpisodeView() {
   const { episodeId } = useParams<{ episodeId: string }>();
