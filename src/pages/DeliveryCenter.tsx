@@ -52,6 +52,18 @@ export default function DeliveryCenter() {
     }
   };
 
+  const handleExport = async (episodeId: string) => {
+    try {
+      const { error } = await supabase.functions.invoke("export-assets", {
+        body: { episode_id: episodeId, series_id: seriesId, format: "mp4", export_type: "episode" },
+      });
+      if (error) throw error;
+      toast.success("Export lancé — vous serez notifié quand il sera prêt");
+    } catch {
+      toast.error("Erreur lors du lancement de l'export");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
