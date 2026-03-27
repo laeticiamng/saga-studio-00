@@ -101,6 +101,8 @@ export default function DocumentsCenter() {
     }
   };
 
+  if (!seriesLoading && !series) return <SeriesNotFound />;
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
