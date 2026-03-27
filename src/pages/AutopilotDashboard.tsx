@@ -219,10 +219,24 @@ export default function AutopilotDashboard() {
           </p>
 
           {!workflowRun && activeEpisodeId && (
-            <Button onClick={() => handleStart(activeEpisodeId)} className="mt-4" disabled={startAutopilot.isPending}>
-              <Play className="h-4 w-4 mr-2" />
-              {startAutopilot.isPending ? "Démarrage..." : "Démarrer l'autopilot"}
-            </Button>
+            <div className="mt-4 space-y-3">
+              {costEstimate && (
+                <div className="p-3 bg-muted/50 rounded-lg">
+                  <p className="text-sm font-medium">Coût estimé : {costEstimate.total_credits} crédits</p>
+                  {costEstimate.breakdown && (
+                    <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
+                      {Object.entries(costEstimate.breakdown).map(([k, v]) => (
+                        <span key={k}>{k}: {v}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              <Button onClick={() => handleStart(activeEpisodeId)} disabled={startAutopilot.isPending}>
+                <Play className="h-4 w-4 mr-2" />
+                {startAutopilot.isPending ? "Démarrage..." : "Démarrer l'autopilot"}
+              </Button>
+            </div>
           )}
         </CardContent>
       </Card>
