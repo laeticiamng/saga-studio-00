@@ -268,7 +268,19 @@ export default function AutopilotDashboard() {
                   )}
                 </div>
               )}
-              <Button onClick={() => handleStart(activeEpisodeId)} disabled={startAutopilot.isPending}>
+
+              {/* Insufficient credits guard */}
+              {(creditsError || (costEstimate && balance != null && balance < costEstimate.total_credits)) && (
+                <InsufficientCreditsAlert
+                  balance={balance ?? 0}
+                  required={costEstimate?.total_credits ?? 0}
+                />
+              )}
+
+              <Button
+                onClick={() => handleStart(activeEpisodeId)}
+                disabled={startAutopilot.isPending || (costEstimate != null && balance != null && balance < costEstimate.total_credits)}
+              >
                 <Play className="h-4 w-4 mr-2" />
                 {startAutopilot.isPending ? "Démarrage..." : "Démarrer l'autopilot"}
               </Button>

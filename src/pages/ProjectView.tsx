@@ -10,6 +10,7 @@ import { ShotGrid } from "@/components/ShotGrid";
 import { ShotPreviewPlayer } from "@/components/ShotPreviewPlayer";
 import { RenderExportPanel } from "@/components/RenderExportPanel";
 import { ProjectDiagnostics } from "@/components/ProjectDiagnostics";
+import { InsufficientCreditsAlert, isInsufficientCreditsError } from "@/components/InsufficientCreditsAlert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
