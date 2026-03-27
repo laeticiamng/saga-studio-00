@@ -164,6 +164,14 @@ export default function Dashboard() {
                   </Button>
                   <p className="text-xs text-muted-foreground mt-2">À partir d'un scénario</p>
                 </div>
+                {seriesEnabled && (
+                  <div className="text-center">
+                    <Button variant="glass" asChild>
+                      <Link to="/create/series"><Tv className="h-4 w-4 mr-2" /> Créer une série</Link>
+                    </Button>
+                    <p className="text-xs text-muted-foreground mt-2">Multi-épisodes</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

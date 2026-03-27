@@ -215,9 +215,9 @@ export default function ProjectView() {
   const isActive = ["analyzing", "planning", "generating", "stitching"].includes(project.status);
   const completedShots = shots?.filter(s => s.status === "completed").length || 0;
   const totalShots = shots?.length || 0;
-  const shotlistJson = plan?.shotlist_json as any[] | null;
-  const styleBible = plan?.style_bible_json as Record<string, any> | null;
-  const sectionsJson = audioAnalysis?.sections_json as any[] | null;
+  const shotlistJson = Array.isArray(plan?.shotlist_json) ? plan.shotlist_json as Array<Record<string, unknown>> : null;
+  const styleBible = plan?.style_bible_json && typeof plan.style_bible_json === "object" && !Array.isArray(plan.style_bible_json) ? plan.style_bible_json as Record<string, unknown> : null;
+  const sectionsJson = Array.isArray(audioAnalysis?.sections_json) ? audioAnalysis.sections_json as Array<Record<string, unknown>> : null;
   const hasCompletedShots = completedShots > 0;
 
   return (
@@ -437,7 +437,7 @@ export default function ProjectView() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-                      {shotlistJson.map((shot: any, i: number) => (
+                      {shotlistJson.map((shot, i) => (
                         <motion.div
                           key={i}
                           initial={{ opacity: 0, x: -8 }}
@@ -447,7 +447,7 @@ export default function ProjectView() {
                         >
                           <span className="text-sm font-bold text-primary shrink-0 w-8 text-right">#{i + 1}</span>
                           <p className="text-sm text-muted-foreground leading-relaxed">
-                            {shot.prompt || shot.description || JSON.stringify(shot)}
+                            {String(shot.prompt || shot.description || JSON.stringify(shot))}
                           </p>
                         </motion.div>
                       ))}
@@ -492,7 +492,7 @@ export default function ProjectView() {
                     <div>
                       <h4 className="text-sm font-medium mb-3">Structure du morceau</h4>
                       <div className="flex gap-2 flex-wrap">
-                        {sectionsJson.map((sec: any, i: number) => (
+                        {sectionsJson.map((sec, i) => (
                           <motion.div
                             key={i}
                             initial={{ opacity: 0, scale: 0.9 }}
@@ -500,10 +500,10 @@ export default function ProjectView() {
                             transition={{ duration: 0.2, delay: i * 0.04 }}
                           >
                             <Badge variant="outline" className="text-xs py-1.5 px-3">
-                              {sec.label || sec.type || `Section ${i + 1}`}
+                              {String(sec.label || sec.type || `Section ${i + 1}`)}
                               {sec.start != null && (
                                 <span className="ml-1.5 text-muted-foreground">
-                                  {Math.floor(sec.start / 60)}:{String(Math.round(sec.start % 60)).padStart(2, "0")}
+                                  {Math.floor(Number(sec.start) / 60)}:{String(Math.round(Number(sec.start) % 60)).padStart(2, "0")}
                                 </span>
                               )}
                             </Badge>

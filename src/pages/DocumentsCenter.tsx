@@ -209,7 +209,8 @@ function DocumentDetail({ documentId, seriesId }: { documentId: string; seriesId
   const updateMapping = useUpdateMapping();
 
   // Group entities by type
-  const entitiesByType: Record<string, any[]> = {};
+  type DocumentEntity = NonNullable<typeof entities>[number];
+  const entitiesByType: Record<string, DocumentEntity[]> = {};
   entities?.forEach(e => {
     if (!entitiesByType[e.entity_type]) entitiesByType[e.entity_type] = [];
     entitiesByType[e.entity_type].push(e);
@@ -272,7 +273,7 @@ function DocumentDetail({ documentId, seriesId }: { documentId: string; seriesId
         {Object.entries(entitiesByType).map(([type, items]) => (
           <TabsContent key={type} value={type}>
             <div className="space-y-3">
-              {items.map((entity: any) => (
+              {items.map((entity) => (
                 <Card key={entity.id}>
                   <CardContent className="py-3">
                     <div className="flex items-start justify-between gap-3">
@@ -313,7 +314,7 @@ function DocumentDetail({ documentId, seriesId }: { documentId: string; seriesId
                         {/* Mappings */}
                         {entity.mappings?.length > 0 && (
                           <div className="mt-2 space-y-1">
-                            {entity.mappings.map((m: any) => (
+                            {entity.mappings.map((m: { id: string; target_table: string; target_field: string; status: string }) => (
                               <div key={m.id} className="flex items-center gap-2 text-xs">
                                 <span className="text-muted-foreground">→ {m.target_table}.{m.target_field}</span>
                                 <Badge variant="outline" className="text-xs">
