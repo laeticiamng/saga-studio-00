@@ -59,8 +59,8 @@ export default function AgentDashboard() {
           <Card>
             <CardContent className="p-4 text-center">
               <Coins className="h-5 w-5 mx-auto mb-1 text-yellow-500" />
-              <p className="text-2xl font-bold">{stats.totalCredits}</p>
-              <p className="text-xs text-muted-foreground">Crédits</p>
+              <p className="text-2xl font-bold">{stats.totalTokens.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground">Tokens</p>
             </CardContent>
           </Card>
         </div>
