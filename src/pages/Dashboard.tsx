@@ -75,12 +75,12 @@ export default function Dashboard() {
       const seriesProjects = data?.filter(p => p.type === "series") || [];
       let seriesMap: Record<string, string> = {};
       if (seriesProjects.length > 0) {
-        const { data: seriesData } = await (supabase as any)
+        const { data: seriesData } = await supabase
           .from("series")
           .select("id, project_id")
           .in("project_id", seriesProjects.map(p => p.id));
         if (seriesData) {
-          seriesData.forEach((s: any) => { seriesMap[s.project_id] = s.id; });
+          seriesData.forEach((s) => { seriesMap[s.project_id] = s.id; });
         }
       }
 
