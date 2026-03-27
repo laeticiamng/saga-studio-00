@@ -96,9 +96,7 @@ export function EpisodePipeline({
             } else if (currentStatus === "draft") {
               icon = <Circle className="h-3 w-3" />;
               variant = "outline";
-            } else(
-
-            ) {
+            } else {
               icon = <Loader2 className="h-3 w-3 animate-spin" />;
               variant = "default";
             }
