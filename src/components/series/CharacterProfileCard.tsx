@@ -1,13 +1,16 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { User } from "lucide-react";
+import type { Database } from "@/integrations/supabase/types";
+
+type CharacterProfile = Database["public"]["Tables"]["character_profiles"]["Row"];
 
 export function CharacterProfileCard({
   character,
 }: {
-  character: any;
+  character: CharacterProfile;
 }) {
-  const refImages = (character.reference_images as string[]) || [];
+  const refImages: string[] = [];
 
   return (
     <Card className="hover:border-primary/50 transition-colors">

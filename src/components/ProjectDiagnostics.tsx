@@ -1,13 +1,20 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, AlertTriangle, CheckCircle, XCircle, Image, Video, Server, Globe, Clock } from "lucide-react";
+import type { Database } from "@/integrations/supabase/types";
+
+type Project = Database["public"]["Tables"]["projects"]["Row"];
+type Shot = Database["public"]["Tables"]["shots"]["Row"];
+type Render = Database["public"]["Tables"]["renders"]["Row"];
+type Plan = Database["public"]["Tables"]["plans"]["Row"];
+type AudioAnalysis = Database["public"]["Tables"]["audio_analysis"]["Row"];
 
 interface ProjectDiagnosticsProps {
-  project: any;
-  shots: any[] | null;
-  render: any | null;
-  plan: any | null;
-  audioAnalysis: any | null;
+  project: Project;
+  shots: Shot[] | null;
+  render: Render | null;
+  plan: Plan | null;
+  audioAnalysis: AudioAnalysis | null;
 }
 
 const statusIcon = (status: string) => {
