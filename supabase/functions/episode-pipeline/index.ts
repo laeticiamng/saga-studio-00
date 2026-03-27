@@ -34,6 +34,12 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Validate JWT
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) throw new Error("No authorization header");
+    const { data: { user }, error: authErr } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
+    if (authErr || !user) throw new Error("Unauthorized");
+
     const body = await req.json();
     const { episode_id, force_step, idempotency_key } = body;
     if (!episode_id) throw new Error("episode_id required");

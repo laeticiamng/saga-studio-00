@@ -62,6 +62,8 @@ serve(async (req) => {
 
     if (pipelineErr) throw new Error(`Pipeline dispatch failed: ${pipelineErr.message}`);
 
+    const workflowRunId = pipelineResult?.workflow_run_id || null;
+
     // Audit log
     await supabase.from("audit_logs").insert({
       user_id: user.id,
@@ -72,6 +74,7 @@ serve(async (req) => {
         series_id: seriesId,
         correlation_id: correlationId,
         auto_approve_threshold: auto_approve_threshold || 0.85,
+        workflow_run_id: workflowRunId,
         pipeline_result: pipelineResult,
       },
     });
@@ -80,6 +83,7 @@ serve(async (req) => {
       message: "Autopilot started",
       episode_id,
       correlation_id: correlationId,
+      workflow_run_id: workflowRunId,
       pipeline_result: pipelineResult,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
