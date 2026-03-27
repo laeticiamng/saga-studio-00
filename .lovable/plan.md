@@ -1,67 +1,56 @@
 
 
-
-# Audit technique — Saga Studio (27 mars 2026, v4)
+# Audit technique — Saga Studio (27 mars 2026, v5)
 
 ## Résumé
 
-Après les corrections v3 (suppression de 22 `as any`, breadcrumbs Settings, ConfirmDialog webhooks, CTA crédits, ShareView series, Dashboard empty state), voici les lacunes résiduelles.
+Après les corrections v4 (SeriesNotFound guards, Breadcrumbs création, labels.ts, favicon/OG, logger), voici les lacunes résiduelles.
+
+✅ **Acquis v4** :
+- 0 `as any` côté client
+- TypeScript compile sans erreur
+- Breadcrumbs sur toutes les pages (création, studio, settings)
+- SeriesNotFound guard sur 8 pages studio
+- Favicon + OG image générés
+- Guidance onglet Agents vide (EpisodeView)
 
 ---
 
-## IMPORTANT (fonctionnel / robustesse)
+## IMPORTANT (dette technique active)
 
-### 1. Pages création sans Breadcrumbs
-`CreateClip.tsx`, `CreateFilm.tsx` et `CreateSeries.tsx` n'utilisent pas le composant `<Breadcrumbs>`.
-**Correction** : ajouter `<Breadcrumbs items={[{ label: "Nouveau clip/film/série" }]} />`.
+### 1. Labels dupliqués non consommés depuis `labels.ts`
+Le fichier `src/lib/labels.ts` a été créé mais **4 fichiers continuent d'utiliser leurs propres copies locales** :
+- `Dashboard.tsx` (lignes 16-49)
+- `Admin.tsx` (lignes 27-41)
+- `ProjectView.tsx` (lignes 24-40)
+- `ShareView.tsx` (lignes 11-17)
 
-### 2. Pas de gestion "série supprimée" dans les pages studio
-Si une série est supprimée alors que l'utilisateur est sur `/series/:id/autopilot`, `/series/:id/agents`, etc., la page affiche des données vides sans redirection ni message.
-**Pages concernées** : `AutopilotDashboard`, `ApprovalInbox`, `ContinuityCenter`, `DeliveryCenter`, `DocumentsCenter`, `AgentDashboard`, `BibleManager`, `CharacterGallery`.
-**Correction** : dans chaque page, après le chargement, si `series` est null, afficher un message "Série non trouvée" avec un lien retour Dashboard.
+**Note** : `BibleEditor.tsx` a ses propres `typeLabels` pour les types de bibles (style/character/world/tone/custom) — c'est un domaine différent, pas de duplication.
 
-### 3. Onglet "Agents" dans EpisodeView sans guidance
-L'onglet affiche "Aucune exécution d'agent pour cet épisode." sans expliquer comment en déclencher.
-**Correction** : ajouter un lien vers l'Autopilot de la série parente.
+**Correction** : Remplacer les constantes locales par `import { statusLabels, typeLabels, styleLabels } from "@/lib/labels"` dans ces 4 fichiers.
 
-### 4. `as any` résiduels côté edge functions
-5 fichiers edge functions utilisent encore `as any` :
-- `stitch-render/index.ts` : `as any[]` pour beats/sections/energy JSON
-- `export-assets/index.ts` : `(e.season as any)?.series_id`
-- `generate-shots/index.ts` : `status as any`, `as Record<string, any>`, `as any[]`
-- `plan-project/index.ts` : `sections as any[]`
-- `stripe-webhook/index.ts` : `(customer as any).deleted`
+### 2. `console.*` résiduels côté client
+5 fichiers utilisent encore `console.*` directement :
+- `NotFound.tsx` : `console.error` pour le 404 → remplacer par `logger.warn`
+- `main.tsx` : `console.error` pour les erreurs fatales → **garder** (logger non disponible si l'import échoue)
+- `ErrorBoundary.tsx` : `console.error` dans `componentDidCatch` → **garder** (fallback critique)
+- `ffmpeg-renderer.ts` : `console.log/warn/error` pour le rendu FFmpeg → remplacer par `logger`
 
-**Note** : les edge functions n'ont pas les types générés Supabase. Ces casts sont nécessaires ou tolérés. **Pas d'action requise** sauf si on copie les types dans les edge functions.
+**Correction** : remplacer dans `NotFound.tsx` et `ffmpeg-renderer.ts`. Garder `main.tsx` et `ErrorBoundary.tsx` car ce sont des fallbacks critiques.
 
 ---
 
-## AMÉLIORATIONS (UX / dette technique)
+## AMÉLIORATIONS (basse priorité)
 
-### 5. Console.log/warn/error dans le code client
-9 fichiers client contiennent des `console.*` directs (hors `logger.ts`) :
-- `CreateClip.tsx`, `CreateFilm.tsx`, `RenderExportPanel.tsx`, `ProjectView.tsx`, `NotFound.tsx`, `ffmpeg-renderer.ts`, `main.tsx`, `ErrorBoundary.tsx`
-**Correction** : remplacer par le `logger` centralisé pour une meilleure observabilité.
+### 3. `ProjectView.tsx` — `statusVariants` non centralisé
+Le mapping `statusVariants` (associant statuts à des variantes de Badge) est défini localement. Pourrait être ajouté à `labels.ts`.
 
-### 6. Duplication des constantes label/style
-`statusLabels`, `typeLabels`, `styleLabels` sont dupliqués dans `Dashboard.tsx`, `ProjectView.tsx`, `ShareView.tsx`, `Admin.tsx`.
-**Correction** : extraire dans `src/lib/labels.ts` pour centralisation.
-
-### 7. Pas de favicon réel
-`index.html` référence `/favicon.ico` mais le fichier n'existe pas dans `/public`. Seul `placeholder.svg` est présent.
-**Correction** : générer un favicon ou le remplacer par le SVG existant.
-
-### 8. OG image manquante
-`index.html` référence `/og-image.jpg` qui n'existe pas dans le dossier public.
-**Correction** : générer une image OG 1200x630 ou supprimer la meta.
-
-### 9. Pages protégées sans meta description dynamique
-Les pages du studio (`ProjectView`, `EpisodeView`, etc.) n'ont pas de meta description SEO. Elles héritent de la meta de la landing page.
-**Pas bloquant** pour les pages protégées (non indexées).
-
-### 10. Pas de page 404 stylisée pour les routes `/series/:id/*` inexistantes
-Si un utilisateur tape une route studio invalide (ex: `/series/abc/foo`), c'est le `NotFound` générique qui s'affiche.
+### 4. Pas de page 404 contextualisée pour `/series/:id/*`
+Si un utilisateur tape `/series/abc/foo`, il voit le NotFound générique.
 **Peu prioritaire** car protégé par l'auth.
+
+### 5. `AdminAuditLog.tsx` — pas de Breadcrumbs
+Les autres pages admin (`AdminAgentManager`, `AdminProviderDashboard`) n'ont pas non plus de Breadcrumbs, mais c'est cohérent entre elles. À ajouter si on veut une navigation admin complète.
 
 ---
 
@@ -69,11 +58,8 @@ Si un utilisateur tape une route studio invalide (ex: `/series/abc/foo`), c'est 
 
 | # | Action | Fichiers | Priorité |
 |---|--------|----------|----------|
-| 1 | Breadcrumbs dans CreateClip, CreateFilm, CreateSeries | 3 fichiers | Moyenne |
-| 2 | Gestion "série non trouvée" dans 8 pages studio | 8 fichiers | Haute |
-| 3 | Guidance onglet Agents vide dans EpisodeView | 1 fichier | Moyenne |
-| 4 | Centraliser les labels dupliqués | 5+ fichiers | Basse |
-| 5 | Remplacer console.* par logger | 6 fichiers | Basse |
-| 6 | Favicon + OG image | 2 assets | Basse |
+| 1 | Consommer `labels.ts` dans 4 fichiers | Dashboard, Admin, ProjectView, ShareView | Moyenne |
+| 2 | Remplacer `console.*` par logger | NotFound, ffmpeg-renderer | Basse |
+| 3 | Centraliser `statusVariants` | labels.ts + ProjectView | Basse |
 
-Priorité recommandée : **#2** (robustesse), puis **#1 + #3** (navigation/UX), puis **#4-6** (dette technique).
+**Estimation** : ~15 min, 0 risque de régression.
