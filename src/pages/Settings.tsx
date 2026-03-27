@@ -12,12 +12,16 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { Loader2, ArrowUp, ArrowDown, Webhook, Plus, Trash2, Eye, EyeOff, Copy, KeyRound } from "lucide-react";
+import { Loader2, ArrowUp, ArrowDown, Webhook, Plus, Trash2, Eye, EyeOff, Copy, KeyRound, CreditCard } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useNavigate } from "react-router-dom";
 
 export default function Settings() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   usePageTitle("Paramètres");
   const queryClient = useQueryClient();
   const [displayName, setDisplayName] = useState("");
@@ -29,6 +33,8 @@ export default function Settings() {
   const [newWebhookUrl, setNewWebhookUrl] = useState("");
   const [addingWebhook, setAddingWebhook] = useState(false);
   const [revealedSecrets, setRevealedSecrets] = useState<Set<string>>(new Set());
+  const [webhookToDelete, setWebhookToDelete] = useState<string | null>(null);
+  const [deletingWebhook, setDeletingWebhook] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -129,10 +135,14 @@ export default function Settings() {
     queryClient.invalidateQueries({ queryKey: ["webhooks"] });
   };
 
-  const handleDeleteWebhook = async (id: string) => {
-    await supabase.from("webhook_endpoints").delete().eq("id", id);
+  const handleDeleteWebhook = async () => {
+    if (!webhookToDelete) return;
+    setDeletingWebhook(true);
+    await supabase.from("webhook_endpoints").delete().eq("id", webhookToDelete);
     queryClient.invalidateQueries({ queryKey: ["webhooks"] });
     toast({ title: "Supprimé" });
+    setDeletingWebhook(false);
+    setWebhookToDelete(null);
   };
 
   const toggleSecret = (id: string) => {
@@ -152,6 +162,7 @@ export default function Settings() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="container mx-auto max-w-2xl px-4 py-10 md:py-14 space-y-6">
+        <Breadcrumbs items={[{ label: "Paramètres" }]} />
         <div>
           <h1 className="text-3xl font-bold">Paramètres</h1>
           <p className="text-muted-foreground mt-1 text-sm">Gérez votre profil, mot de passe et préférences</p>
@@ -225,7 +236,7 @@ export default function Settings() {
                 <p className="text-sm text-muted-foreground text-center py-4">Aucun webhook configuré</p>
               ) : (
                 <div className="space-y-3">
-                  {webhooks.map((wh: any) => (
+                  {webhooks.map((wh) => (
                     <div key={wh.id} className="rounded-lg border border-border/50 bg-secondary/30 p-3 space-y-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 min-w-0">
@@ -236,7 +247,7 @@ export default function Settings() {
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
                           <Switch checked={wh.active} onCheckedChange={() => handleToggleWebhook(wh.id, wh.active)} />
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteWebhook(wh.id)}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setWebhookToDelete(wh.id)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -266,11 +277,16 @@ export default function Settings() {
           <CardHeader>
             <CardTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-lg">
               Historique des crédits
-              {wallet && (
-                <Badge variant="secondary" className="text-sm font-medium w-fit">
-                  Solde : {wallet.balance} crédits
-                </Badge>
-              )}
+              <div className="flex items-center gap-2">
+                {wallet && (
+                  <Badge variant="secondary" className="text-sm font-medium w-fit">
+                    Solde : {wallet.balance} crédits
+                  </Badge>
+                )}
+                <Button variant="outline" size="sm" onClick={() => navigate("/pricing")} className="gap-1.5">
+                  <CreditCard className="h-3.5 w-3.5" /> Acheter des crédits
+                </Button>
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -309,6 +325,15 @@ export default function Settings() {
             )}
           </CardContent>
         </Card>
+        <ConfirmDialog
+          open={!!webhookToDelete}
+          onOpenChange={(open) => { if (!open) setWebhookToDelete(null); }}
+          title="Supprimer ce webhook ?"
+          description="Cette action est irréversible. Le webhook ne recevra plus de notifications."
+          confirmLabel="Supprimer"
+          onConfirm={handleDeleteWebhook}
+          isPending={deletingWebhook}
+        />
       </main>
       <Footer />
     </div>

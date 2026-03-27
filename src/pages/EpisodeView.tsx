@@ -133,13 +133,10 @@ export default function EpisodeView() {
           <TabsContent value="agents">
             {agentRuns && agentRuns.length > 0 ? (
               <div className="space-y-2">
-                {agentRuns.map((run: any) => (
+                {agentRuns.map((run) => (
                   <div key={run.id} className="border rounded-lg p-3 flex items-center justify-between">
                     <div>
-                      <span className="font-medium">{run.agent?.name || run.agent_slug}</span>
-                      <span className="text-sm text-muted-foreground ml-2">
-                        {run.agent?.category}
-                      </span>
+                      <span className="font-medium">{run.agent_slug}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       {run.latency_ms && (
@@ -169,21 +166,24 @@ export default function EpisodeView() {
               <Card>
                 <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Brain className="h-5 w-5" /> Revues psychologiques</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
-                  {psychReviews.map((r: any) => (
+                  {psychReviews.map((r) => {
+                    const assessments = Array.isArray(r.character_assessments) ? r.character_assessments as Array<Record<string, unknown>> : [];
+                    return (
                     <div key={r.id} className="border rounded-lg p-3">
                       <div className="flex items-center gap-2 mb-2">
                         <Badge variant={r.verdict === "pass" ? "secondary" : "destructive"}>{r.verdict}</Badge>
                       </div>
                       {r.recommendations && <p className="text-sm text-muted-foreground">{r.recommendations}</p>}
-                      {r.character_assessments && Array.isArray(r.character_assessments) && r.character_assessments.length > 0 && (
+                      {assessments.length > 0 && (
                         <div className="mt-2 space-y-1">
-                          {r.character_assessments.map((a: any, i: number) => (
-                            <p key={i} className="text-xs text-muted-foreground">• {a.character || a.name}: {a.assessment || a.note || JSON.stringify(a)}</p>
+                          {assessments.map((a, i) => (
+                            <p key={i} className="text-xs text-muted-foreground">• {String(a.character || a.name)}: {String(a.assessment || a.note || JSON.stringify(a))}</p>
                           ))}
                         </div>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </CardContent>
               </Card>
             )}
@@ -193,23 +193,26 @@ export default function EpisodeView() {
               <Card>
                 <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Scale className="h-5 w-5" /> Revues juridiques/éthiques</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
-                  {legalReviews.map((r: any) => (
+                  {legalReviews.map((r) => {
+                    const flags = Array.isArray(r.flags) ? r.flags as Array<Record<string, unknown>> : [];
+                    return (
                     <div key={r.id} className="border rounded-lg p-3">
                       <div className="flex items-center gap-2 mb-2">
                         <Badge variant={r.verdict === "pass" ? "secondary" : "destructive"}>{r.verdict}</Badge>
                       </div>
                       {r.recommendations && <p className="text-sm text-muted-foreground">{r.recommendations}</p>}
-                      {r.flags && Array.isArray(r.flags) && r.flags.length > 0 && (
+                      {flags.length > 0 && (
                         <div className="mt-2 space-y-1">
-                          {r.flags.map((f: any, i: number) => (
+                          {flags.map((f, i) => (
                             <p key={i} className="text-xs flex items-center gap-1">
-                              <AlertTriangle className="h-3 w-3" /> {f.description || f.flag || JSON.stringify(f)}
+                              <AlertTriangle className="h-3 w-3" /> {String(f.description || f.flag || JSON.stringify(f))}
                             </p>
                           ))}
                         </div>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </CardContent>
               </Card>
             )}
@@ -219,23 +222,26 @@ export default function EpisodeView() {
               <Card>
                 <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Eye className="h-5 w-5" /> Rapports de continuité</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
-                  {continuityReports.map((r: any) => (
+                  {continuityReports.map((r) => {
+                    const issues = Array.isArray(r.issues) ? r.issues as Array<Record<string, unknown>> : [];
+                    return (
                     <div key={r.id} className="border rounded-lg p-3">
                       <div className="flex items-center gap-2 mb-2">
                         <Badge variant={r.verdict === "pass" ? "secondary" : "destructive"}>{r.verdict}</Badge>
                       </div>
                       {r.summary && <p className="text-sm text-muted-foreground">{r.summary}</p>}
-                      {r.issues && Array.isArray(r.issues) && r.issues.length > 0 && (
+                      {issues.length > 0 && (
                         <div className="mt-2 space-y-1">
-                          {r.issues.map((issue: any, i: number) => (
+                          {issues.map((issue, i) => (
                             <p key={i} className="text-xs flex items-center gap-1">
-                              <AlertTriangle className="h-3 w-3" /> {issue.description || JSON.stringify(issue)}
+                              <AlertTriangle className="h-3 w-3" /> {String(issue.description || JSON.stringify(issue))}
                             </p>
                           ))}
                         </div>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </CardContent>
               </Card>
             )}

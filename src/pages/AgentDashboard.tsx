@@ -106,10 +106,10 @@ export default function AgentDashboard() {
               <Loader2 className="h-5 w-5 animate-spin mx-auto" />
             ) : agentRuns && agentRuns.length > 0 ? (
               <div className="space-y-2">
-                {agentRuns.slice(0, 20).map((run: any) => (
+                {agentRuns.slice(0, 20).map((run) => (
                   <div key={run.id} className="flex items-center justify-between p-2 border rounded text-sm">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{run.agent?.name || run.agent_slug}</span>
+                      <span className="font-medium">{run.agent_slug}</span>
                       {run.model_used && (
                         <span className="text-xs text-muted-foreground">{run.model_used}</span>
                       )}

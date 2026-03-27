@@ -63,7 +63,7 @@ export function EpisodePipeline({
   };
 
   const getConfidence = (stepKey: string) => {
-    return confidenceScores?.find((s: any) => s.dimension === stepKey || s.dimension?.includes(stepKey));
+    return confidenceScores?.find((s) => s.dimension === stepKey || s.dimension?.includes(stepKey));
   };
 
   return (

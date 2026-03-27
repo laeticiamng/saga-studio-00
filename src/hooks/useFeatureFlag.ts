@@ -12,12 +12,12 @@ export function useFeatureFlag(key: string): boolean {
     queryFn: async () => {
       try {
         const { data, error } = await supabase
-          .from("feature_flags" as any)
+          .from("feature_flags")
           .select("enabled")
           .eq("key", key)
           .maybeSingle();
         if (error) return false;
-        return (data as any)?.enabled ?? false;
+        return data?.enabled ?? false;
       } catch {
         return false;
       }

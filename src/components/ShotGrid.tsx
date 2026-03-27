@@ -34,7 +34,7 @@ export function ShotGrid({ shots }: { shots: Shot[] }) {
   const handleRetry = async (shot: Shot) => {
     setRetrying(shot.id);
     try {
-      await supabase.from("shots").update({ status: "regenerating" as any, error_message: null }).eq("id", shot.id);
+      await supabase.from("shots").update({ status: "regenerating", error_message: null }).eq("id", shot.id);
       await supabase.functions.invoke("generate-shots", {
         body: { project_id: shot.project_id, shot_ids: [shot.id] },
       });
