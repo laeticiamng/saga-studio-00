@@ -168,9 +168,9 @@ export default function DeliveryCenter() {
                           </>
                         )}
                         {(manifest.status === "qc_passed" || manifest.status === "delivered") && (
-                          <Button size="sm">
-                            <Download className="h-4 w-4 mr-1" /> Exporter
-                          </Button>
+                          <Button size="sm" onClick={() => handleExport(manifest.episode_id!)}>
+                             <Download className="h-4 w-4 mr-1" /> Exporter
+                           </Button>
                         )}
                       </div>
                     </CardContent>
