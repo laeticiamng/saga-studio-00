@@ -24,21 +24,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const statusLabels: Record<string, string> = {
-  completed: "Terminé", processing: "En cours", pending: "En attente",
-  failed: "Échoué", cancelled: "Annulé", generating: "Génération",
-  analyzing: "Analyse", planning: "Planification", stitching: "Assemblage",
-  draft: "Brouillon", resolved: "Résolu", dismissed: "Rejeté", reviewed: "Examiné",
-};
-
-const typeLabels: Record<string, string> = { clip: "Clip", film: "Film", series: "Série" };
-
-const styleLabels: Record<string, string> = {
-  cinematic: "Cinématique", anime: "Anime", watercolor: "Aquarelle",
-  "3d_render": "Rendu 3D", noir: "Noir", vintage: "Vintage", neon: "Néon", realistic: "Réaliste",
-  hyperpop: "Hyperpop", afrofuturism: "Afrofuturisme", synthwave: "Synthwave",
-  documentary: "Documentaire", fantasy: "Fantaisie",
-};
+import { statusLabels, typeLabels, styleLabels } from "@/lib/labels";
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ReactNode }> = {

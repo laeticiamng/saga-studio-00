@@ -8,13 +8,7 @@ import { Film, Download, Loader2, Play } from "lucide-react";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { ShotPreviewPlayer } from "@/components/ShotPreviewPlayer";
 
-const typeLabels: Record<string, string> = { clip: "Clip", film: "Film", series: "Série" };
-const styleLabels: Record<string, string> = {
-  cinematic: "Cinématique", anime: "Anime", watercolor: "Aquarelle",
-  "3d_render": "Rendu 3D", noir: "Noir", vintage: "Vintage", neon: "Néon", realistic: "Réaliste",
-  hyperpop: "Hyperpop", afrofuturism: "Afrofuturisme", synthwave: "Synthwave",
-  documentary: "Documentaire", fantasy: "Fantaisie",
-};
+import { typeLabels, styleLabels } from "@/lib/labels";
 
 function isManifestUrl(url: string | null): boolean {
   return !!url && url.includes("manifest.json");

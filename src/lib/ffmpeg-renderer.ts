@@ -1,6 +1,7 @@
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { toBlobURL, fetchFile } from "@ffmpeg/util";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 /** Fetch a file, proxying external URLs through the edge function to avoid CORS */
 async function fetchFileProxy(url: string): Promise<Uint8Array> {
