@@ -1,18 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+type Season = Database["public"]["Tables"]["seasons"]["Row"];
+type SeasonInsert = Database["public"]["Tables"]["seasons"]["Insert"];
 
 export function useSeasons(seriesId: string | undefined) {
   return useQuery({
     queryKey: ["seasons", seriesId],
     queryFn: async () => {
       if (!seriesId) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("seasons")
         .select("*")
         .eq("series_id", seriesId)
         .order("number", { ascending: true });
       if (error) throw error;
-      return data as any[];
+      return data;
     },
     enabled: !!seriesId,
   });
@@ -23,13 +27,13 @@ export function useSeason(seasonId: string | undefined) {
     queryKey: ["season", seasonId],
     queryFn: async () => {
       if (!seasonId) return null;
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("seasons")
         .select("*")
         .eq("id", seasonId)
         .single();
       if (error) throw error;
-      return data as any;
+      return data;
     },
     enabled: !!seasonId,
   });
@@ -38,16 +42,16 @@ export function useSeason(seasonId: string | undefined) {
 export function useCreateSeason() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: any) => {
-      const { data, error } = await (supabase as any)
+    mutationFn: async (input: SeasonInsert) => {
+      const { data, error } = await supabase
         .from("seasons")
         .insert(input)
         .select()
         .single();
       if (error) throw error;
-      return data as any;
+      return data;
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["seasons", data.series_id] });
     },
   });
@@ -56,17 +60,17 @@ export function useCreateSeason() {
 export function useUpdateSeason() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
-      const { data, error } = await (supabase as any)
+    mutationFn: async ({ id, ...updates }: { id: string } & Partial<Season>) => {
+      const { data, error } = await supabase
         .from("seasons")
         .update(updates)
         .eq("id", id)
         .select()
         .single();
       if (error) throw error;
-      return data as any;
+      return data;
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["seasons", data.series_id] });
       queryClient.invalidateQueries({ queryKey: ["season", data.id] });
     },

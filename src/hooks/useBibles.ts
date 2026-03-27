@@ -1,12 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database, Json } from "@/integrations/supabase/types";
+
+type Bible = Database["public"]["Tables"]["bibles"]["Row"];
 
 export function useBibles(seriesId: string | undefined, type?: string) {
   return useQuery({
     queryKey: ["bibles", seriesId, type],
     queryFn: async () => {
       if (!seriesId) return [];
-      let query = (supabase as any)
+      let query = supabase
         .from("bibles")
         .select("*")
         .eq("series_id", seriesId)
@@ -14,7 +17,7 @@ export function useBibles(seriesId: string | undefined, type?: string) {
       if (type) query = query.eq("type", type);
       const { data, error } = await query;
       if (error) throw error;
-      return data as any[];
+      return data;
     },
     enabled: !!seriesId,
   });
@@ -23,16 +26,16 @@ export function useBibles(seriesId: string | undefined, type?: string) {
 export function useCreateBible() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { series_id: string; type: string; name: string; content: any }) => {
-      const { data, error } = await (supabase as any)
+    mutationFn: async (input: { series_id: string; type: string; name: string; content: Json }) => {
+      const { data, error } = await supabase
         .from("bibles")
         .insert(input)
         .select()
         .single();
       if (error) throw error;
-      return data as any;
+      return data;
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["bibles", data.series_id] });
     },
   });
@@ -41,17 +44,17 @@ export function useCreateBible() {
 export function useUpdateBible() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
-      const { data, error } = await (supabase as any)
+    mutationFn: async ({ id, ...updates }: { id: string } & Partial<Bible>) => {
+      const { data, error } = await supabase
         .from("bibles")
         .update(updates)
         .eq("id", id)
         .select()
         .single();
       if (error) throw error;
-      return data as any;
+      return data;
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["bibles", data.series_id] });
     },
   });
@@ -61,11 +64,11 @@ export function useDeleteBible() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, seriesId }: { id: string; seriesId: string }) => {
-      const { error } = await (supabase as any).from("bibles").delete().eq("id", id);
+      const { error } = await supabase.from("bibles").delete().eq("id", id);
       if (error) throw error;
       return { seriesId };
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["bibles", data.seriesId] });
     },
   });

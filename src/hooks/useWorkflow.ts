@@ -6,7 +6,7 @@ export function useWorkflowRun(episodeId: string | undefined) {
     queryKey: ["workflow_run", episodeId],
     enabled: !!episodeId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("workflow_runs")
         .select("*")
         .eq("episode_id", episodeId!)
@@ -14,7 +14,7 @@ export function useWorkflowRun(episodeId: string | undefined) {
         .limit(1)
         .maybeSingle();
       if (error) throw error;
-      return data as any | null;
+      return data;
     },
   });
 }
@@ -24,13 +24,13 @@ export function useWorkflowSteps(workflowRunId: string | undefined) {
     queryKey: ["workflow_steps", workflowRunId],
     enabled: !!workflowRunId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("workflow_steps")
         .select("*")
         .eq("workflow_run_id", workflowRunId!)
         .order("step_order");
       if (error) throw error;
-      return data as any[];
+      return data;
     },
   });
 }
@@ -40,13 +40,13 @@ export function useConfidenceScores(episodeId: string | undefined) {
     queryKey: ["confidence_scores", episodeId],
     enabled: !!episodeId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("workflow_confidence_scores")
         .select("*")
         .eq("episode_id", episodeId!)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as any[];
+      return data;
     },
   });
 }
@@ -61,7 +61,7 @@ export function useStartAutopilot() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (_data: any, { episodeId }: { episodeId: string }) => {
+    onSuccess: (_data, { episodeId }) => {
       queryClient.invalidateQueries({ queryKey: ["workflow_run", episodeId] });
       queryClient.invalidateQueries({ queryKey: ["episode", episodeId] });
     },
@@ -83,7 +83,7 @@ export function useApprovalEvaluate() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (_data: any, variables: any) => {
+    onSuccess: (_data, variables) => {
       const { episodeId } = variables;
       queryClient.invalidateQueries({ queryKey: ["workflow_run", episodeId] });
       queryClient.invalidateQueries({ queryKey: ["workflow_steps"] });

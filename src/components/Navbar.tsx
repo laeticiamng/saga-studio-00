@@ -1,7 +1,7 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Film, LogOut, User, LayoutDashboard, CreditCard, Search, Menu, X } from "lucide-react";
+import { Film, LogOut, User, LayoutDashboard, CreditCard, Search, Menu, X, Tv } from "lucide-react";
 import { CreditDisplay } from "@/components/CreditDisplay";
 import CommandPalette from "@/components/CommandPalette";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -102,10 +102,14 @@ export default function Navbar() {
               {user ? (
                 <>
                   <CreditDisplay />
-                  <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="gap-2">
-                    <LayoutDashboard className="h-4 w-4" />
-                    <span className="hidden xl:inline">Mes projets</span>
-                  </Button>
+                   <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="gap-2">
+                     <LayoutDashboard className="h-4 w-4" />
+                     <span className="hidden xl:inline">Mes projets</span>
+                   </Button>
+                   <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard?tab=series")} className="gap-2">
+                     <Tv className="h-4 w-4" />
+                     <span className="hidden xl:inline">Séries</span>
+                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => navigate("/pricing")} className="gap-2">
                     <CreditCard className="h-4 w-4" />
                     <span className="hidden xl:inline">Tarifs</span>
@@ -185,9 +189,12 @@ export default function Navbar() {
                     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }}>
                       <CreditDisplay />
                     </motion.div>
-                    <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} onClick={() => mobileNav("/dashboard")} className="flex items-center gap-3 px-4 py-3.5 rounded-lg hover:bg-muted/50 active:bg-muted/70 transition-colors min-h-[44px]">
-                      <LayoutDashboard className="h-4 w-4 text-primary" /> Mes projets
-                    </motion.button>
+                     <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} onClick={() => mobileNav("/dashboard")} className="flex items-center gap-3 px-4 py-3.5 rounded-lg hover:bg-muted/50 active:bg-muted/70 transition-colors min-h-[44px]">
+                       <LayoutDashboard className="h-4 w-4 text-primary" /> Mes projets
+                     </motion.button>
+                     <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.22 }} onClick={() => mobileNav("/dashboard?tab=series")} className="flex items-center gap-3 px-4 py-3.5 rounded-lg hover:bg-muted/50 active:bg-muted/70 transition-colors min-h-[44px]">
+                       <Tv className="h-4 w-4 text-primary" /> Séries
+                     </motion.button>
                     <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.25 }} onClick={() => mobileNav("/pricing")} className="flex items-center gap-3 px-4 py-3.5 rounded-lg hover:bg-muted/50 active:bg-muted/70 transition-colors min-h-[44px]">
                       <CreditCard className="h-4 w-4 text-primary" /> Tarifs
                     </motion.button>

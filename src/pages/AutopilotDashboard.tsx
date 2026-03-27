@@ -44,20 +44,20 @@ function useSeriesEpisodes(seriesId: string | undefined) {
     enabled: !!seriesId,
     queryFn: async () => {
       // Episodes don't have series_id — go through seasons
-      const { data: seasons, error: sErr } = await (supabase as any)
+      const { data: seasons, error: sErr } = await supabase
         .from("seasons")
         .select("id")
         .eq("series_id", seriesId!);
       if (sErr) throw sErr;
       if (!seasons || seasons.length === 0) return [];
-      const seasonIds = seasons.map((s: any) => s.id);
-      const { data, error } = await (supabase as any)
+      const seasonIds = seasons.map((s) => s.id);
+      const { data, error } = await supabase
         .from("episodes")
         .select("*")
         .in("season_id", seasonIds)
         .order("number", { ascending: true });
       if (error) throw error;
-      return data as any[];
+      return data;
     },
   });
 }
