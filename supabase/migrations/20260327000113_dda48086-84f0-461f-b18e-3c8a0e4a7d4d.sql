@@ -1,0 +1,36 @@
+
+-- Seed 16 core agents into agent_registry (upsert to avoid duplication)
+INSERT INTO public.agent_registry (slug, name, category, role, description, dependencies, is_active, status) VALUES
+  ('showrunner', 'Showrunner', 'writing', 'orchestrator', 'Orchestre la production, priorise les tâches, valide la direction créative globale', '{}', true, 'active'),
+  ('story_architect', 'Architecte narratif', 'writing', 'creator', 'Crée la structure narrative avec arcs, thèmes et progression dramatique', '{}', true, 'active'),
+  ('scriptwriter', 'Scénariste', 'writing', 'creator', 'Écrit des scripts détaillés avec dialogues et mise en scène', '{story_architect}', true, 'active'),
+  ('script_doctor', 'Script Doctor', 'writing', 'refiner', 'Identifie les faiblesses narratives et propose des corrections', '{scriptwriter}', true, 'active'),
+  ('psychology_reviewer', 'Psychologue narratif', 'validation', 'reviewer', 'Évalue cohérence psychologique, motivations et impact émotionnel', '{scriptwriter}', true, 'active'),
+  ('legal_ethics_reviewer', 'Conseiller juridique', 'validation', 'reviewer', 'Vérifie conformité légale et éthique (diffamation, droits, sensibilité)', '{scriptwriter}', true, 'active'),
+  ('continuity_checker', 'Vérificateur continuité', 'validation', 'reviewer', 'Compare avec la mémoire série, détecte les incohérences', '{scriptwriter}', true, 'active'),
+  ('visual_director', 'Directeur visuel', 'visual', 'creator', 'Définit le style visuel, palette, éclairage et bible visuelle', '{story_architect}', true, 'active'),
+  ('production_designer', 'Chef décorateur', 'visual', 'creator', 'Conçoit décors, ambiances et univers visuel cohérent', '{visual_director}', true, 'active'),
+  ('costume_designer', 'Costumier', 'visual', 'creator', 'Définit costumes en cohérence avec la bible et l''évolution narrative', '{visual_director,continuity_checker}', true, 'active'),
+  ('props_designer', 'Accessoiriste', 'visual', 'creator', 'Définit accessoires clés et leur cohérence inter-épisodes', '{scene_designer}', true, 'active'),
+  ('scene_designer', 'Concepteur de scènes', 'visual', 'creator', 'Découpe l''épisode en scènes détaillées', '{scriptwriter,visual_director}', true, 'active'),
+  ('casting_consistency', 'Directeur casting', 'validation', 'reviewer', 'Vérifie cohérence visuelle des personnages (visages, proportions)', '{visual_director}', true, 'active'),
+  ('shot_planner', 'Planificateur de plans', 'production', 'creator', 'Génère shotlists avec cadrages, mouvements et prompts', '{scene_designer}', true, 'active'),
+  ('sound_music', 'Ingénieur son', 'audio', 'creator', 'Définit bande sonore, effets et design audio', '{music_director}', true, 'active'),
+  ('music_director', 'Directeur musical', 'audio', 'creator', 'Sélectionne et synchronise musique, thèmes musicaux par personnage', '{story_architect}', true, 'active'),
+  ('voice_director', 'Directeur voix', 'audio', 'creator', 'Gère casting vocal, direction vocale et ton par personnage', '{dialogue_coach}', true, 'active'),
+  ('dialogue_coach', 'Coach dialogues', 'writing', 'refiner', 'Affine dialogues et voix des personnages', '{scriptwriter}', true, 'active'),
+  ('editor', 'Monteur', 'production', 'assembler', 'Planifie montage, transitions, rythme et assemblage final', '{shot_planner}', true, 'active'),
+  ('colorist', 'Étalonneur', 'visual', 'refiner', 'Étalonnage couleur et cohérence visuelle inter-plans', '{editor}', true, 'active'),
+  ('qa_reviewer', 'Contrôleur qualité', 'validation', 'reviewer', 'Évalue qualité globale (technique, narrative, visuelle, sonore)', '{editor}', true, 'active'),
+  ('delivery_manager', 'Responsable livraison', 'delivery', 'assembler', 'Prépare spécifications d''export et vérifie conformité technique', '{qa_reviewer}', true, 'active'),
+  ('delivery_supervisor', 'Superviseur livraison', 'delivery', 'reviewer', 'Valide conformité technique finale avant export', '{delivery_manager,qa_reviewer}', true, 'active'),
+  ('document_ingestion', 'Agent d''ingestion', 'writing', 'creator', 'Comprend un document importé et produit une structure exploitable', '{}', true, 'active'),
+  ('autofill_mapper', 'Agent de mapping', 'writing', 'creator', 'Mappe les champs extraits vers l''UI et le modèle de données', '{document_ingestion}', true, 'active')
+ON CONFLICT (slug) DO UPDATE SET
+  name = EXCLUDED.name,
+  category = EXCLUDED.category,
+  role = EXCLUDED.role,
+  description = EXCLUDED.description,
+  dependencies = EXCLUDED.dependencies,
+  is_active = EXCLUDED.is_active,
+  status = EXCLUDED.status;
