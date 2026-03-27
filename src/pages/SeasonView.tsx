@@ -161,7 +161,7 @@ export default function SeasonView() {
 
         <div className="space-y-3">
           {episodes && episodes.length > 0 ? (
-            episodes.map((ep: any) => (
+            episodes.map((ep) => (
               <EpisodeCard key={ep.id} episode={ep} seriesId={seriesId!} />
             ))
           ) : (
