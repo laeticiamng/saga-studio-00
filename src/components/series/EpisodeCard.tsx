@@ -44,6 +44,9 @@ export function EpisodeCard({
             <div className="min-w-0">
               <p className="text-sm text-muted-foreground">
                 Épisode {episode.number}
+                {episode.duration_target_min && (
+                  <span className="ml-2">• {episode.duration_target_min} min</span>
+                )}
               </p>
               <h4 className="font-medium truncate">{episode.title}</h4>
               {episode.synopsis && (

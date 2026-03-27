@@ -198,6 +198,10 @@ serve(async (req) => {
             trigger_status: currentStatus,
             workflow_run_id: workflowRun.id,
             workflow_step_id: wfStep.id,
+            duration_target_min: durationTargetMin,
+            estimated_scenes: estimatedScenes,
+            estimated_shots_per_scene: estimatedShotsPerScene,
+            total_estimated_shots: estimatedScenes * estimatedShotsPerScene,
           },
         })
         .select()
