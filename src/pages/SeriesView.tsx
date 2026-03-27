@@ -69,7 +69,7 @@ export default function SeriesView() {
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-2">
             <Tv className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold">{project?.title}</h1>
+            <h1 className="text-2xl font-bold">{String(project?.title || "Série")}</h1>
             <Badge variant="secondary">{series.genre || "Série"}</Badge>
             {series.tone && <Badge variant="outline">{series.tone}</Badge>}
           </div>
