@@ -11,7 +11,7 @@ import { usePsychologyReviews, useLegalEthicsReviews, useContinuityReports } fro
 import { EpisodePipeline } from "@/components/series/EpisodePipeline";
 import { SceneBreakdown } from "@/components/series/SceneBreakdown";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { Loader2, FileText, Layers, Play, Activity, Shield, Brain, Scale, Eye, CheckCircle, AlertTriangle } from "lucide-react";
+import { Loader2, FileText, Layers, Play, Activity, Shield, Brain, Scale, Eye, CheckCircle, AlertTriangle, Clock } from "lucide-react";
 
 export default function EpisodeView() {
   const { episodeId } = useParams<{ episodeId: string }>();
@@ -60,6 +60,12 @@ export default function EpisodeView() {
               Épisode {episode.number} — {episode.title}
             </h1>
             <Badge variant="secondary">{episode.status}</Badge>
+            {episode.duration_target_min && (
+              <Badge variant="outline" className="gap-1">
+                <Clock className="h-3 w-3" />
+                {episode.duration_target_min} min
+              </Badge>
+            )}
           </div>
           {episode.synopsis && (
             <p className="text-muted-foreground max-w-2xl">{episode.synopsis}</p>
@@ -108,7 +114,7 @@ export default function EpisodeView() {
           </TabsContent>
 
           <TabsContent value="scenes">
-            <SceneBreakdown episodeId={episode.id} />
+            <SceneBreakdown episodeId={episode.id} durationTargetMin={episode.duration_target_min} />
           </TabsContent>
 
           <TabsContent value="agents">

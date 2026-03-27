@@ -886,9 +886,82 @@ export type Database = {
           },
         ]
       }
+      episode_shots: {
+        Row: {
+          batch_index: number | null
+          cost_credits: number | null
+          created_at: string | null
+          duration_sec: number | null
+          episode_id: string
+          error_message: string | null
+          id: string
+          idx: number
+          negative_prompt: string | null
+          output_url: string | null
+          prompt: string | null
+          provider: string | null
+          scene_id: string | null
+          seed: number | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          batch_index?: number | null
+          cost_credits?: number | null
+          created_at?: string | null
+          duration_sec?: number | null
+          episode_id: string
+          error_message?: string | null
+          id?: string
+          idx?: number
+          negative_prompt?: string | null
+          output_url?: string | null
+          prompt?: string | null
+          provider?: string | null
+          scene_id?: string | null
+          seed?: number | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          batch_index?: number | null
+          cost_credits?: number | null
+          created_at?: string | null
+          duration_sec?: number | null
+          episode_id?: string
+          error_message?: string | null
+          id?: string
+          idx?: number
+          negative_prompt?: string | null
+          output_url?: string | null
+          prompt?: string | null
+          provider?: string | null
+          scene_id?: string | null
+          seed?: number | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "episode_shots_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "episode_shots_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "scenes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       episodes: {
         Row: {
           created_at: string
+          duration_target_min: number | null
           id: string
           number: number
           project_id: string | null
@@ -901,6 +974,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          duration_target_min?: number | null
           id?: string
           number: number
           project_id?: string | null
@@ -913,6 +987,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          duration_target_min?: number | null
           id?: string
           number?: number
           project_id?: string | null
@@ -1655,6 +1730,57 @@ export type Database = {
           },
         ]
       }
+      render_batches: {
+        Row: {
+          created_at: string | null
+          episode_ids: Json | null
+          error_message: string | null
+          id: string
+          progress: Json | null
+          season_id: string | null
+          series_id: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          episode_ids?: Json | null
+          error_message?: string | null
+          id?: string
+          progress?: Json | null
+          season_id?: string | null
+          series_id: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          episode_ids?: Json | null
+          error_message?: string | null
+          id?: string
+          progress?: Json | null
+          season_id?: string | null
+          series_id?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "render_batches_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "render_batches_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       renders: {
         Row: {
           created_at: string
@@ -1726,6 +1852,7 @@ export type Database = {
           idx: number
           location: string | null
           mood: string | null
+          shot_count: number | null
           time_of_day: string | null
           title: string | null
           updated_at: string
@@ -1740,6 +1867,7 @@ export type Database = {
           idx?: number
           location?: string | null
           mood?: string | null
+          shot_count?: number | null
           time_of_day?: string | null
           title?: string | null
           updated_at?: string
@@ -1754,6 +1882,7 @@ export type Database = {
           idx?: number
           location?: string | null
           mood?: string | null
+          shot_count?: number | null
           time_of_day?: string | null
           title?: string | null
           updated_at?: string
@@ -1879,6 +2008,8 @@ export type Database = {
       series: {
         Row: {
           created_at: string
+          episode_duration_min: number | null
+          episodes_per_season: number | null
           genre: string | null
           id: string
           logline: string | null
@@ -1890,6 +2021,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          episode_duration_min?: number | null
+          episodes_per_season?: number | null
           genre?: string | null
           id?: string
           logline?: string | null
@@ -1901,6 +2034,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          episode_duration_min?: number | null
+          episodes_per_season?: number | null
           genre?: string | null
           id?: string
           logline?: string | null

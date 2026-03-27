@@ -57,7 +57,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { title, logline, genre, tone, target_audience, total_seasons, style_preset } = body;
+    const { title, logline, genre, tone, target_audience, total_seasons, style_preset, episode_duration_min, episodes_per_season } = body;
 
     if (!title || typeof title !== "string" || title.length > 200) {
       throw new Error("Titre requis (max 200 caractères)");
@@ -89,6 +89,9 @@ serve(async (req) => {
     if (projectErr) throw projectErr;
 
     // Create series record
+    const epDuration = episode_duration_min || 50;
+    const epPerSeason = episodes_per_season || 10;
+
     const { data: series, error: seriesErr } = await supabase
       .from("series")
       .insert({
@@ -98,6 +101,8 @@ serve(async (req) => {
         tone: tone || null,
         target_audience: target_audience || null,
         total_seasons: total_seasons || 1,
+        episode_duration_min: epDuration,
+        episodes_per_season: epPerSeason,
       })
       .select()
       .single();
@@ -114,6 +119,21 @@ serve(async (req) => {
       .select()
       .single();
     if (seasonErr) throw seasonErr;
+
+    // Create initial episodes with duration targets
+    const episodeInserts = [];
+    for (let i = 1; i <= Math.min(epPerSeason, 50); i++) {
+      episodeInserts.push({
+        season_id: season.id,
+        number: i,
+        title: `Épisode ${i}`,
+        status: "draft",
+        duration_target_min: epDuration,
+      });
+    }
+    if (episodeInserts.length > 0) {
+      await supabase.from("episodes").insert(episodeInserts);
+    }
 
     return new Response(JSON.stringify({ project, series, season }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
