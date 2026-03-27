@@ -18,7 +18,7 @@ export default function AgentDashboard() {
     completed: agentRuns?.filter((r) => r.status === "completed").length ?? 0,
     failed: agentRuns?.filter((r) => r.status === "failed").length ?? 0,
     running: agentRuns?.filter((r) => r.status === "running").length ?? 0,
-    totalCredits: agentRuns?.reduce((sum, r) => sum + (r.cost_credits ?? 0), 0) ?? 0,
+    totalTokens: agentRuns?.reduce((sum, r) => sum + (r.tokens_used ?? 0), 0) ?? 0,
     avgLatency: agentRuns && agentRuns.length > 0
       ? Math.round(agentRuns.reduce((sum, r) => sum + (r.latency_ms ?? 0), 0) / agentRuns.length)
       : 0,
