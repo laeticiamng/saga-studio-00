@@ -64,6 +64,8 @@ export function useCreateSeries() {
       target_audience?: string;
       total_seasons?: number;
       style_preset?: string;
+      episode_duration_min?: number;
+      episodes_per_season?: number;
     }) => {
       const { data, error } = await supabase.functions.invoke("create-series", {
         body: input,
