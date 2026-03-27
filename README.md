@@ -130,6 +130,18 @@ npm run ci             # Suite CI complète
 - Rate limiting sur la création de séries
 - Feature flags pour activer/désactiver les fonctionnalités
 
+## Import documentaire
+
+La plateforme permet d'importer un document source (PDF, DOCX, TXT, Markdown) pour pré-remplir automatiquement un projet. Le pipeline :
+
+1. **Upload** → extraction texte natif
+2. **Analyse IA** → extraction d'entités (personnages, lieux, épisodes, musique, etc.)
+3. **Mapping** → correspondance vers les tables cibles avec score de confiance
+4. **Revue** → validation champ par champ dans DocumentsCenter
+5. **Propagation** → écriture dans séries, épisodes, bibles, personnages
+
+Hiérarchie des sources : édition manuelle > document validé > document brut > suggestion IA.
+
 ## Documentation complémentaire
 
 - [docs/architecture.md](docs/architecture.md) — Architecture détaillée
@@ -139,3 +151,5 @@ npm run ci             # Suite CI complète
 - [docs/delivery.md](docs/delivery.md) — Pipeline de livraison
 - [docs/security.md](docs/security.md) — Politique de sécurité
 - [docs/runbooks.md](docs/runbooks.md) — Procédures opérationnelles
+- [docs/document-ingestion.md](docs/document-ingestion.md) — Pipeline d'import documentaire
+- [docs/autofill.md](docs/autofill.md) — Pré-remplissage intelligent
