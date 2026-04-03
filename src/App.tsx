@@ -21,6 +21,7 @@ const Auth = lazy(() => import("./pages/Auth"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const CreateClip = lazy(() => import("./pages/CreateClip"));
 const CreateFilm = lazy(() => import("./pages/CreateFilm"));
+const CreateMusicVideo = lazy(() => import("./pages/CreateMusicVideo"));
 const ProjectView = lazy(() => import("./pages/ProjectView"));
 const Pricing = lazy(() => import("./pages/Pricing"));
 const Settings = lazy(() => import("./pages/Settings"));
@@ -87,6 +88,7 @@ const App = () => (
                 <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                 <Route path="/create/clip" element={<ProtectedRoute><CreateClip /></ProtectedRoute>} />
                 <Route path="/create/film" element={<ProtectedRoute><CreateFilm /></ProtectedRoute>} />
+                <Route path="/create/music-video" element={<ProtectedRoute><CreateMusicVideo /></ProtectedRoute>} />
                 <Route path="/project/:id" element={<ProtectedRoute><ProjectView /></ProtectedRoute>} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />

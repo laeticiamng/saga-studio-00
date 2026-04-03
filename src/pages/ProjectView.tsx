@@ -22,7 +22,7 @@ import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
-import { statusLabels, statusVariants, typeLabels, styleLabels } from "@/lib/labels";
+import { statusLabels, statusVariants, typeLabels, styleLabels, qualityTierLabels, clipTypeLabels, artistPresenceLabels, renderTargetLabels } from "@/lib/labels";
 const modeLabels: Record<string, string> = {
   story: "Narratif", performance: "Performance", abstract: "Abstrait",
 };
@@ -242,7 +242,17 @@ export default function ProjectView() {
                 )}
                 {project.mode && (
                   <Badge variant="outline" className="text-muted-foreground">
-                    {modeLabels[project.mode] || project.mode}
+                    {modeLabels[project.mode] || clipTypeLabels[project.mode] || project.mode}
+                  </Badge>
+                )}
+                {(project as any).quality_tier && (project as any).quality_tier !== "standard" && (
+                  <Badge variant={(project as any).quality_tier === "premium" ? "default" : "outline"} className="text-xs">
+                    {qualityTierLabels[(project as any).quality_tier] || (project as any).quality_tier}
+                  </Badge>
+                )}
+                {(project as any).render_target && (project as any).render_target !== "browser_allowed" && (
+                  <Badge variant="outline" className="text-xs text-muted-foreground">
+                    {renderTargetLabels[(project as any).render_target] || (project as any).render_target}
                   </Badge>
                 )}
               </div>
