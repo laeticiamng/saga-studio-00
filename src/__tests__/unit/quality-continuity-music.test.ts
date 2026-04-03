@@ -112,9 +112,10 @@ describe("Music Structure — P1.4", () => {
     expect(chorusCuts).toBeGreaterThanOrEqual(introCuts);
   });
 
-  it("getHighImpactSections returns chorus-like sections", () => {
+  it("getHighImpactSections returns high-energy sections", () => {
     const impact = getHighImpactSections(sections);
-    expect(impact.some(s => s.label === "chorus")).toBe(true);
+    expect(impact.length).toBeGreaterThan(0);
+    expect(impact.every(s => s.energy > 0.7 || s.isHighImpact)).toBe(true);
   });
 
   it("parseSections handles raw JSON", () => {

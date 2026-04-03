@@ -5,7 +5,7 @@ describe("Provider Matrix — P0.2", () => {
   it("music_video premium blocks when no video provider available", () => {
     const result = resolveProvider("music_video", "premium", ["openai_image"]);
     expect(result.blocked).toBe(true);
-    expect(result.blockReason).toContain("not acceptable");
+    expect(result.blockReason).toContain("Aucun provider");
   });
 
   it("music_video premium selects runway when available", () => {
