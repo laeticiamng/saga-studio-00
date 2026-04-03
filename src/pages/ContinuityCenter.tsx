@@ -5,12 +5,16 @@ import { SeriesNotFound } from "@/components/SeriesNotFound";
 import Footer from "@/components/Footer";
 import { useSeries } from "@/hooks/useSeries";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { useContinuityNodes, useContinuityEdges, useContinuityConflicts } from "@/hooks/useContinuity";
+import { useContinuityNodes, useContinuityEdges, useContinuityConflicts, useResolveConflict } from "@/hooks/useContinuity";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Network, AlertTriangle, CheckCircle, User, MapPin, Shirt, Package } from "lucide-react";
 import { getSeriesProjectTitle } from "@/lib/series-helpers";
+import { useState } from "react";
+import { toast } from "sonner";
 
 const NODE_ICONS: Record<string, React.ReactNode> = {
   character: <User className="h-4 w-4" />,
@@ -30,12 +34,14 @@ export default function ContinuityCenter() {
   usePageTitle("Centre de continuité");
   const { id: seriesId } = useParams<{ id: string }>();
   const { data: series, isLoading: seriesLoading } = useSeries(seriesId);
-
-  if (!seriesLoading && !series) return <SeriesNotFound />;
-
   const { data: nodes, isLoading: nodesLoading } = useContinuityNodes(seriesId);
   const { data: edges } = useContinuityEdges(seriesId);
   const { data: conflicts } = useContinuityConflicts(seriesId);
+  const resolveConflict = useResolveConflict();
+  const [resolvingId, setResolvingId] = useState<string | null>(null);
+  const [resolution, setResolution] = useState("");
+
+  if (!seriesLoading && !series) return <SeriesNotFound />;
 
   const unresolvedConflicts = conflicts?.filter(c => !c.resolved) || [];
   const resolvedConflicts = conflicts?.filter(c => c.resolved) || [];
@@ -122,6 +128,36 @@ export default function ContinuityCenter() {
                         <p className="text-xs text-muted-foreground mt-1">
                           {new Date(conflict.created_at).toLocaleDateString("fr-FR", { dateStyle: "medium" })}
                         </p>
+
+                        {resolvingId === conflict.id ? (
+                          <div className="mt-3 space-y-2">
+                            <Textarea
+                              value={resolution}
+                              onChange={(e) => setResolution(e.target.value)}
+                              placeholder="Comment ce conflit a-t-il été résolu ?"
+                              rows={2}
+                            />
+                            <div className="flex gap-2">
+                              <Button size="sm" disabled={resolveConflict.isPending || !resolution.trim()} onClick={async () => {
+                                try {
+                                  await resolveConflict.mutateAsync({ id: conflict.id, resolution: resolution.trim() });
+                                  toast.success("Conflit résolu");
+                                  setResolvingId(null);
+                                  setResolution("");
+                                } catch { toast.error("Erreur"); }
+                              }}>
+                                <CheckCircle className="h-4 w-4 mr-1" /> Confirmer
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => { setResolvingId(null); setResolution(""); }}>
+                                Annuler
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <Button size="sm" variant="outline" className="mt-2" onClick={() => setResolvingId(conflict.id)}>
+                            Résoudre
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>

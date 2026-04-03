@@ -36,6 +36,16 @@ export function useEpisode(episodeId: string | undefined) {
       return data;
     },
     enabled: !!episodeId,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      // Poll every 5s when pipeline is active, stop when idle
+      const activeStatuses = [
+        "story_development", "psychology_review", "legal_ethics_review",
+        "visual_bible", "continuity_check", "shot_generation",
+        "shot_review", "assembly", "edit_review", "delivery",
+      ];
+      return status && activeStatuses.includes(status) ? 5_000 : false;
+    },
   });
 }
 

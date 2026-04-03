@@ -1,33 +1,67 @@
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
+import { useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import Footer from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEpisode } from "@/hooks/useEpisodes";
 import { useScript } from "@/hooks/useScripts";
 import { useAgentRuns } from "@/hooks/useAgentRuns";
 import { usePsychologyReviews, useLegalEthicsReviews, useContinuityReports } from "@/hooks/useReviews";
+import { useStartAutopilot } from "@/hooks/useWorkflow";
 import { EpisodePipeline } from "@/components/series/EpisodePipeline";
 import { SceneBreakdown } from "@/components/series/SceneBreakdown";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { Loader2, FileText, Layers, Play, Activity, Shield, Brain, Scale, Eye, CheckCircle, AlertTriangle, Clock } from "lucide-react";
+import { Loader2, FileText, Layers, Play, Activity, Shield, Brain, Scale, Eye, CheckCircle, AlertTriangle, Clock, Rocket } from "lucide-react";
 import { useSeries } from "@/hooks/useSeries";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export default function EpisodeView() {
   const { episodeId } = useParams<{ episodeId: string }>();
+  const queryClient = useQueryClient();
   const { data: episode, isLoading } = useEpisode(episodeId);
   const seasonData = episode?.season as { id: string; number: number; title: string | null; series_id: string } | null;
   const { data: series } = useSeries(seasonData?.series_id);
   const seriesProject = series?.project as Record<string, unknown> | null;
   const { data: script } = useScript(episodeId);
   const { data: agentRuns } = useAgentRuns({ episodeId });
+  const startAutopilot = useStartAutopilot();
   const { data: psychReviews } = usePsychologyReviews(episodeId);
   const { data: legalReviews } = useLegalEthicsReviews(episodeId);
   const { data: continuityReports } = useContinuityReports(episodeId);
 
   usePageTitle(episode ? `Ép. ${episode.number} — ${episode.title}` : "Épisode");
+
+  // Realtime: auto-refresh agent_runs and episode when pipeline is active
+  useEffect(() => {
+    if (!episodeId) return;
+    const channel = supabase
+      .channel(`episode-${episodeId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "agent_runs", filter: `episode_id=eq.${episodeId}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ["agent_runs", { episodeId }] });
+        queryClient.invalidateQueries({ queryKey: ["episode", episodeId] });
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "episodes", filter: `id=eq.${episodeId}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ["episode", episodeId] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [episodeId, queryClient]);
+
+  const handleStartAutopilot = async () => {
+    if (!episodeId) return;
+    try {
+      await startAutopilot.mutateAsync({ episodeId });
+      toast.success("Autopilot démarré pour cet épisode");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Erreur au démarrage");
+    }
+  };
 
   if (isLoading) {
     return (
@@ -78,6 +112,12 @@ export default function EpisodeView() {
                 <Clock className="h-3 w-3" />
                 {episode.duration_target_min} min
               </Badge>
+            )}
+            {episode.status === "draft" && (
+              <Button size="sm" onClick={handleStartAutopilot} disabled={startAutopilot.isPending} className="ml-auto">
+                {startAutopilot.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Rocket className="h-4 w-4 mr-1" />}
+                Lancer l'autopilot
+              </Button>
             )}
           </div>
           {episode.synopsis && (

@@ -5,8 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useBibles, useCreateBible, useDeleteBible } from "@/hooks/useBibles";
-import { Plus, Trash2, BookOpen, Loader2 } from "lucide-react";
+import { useBibles, useCreateBible, useDeleteBible, useUpdateBible } from "@/hooks/useBibles";
+import { Plus, Trash2, BookOpen, Loader2, Pencil, Check, X } from "lucide-react";
 
 type BibleType = "style" | "character" | "world" | "tone" | "custom";
 
@@ -28,7 +28,11 @@ export function BibleEditor({ seriesId }: { seriesId: string }) {
   const { data: bibles, isLoading } = useBibles(seriesId, selectedType);
   const createBible = useCreateBible();
   const deleteBible = useDeleteBible();
+  const updateBible = useUpdateBible();
   const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editContent, setEditContent] = useState("");
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState<BibleType>("style");
   const [newContent, setNewContent] = useState("");
@@ -106,25 +110,62 @@ export function BibleEditor({ seriesId }: { seriesId: string }) {
           <Loader2 className="h-5 w-5 animate-spin mx-auto" />
         ) : bibles && bibles.length > 0 ? (
           bibles.map((bible) => (
-            <div key={bible.id} className="border rounded-lg p-3 flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{bible.name}</span>
-                  <Badge variant="outline" className="text-xs">{typeLabels[bible.type]}</Badge>
-                  <span className="text-xs text-muted-foreground">v{bible.version}</span>
+            <div key={bible.id} className="border rounded-lg p-3">
+              {editingId === bible.id ? (
+                <div className="space-y-2">
+                  <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Nom" />
+                  <Textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} rows={4} />
+                  <div className="flex gap-2">
+                    <Button size="sm" disabled={updateBible.isPending} onClick={async () => {
+                      let content: Record<string, unknown> = {};
+                      try { content = JSON.parse(editContent); } catch { content = { text: editContent }; }
+                      await updateBible.mutateAsync({ id: bible.id, name: editName.trim() || bible.name, content });
+                      setEditingId(null);
+                    }}>
+                      {updateBible.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
+                      Sauver
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>
+                      <X className="h-4 w-4 mr-1" />Annuler
+                    </Button>
+                  </div>
                 </div>
-                <pre className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap max-h-20 overflow-auto">
-                  {JSON.stringify(bible.content, null, 2)}
-                </pre>
-              </div>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="shrink-0"
-                onClick={() => deleteBible.mutate({ id: bible.id, seriesId })}
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
+              ) : (
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{bible.name}</span>
+                      <Badge variant="outline" className="text-xs">{typeLabels[bible.type]}</Badge>
+                      <span className="text-xs text-muted-foreground">v{bible.version}</span>
+                    </div>
+                    <pre className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap max-h-20 overflow-auto">
+                      {JSON.stringify(bible.content, null, 2)}
+                    </pre>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => {
+                        setEditingId(bible.id);
+                        setEditName(bible.name);
+                        setEditContent(
+                          typeof bible.content === "string" ? bible.content : JSON.stringify(bible.content, null, 2)
+                        );
+                      }}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => deleteBible.mutate({ id: bible.id, seriesId })}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           ))
         ) : (

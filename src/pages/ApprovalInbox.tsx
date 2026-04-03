@@ -1,11 +1,11 @@
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { SeriesNotFound } from "@/components/SeriesNotFound";
 import Footer from "@/components/Footer";
 import { useSeries } from "@/hooks/useSeries";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { useApprovalSteps } from "@/hooks/useApprovals";
+import { useApprovalStepsBySeries } from "@/hooks/useApprovals";
 import { useApprovalEvaluate } from "@/hooks/useWorkflow";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,27 @@ import { toast } from "sonner";
 import { CheckCircle, XCircle, RotateCcw, Shield, Scale, Brain, Eye, Clapperboard } from "lucide-react";
 import { useState } from "react";
 import { getSeriesProjectTitle } from "@/lib/series-helpers";
+
+interface EpisodeInfo {
+  id: string;
+  number: number;
+  title: string;
+  season_id: string;
+}
+
+interface ApprovalWithEpisode {
+  id: string;
+  episode_id: string;
+  step_name: string;
+  status: string;
+  reviewer_agent: string | null;
+  reviewer_user: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  decisions: unknown[];
+  _episode: EpisodeInfo | null;
+}
 
 const STEP_ICONS: Record<string, React.ReactNode> = {
   psychology_review: <Brain className="h-5 w-5" />,
@@ -37,13 +58,13 @@ export default function ApprovalInbox() {
   const { id: seriesId } = useParams<{ id: string }>();
   const { data: series, isLoading: seriesLoading } = useSeries(seriesId);
   const [reasons, setReasons] = useState<Record<string, string>>({});
-  const { data: approvals, isLoading } = useApprovalSteps(undefined);
+  const { data: approvals, isLoading } = useApprovalStepsBySeries(seriesId);
   const approvalEvaluate = useApprovalEvaluate();
 
   if (!seriesLoading && !series) return <SeriesNotFound />;
 
-  const pendingApprovals = approvals?.filter(a => a.status === "pending") || [];
-  const recentDecisions = approvals?.filter(a => a.status !== "pending").slice(0, 20) || [];
+  const pendingApprovals = (approvals as ApprovalWithEpisode[] | undefined)?.filter(a => a.status === "pending") || [];
+  const recentDecisions = (approvals as ApprovalWithEpisode[] | undefined)?.filter(a => a.status !== "pending").slice(0, 20) || [];
 
   const handleDecision = async (approval: { episode_id: string; step_name: string }, decision: "approved" | "rejected" | "revision_requested") => {
     try {
@@ -102,7 +123,15 @@ export default function ApprovalInbox() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground mb-3">
-                  Épisode: {approval.episode_id?.slice(0, 8)}...
+                  Épisode:{" "}
+                  <Link
+                    to={`/series/${seriesId}/episode/${approval.episode_id}`}
+                    className="underline hover:text-primary"
+                  >
+                    {approval._episode
+                      ? `Ép. ${approval._episode.number} — ${approval._episode.title}`
+                      : approval.episode_id?.slice(0, 8) + "..."}
+                  </Link>
                   {approval.reviewer_agent && ` — Agent: ${approval.reviewer_agent}`}
                 </p>
 
