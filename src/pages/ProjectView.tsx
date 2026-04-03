@@ -22,7 +22,7 @@ import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
-import { statusLabels, statusVariants, typeLabels, styleLabels } from "@/lib/labels";
+import { statusLabels, statusVariants, typeLabels, styleLabels, qualityTierLabels, clipTypeLabels, artistPresenceLabels, renderTargetLabels } from "@/lib/labels";
 const modeLabels: Record<string, string> = {
   story: "Narratif", performance: "Performance", abstract: "Abstrait",
 };
