@@ -1,65 +1,52 @@
 
+# Ticket Maître — Plan d'exécution
 
-# Audit technique — Saga Studio (27 mars 2026, v5)
+## Phase 1 : P0 — Bloquants Prod
 
-## Résumé
+### P0.1 — Mode `music_video` explicite
+- Ajouter `music_video` au type enum projet (migration DB)
+- Créer `src/pages/CreateMusicVideo.tsx` avec formulaire spécialisé (clip type, artist presence, refs, style)
+- Ajouter route `/create/music-video`
+- Adapter `ProjectView` pour afficher le type correctement
+- Labels UI distincts pour chaque mode
 
-Après les corrections v4 (SeriesNotFound guards, Breadcrumbs création, labels.ts, favicon/OG, logger), voici les lacunes résiduelles.
+### P0.2 — Matrice provider stricte
+- Créer `src/config/providerMatrix.ts` : providers autorisés par mode × qualité
+- Créer `docs/PROVIDER_MATRIX.md`
+- Intégrer la résolution provider dans `generate-shots` et `pipeline-worker`
+- Bloquer fallback silencieux pour modes premium
+- UI : afficher provider réel + mode de rendu dans ProjectView/Diagnostics
 
-✅ **Acquis v4** :
-- 0 `as any` côté client
-- TypeScript compile sans erreur
-- Breadcrumbs sur toutes les pages (création, studio, settings)
-- SeriesNotFound guard sur 8 pages studio
-- Favicon + OG image générés
-- Guidance onglet Agents vide (EpisodeView)
+### P0.3 — Rendu serveur obligatoire pour exports premium
+- Ajouter notion `render_target` (server_required / server_preferred / browser_allowed)
+- Adapter `RenderExportPanel` : distinguer preview locale vs master final
+- Pour `music_video` premium → server_required
+- Renforcer queue de rendu + reprise idempotente + journal
 
----
+### P0.4 — Machine d'état pipeline stricte
+- Créer `src/lib/pipeline-state-machine.ts` avec états, transitions, validations
+- Créer `docs/PIPELINE_STATES.md`
+- Intégrer dans hooks et edge functions
+- Refuser transitions illégales, codifier erreurs
+- Reprise depuis dernier jalon stable
 
-## IMPORTANT (dette technique active)
+### P0.5 — Tests E2E d'intégration
+- Créer 8 scénarios E2E réels (happy path, face refs, no provider, render failure, credits, bad URL, multi-format, retry)
+- Refactorer le fichier test existant en modules focalisés
 
-### 1. Labels dupliqués non consommés depuis `labels.ts`
-Le fichier `src/lib/labels.ts` a été créé mais **4 fichiers continuent d'utiliser leurs propres copies locales** :
-- `Dashboard.tsx` (lignes 16-49)
-- `Admin.tsx` (lignes 27-41)
-- `ProjectView.tsx` (lignes 24-40)
-- `ShareView.tsx` (lignes 11-17)
+## Phase 2 : P1 — Qualité Premium
 
-**Note** : `BibleEditor.tsx` a ses propres `typeLabels` pour les types de bibles (style/character/world/tone/custom) — c'est un domaine différent, pas de duplication.
+### P1.1 — Storyboard preview avant génération
+### P1.2 — Quality scoring automatique (`src/lib/quality-scoring.ts`)
+### P1.3 — Continuity validator (`src/lib/continuity-validator.ts`)
+### P1.4 — Sync musicale native (`src/lib/music-structure.ts`)
+### P1.5 — Dashboard observabilité admin
 
-**Correction** : Remplacer les constantes locales par `import { statusLabels, typeLabels, styleLabels } from "@/lib/labels"` dans ces 4 fichiers.
-
-### 2. `console.*` résiduels côté client
-5 fichiers utilisent encore `console.*` directement :
-- `NotFound.tsx` : `console.error` pour le 404 → remplacer par `logger.warn`
-- `main.tsx` : `console.error` pour les erreurs fatales → **garder** (logger non disponible si l'import échoue)
-- `ErrorBoundary.tsx` : `console.error` dans `componentDidCatch` → **garder** (fallback critique)
-- `ffmpeg-renderer.ts` : `console.log/warn/error` pour le rendu FFmpeg → remplacer par `logger`
-
-**Correction** : remplacer dans `NotFound.tsx` et `ffmpeg-renderer.ts`. Garder `main.tsx` et `ErrorBoundary.tsx` car ce sont des fallbacks critiques.
-
----
-
-## AMÉLIORATIONS (basse priorité)
-
-### 3. `ProjectView.tsx` — `statusVariants` non centralisé
-Le mapping `statusVariants` (associant statuts à des variantes de Badge) est défini localement. Pourrait être ajouté à `labels.ts`.
-
-### 4. Pas de page 404 contextualisée pour `/series/:id/*`
-Si un utilisateur tape `/series/abc/foo`, il voit le NotFound générique.
-**Peu prioritaire** car protégé par l'auth.
-
-### 5. `AdminAuditLog.tsx` — pas de Breadcrumbs
-Les autres pages admin (`AdminAgentManager`, `AdminProviderDashboard`) n'ont pas non plus de Breadcrumbs, mais c'est cohérent entre elles. À ajouter si on veut une navigation admin complète.
+## Phase 3 : P2 — Ambition
+### P2.1 — Personas créatifs
+### P2.2 — Presets clip métier
+### P2.3 — Asset governance
 
 ---
 
-## Plan d'implémentation
-
-| # | Action | Fichiers | Priorité |
-|---|--------|----------|----------|
-| 1 | Consommer `labels.ts` dans 4 fichiers | Dashboard, Admin, ProjectView, ShareView | Moyenne |
-| 2 | Remplacer `console.*` par logger | NotFound, ffmpeg-renderer | Basse |
-| 3 | Centraliser `statusVariants` | labels.ts + ProjectView | Basse |
-
-**Estimation** : ~15 min, 0 risque de régression.
+**Approche** : On attaque P0.1 → P0.4 en parallèle (code + docs + migration), puis P0.5 (tests), puis P1 bloc par bloc.
