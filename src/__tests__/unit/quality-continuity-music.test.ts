@@ -113,7 +113,7 @@ describe("Music Structure — P1.4", () => {
   });
 
   it("getHighImpactSections returns high-energy sections", () => {
-    const impact = getHighImpactSections(sections);
+    const impact = getHighImpactSections(sections, 60);
     expect(impact.length).toBeGreaterThan(0);
     expect(impact.every(s => s.energy > 0.7 || s.isHighImpact)).toBe(true);
   });
