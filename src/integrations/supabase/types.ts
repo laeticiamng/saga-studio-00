@@ -1369,15 +1369,19 @@ export type Database = {
       }
       projects: {
         Row: {
+          artist_presence: string | null
           aspect_ratio: string | null
           audio_url: string | null
+          clip_type: string | null
           created_at: string
           duration_sec: number | null
           face_urls: Json | null
           id: string
           mode: string | null
           provider_default: string | null
+          quality_tier: string | null
           ref_photo_urls: Json | null
+          render_target: string | null
           status: Database["public"]["Enums"]["project_status"]
           style_preset: string | null
           synopsis: string | null
@@ -1387,15 +1391,19 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          artist_presence?: string | null
           aspect_ratio?: string | null
           audio_url?: string | null
+          clip_type?: string | null
           created_at?: string
           duration_sec?: number | null
           face_urls?: Json | null
           id?: string
           mode?: string | null
           provider_default?: string | null
+          quality_tier?: string | null
           ref_photo_urls?: Json | null
+          render_target?: string | null
           status?: Database["public"]["Enums"]["project_status"]
           style_preset?: string | null
           synopsis?: string | null
@@ -1405,15 +1413,19 @@ export type Database = {
           user_id: string
         }
         Update: {
+          artist_presence?: string | null
           aspect_ratio?: string | null
           audio_url?: string | null
+          clip_type?: string | null
           created_at?: string
           duration_sec?: number | null
           face_urls?: Json | null
           id?: string
           mode?: string | null
           provider_default?: string | null
+          quality_tier?: string | null
           ref_photo_urls?: Json | null
+          render_target?: string | null
           status?: Database["public"]["Enums"]["project_status"]
           style_preset?: string | null
           synopsis?: string | null
@@ -2821,7 +2833,7 @@ export type Database = {
         | "completed"
         | "failed"
         | "cancelled"
-      project_type: "clip" | "film" | "series"
+      project_type: "clip" | "film" | "series" | "music_video"
       render_status: "pending" | "processing" | "completed" | "failed"
       shot_status:
         | "pending"
@@ -2969,7 +2981,7 @@ export const Constants = {
         "failed",
         "cancelled",
       ],
-      project_type: ["clip", "film", "series"],
+      project_type: ["clip", "film", "series", "music_video"],
       render_status: ["pending", "processing", "completed", "failed"],
       shot_status: [
         "pending",
