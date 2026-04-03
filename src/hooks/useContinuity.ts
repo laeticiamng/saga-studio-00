@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export function useContinuityNodes(seriesId: string | undefined) {
@@ -79,6 +79,43 @@ export function useQCReports(episodeId: string | undefined) {
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
+    },
+  });
+}
+
+export function useResolveConflict() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, resolution }: { id: string; resolution: string }) => {
+      const { data, error } = await supabase
+        .from("continuity_conflicts")
+        .update({ resolved: true, resolution, resolved_at: new Date().toISOString() })
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["continuity_conflicts", data.series_id] });
+    },
+  });
+}
+
+export function useCreateContinuityNode() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { series_id: string; node_type: string; label: string; properties?: Record<string, unknown> }) => {
+      const { data, error } = await supabase
+        .from("continuity_memory_nodes")
+        .insert({ ...input, is_active: true })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["continuity_nodes", data.series_id] });
     },
   });
 }
