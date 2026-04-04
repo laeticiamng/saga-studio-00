@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBibles, useCreateBible, useDeleteBible, useUpdateBible } from "@/hooks/useBibles";
+import type { Json } from "@/integrations/supabase/types";
 import { Plus, Trash2, BookOpen, Loader2, Pencil, Check, X } from "lucide-react";
 
 type BibleType = "style" | "character" | "world" | "tone" | "custom";
