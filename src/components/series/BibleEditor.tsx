@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBibles, useCreateBible, useDeleteBible, useUpdateBible } from "@/hooks/useBibles";
+import type { Json } from "@/integrations/supabase/types";
 import { Plus, Trash2, BookOpen, Loader2, Pencil, Check, X } from "lucide-react";
 
 type BibleType = "style" | "character" | "world" | "tone" | "custom";
@@ -117,8 +118,8 @@ export function BibleEditor({ seriesId }: { seriesId: string }) {
                   <Textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} rows={4} />
                   <div className="flex gap-2">
                     <Button size="sm" disabled={updateBible.isPending} onClick={async () => {
-                      let content: Record<string, unknown> = {};
-                      try { content = JSON.parse(editContent); } catch { content = { text: editContent }; }
+                      let content: Json = {};
+                      try { content = JSON.parse(editContent) as Json; } catch { content = { text: editContent } as Json; }
                       await updateBible.mutateAsync({ id: bible.id, name: editName.trim() || bible.name, content });
                       setEditingId(null);
                     }}>
