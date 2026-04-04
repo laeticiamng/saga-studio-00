@@ -108,7 +108,7 @@ export function useCreateContinuityNode() {
     mutationFn: async (input: { series_id: string; node_type: string; label: string; properties?: Record<string, unknown> }) => {
       const { data, error } = await supabase
         .from("continuity_memory_nodes")
-        .insert({ ...input, is_active: true })
+        .insert({ series_id: input.series_id, node_type: input.node_type, label: input.label, properties: (input.properties ?? {}) as import("@/integrations/supabase/types").Json, is_active: true })
         .select()
         .single();
       if (error) throw error;

@@ -117,8 +117,8 @@ export function BibleEditor({ seriesId }: { seriesId: string }) {
                   <Textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} rows={4} />
                   <div className="flex gap-2">
                     <Button size="sm" disabled={updateBible.isPending} onClick={async () => {
-                      let content: Record<string, unknown> = {};
-                      try { content = JSON.parse(editContent); } catch { content = { text: editContent }; }
+                      let content: Json = {};
+                      try { content = JSON.parse(editContent) as Json; } catch { content = { text: editContent } as Json; }
                       await updateBible.mutateAsync({ id: bible.id, name: editName.trim() || bible.name, content });
                       setEditingId(null);
                     }}>
