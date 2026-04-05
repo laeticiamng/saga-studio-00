@@ -104,7 +104,7 @@ const PROVIDER_MATRIX: Record<ProjectMode, Record<QualityTier, ProviderRule>> = 
       description: "Série premium — vidéo native uniquement",
     },
     standard: {
-      allowedProviders: ["runway", "luma", "openai_image"],
+      allowedProviders: ["runway", "sora2", "google_veo", "luma", "openai_image"],
       acceptableOutputs: ["native_video", "image_sequence"],
       allowSilentImageFallback: false,
       renderTarget: "server_preferred",
