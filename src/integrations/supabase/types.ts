@@ -2484,6 +2484,13 @@ export type Database = {
             referencedRelation: "webhook_endpoints"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "webhook_deliveries_endpoint_id_fkey"
+            columns: ["endpoint_id"]
+            isOneToOne: false
+            referencedRelation: "webhook_endpoints_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       webhook_endpoints: {
@@ -2781,6 +2788,39 @@ export type Database = {
           style_preset?: string | null
           title?: string | null
           type?: Database["public"]["Enums"]["project_type"] | null
+        }
+        Relationships: []
+      }
+      webhook_endpoints_safe: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          events: string[] | null
+          id: string | null
+          secret_masked: string | null
+          updated_at: string | null
+          url: string | null
+          user_id: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          events?: string[] | null
+          id?: string | null
+          secret_masked?: never
+          updated_at?: string | null
+          url?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          events?: string[] | null
+          id?: string | null
+          secret_masked?: never
+          updated_at?: string | null
+          url?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
