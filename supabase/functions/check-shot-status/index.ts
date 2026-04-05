@@ -58,8 +58,41 @@ async function checkProviderStatus(provider: string, jobId: string): Promise<{ s
     return { status: "pending" };
   }
 
-  if (provider === "sora") {
-    // Sora path in this project is synchronous image generation. Job URL is handled in generate-shots.
+  if (provider === "sora2") {
+    const apiKey = Deno.env.get("OPENAI_API_KEY");
+    if (!apiKey) return { status: "failed", error: "OPENAI_API_KEY is missing" };
+
+    const res = await fetch(`https://api.openai.com/v1/videos/${jobId}`, {
+      headers: { "Authorization": `Bearer ${apiKey}` },
+    });
+    const data = await res.json();
+    if (!res.ok) return { status: "failed", error: data?.error?.message || JSON.stringify(data) };
+
+    if (data.status === "completed") {
+      const url = data.result?.url || data.outputs?.[0]?.url;
+      return { status: "completed", url };
+    }
+    if (data.status === "failed") return { status: "failed", error: data.error?.message || "Sora 2 task failed" };
+    return { status: "pending" };
+  }
+
+  if (provider === "google_veo") {
+    const apiKey = Deno.env.get("GOOGLE_VEO_API_KEY");
+    if (!apiKey) return { status: "failed", error: "GOOGLE_VEO_API_KEY is missing" };
+
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/${jobId}?key=${apiKey}`,
+      { headers: { "Content-Type": "application/json" } }
+    );
+    const data = await res.json();
+    if (!res.ok) return { status: "failed", error: data?.error?.message || JSON.stringify(data) };
+
+    if (data.done === true) {
+      const videoUri = data.response?.predictions?.[0]?.uri;
+      if (videoUri) return { status: "completed", url: videoUri };
+      return { status: "failed", error: "Veo completed without video output" };
+    }
+    if (data.error) return { status: "failed", error: data.error.message || "Veo task failed" };
     return { status: "pending" };
   }
 

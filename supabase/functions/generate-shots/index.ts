@@ -154,15 +154,114 @@ class LumaProvider implements VideoProvider {
   }
 }
 
+/**
+ * OpenAI Sora 2 Provider — native video generation via /v1/videos
+ * Async: submit job, poll for completion.
+ */
+class Sora2Provider implements VideoProvider {
+  name = "sora2";
+  outputType = "video" as const;
+  private apiKey: string;
+  constructor(apiKey: string) { this.apiKey = apiKey; }
+  async generateVideo(prompt: string, duration: number) {
+    const res = await fetch("https://api.openai.com/v1/videos", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${this.apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "sora-2",
+        prompt: prompt.slice(0, 4000),
+        size: "1280x720",
+        duration: Math.min(20, Math.max(5, duration)),
+        n: 1,
+      }),
+    });
+    const data = await res.json();
+    console.log("[sora2] create response:", res.status, JSON.stringify(data));
+    if (!res.ok) throw new Error(data.error?.message || JSON.stringify(data));
+    return { job_id: data.id };
+  }
+  async checkStatus(job_id: string) {
+    const res = await fetch(`https://api.openai.com/v1/videos/${job_id}`, {
+      headers: { "Authorization": `Bearer ${Deno.env.get("OPENAI_API_KEY")}` },
+    });
+    const data = await res.json();
+    console.log("[sora2] status response:", JSON.stringify(data));
+    if (data.status === "completed") {
+      const url = data.result?.url || data.outputs?.[0]?.url;
+      return { status: "completed" as const, url };
+    }
+    if (data.status === "failed") return { status: "failed" as const, error: data.error?.message || "Sora 2 generation failed" };
+    return { status: "pending" as const };
+  }
+}
+
+/**
+ * Google Veo Provider — video generation via Gemini API predictLongRunning
+ * Async: submit job, poll operation for completion.
+ */
+class VeoProvider implements VideoProvider {
+  name = "google_veo";
+  outputType = "video" as const;
+  private apiKey: string;
+  constructor(apiKey: string) { this.apiKey = apiKey; }
+  async generateVideo(prompt: string, duration: number) {
+    const model = "veo-3.0-generate-preview";
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:predictLongRunning?key=${this.apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          instances: [{ prompt: prompt.slice(0, 2000) }],
+          parameters: {
+            aspectRatio: "16:9",
+            durationSeconds: Math.min(8, Math.max(5, duration)),
+            sampleCount: 1,
+          },
+        }),
+      }
+    );
+    const data = await res.json();
+    console.log("[veo] create response:", res.status, JSON.stringify(data));
+    if (!res.ok) throw new Error(data.error?.message || JSON.stringify(data));
+    // Returns an operation name like "operations/xxx"
+    const opName = data.name;
+    if (!opName) throw new Error("Veo returned no operation name");
+    return { job_id: opName };
+  }
+  async checkStatus(job_id: string) {
+    const apiKey = Deno.env.get("GOOGLE_VEO_API_KEY");
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/${job_id}?key=${apiKey}`,
+      { headers: { "Content-Type": "application/json" } }
+    );
+    const data = await res.json();
+    console.log("[veo] status response:", JSON.stringify(data));
+    if (data.done === true) {
+      const video = data.response?.predictions?.[0]?.bytesBase64Encoded;
+      const videoUri = data.response?.predictions?.[0]?.uri;
+      if (videoUri) return { status: "completed" as const, url: videoUri };
+      if (video) return { status: "completed" as const, url: `data:video/mp4;base64,${video}` };
+      return { status: "failed" as const, error: "Veo completed without video output" };
+    }
+    if (data.error) return { status: "failed" as const, error: data.error.message || "Veo generation failed" };
+    return { status: "pending" as const };
+  }
+}
+
 // ─── Provider Fallback Chain ────────────────────────────────────────────────
 
-// Priority: real video providers first, then image fallback
-const PROVIDER_PRIORITY = ["runway", "luma", "openai_image"] as const;
+// Priority: native video providers first, then image fallback
+const PROVIDER_PRIORITY = ["runway", "sora2", "google_veo", "luma", "openai_image"] as const;
 
 function normalizeProviderName(provider?: string | null): string | undefined {
   if (!provider) return undefined;
-  if (provider === "sora2" || provider === "sora" || provider === "openai") return "openai_image";
-  if (provider === "google_veo") return undefined; // Not supported
+  if (provider === "sora" || provider === "openai_sora") return "sora2";
+  if (provider === "veo" || provider === "veo3") return "google_veo";
+  if (provider === "openai") return "openai_image";
   return provider;
 }
 
@@ -171,11 +270,15 @@ function buildProviderChain(preferredProvider?: string): VideoProvider[] {
     openai_image: Deno.env.get("OPENAI_API_KEY"),
     runway: Deno.env.get("RUNWAY_API_KEY"),
     luma: Deno.env.get("LUMA_API_KEY"),
+    sora2: Deno.env.get("OPENAI_API_KEY"),
+    google_veo: Deno.env.get("GOOGLE_VEO_API_KEY"),
   };
   const factories: Record<string, (k: string) => VideoProvider> = {
     openai_image: (k) => new OpenAIImageProvider(k),
     runway: (k) => new RunwayProvider(k),
     luma: (k) => new LumaProvider(k),
+    sora2: (k) => new Sora2Provider(k),
+    google_veo: (k) => new VeoProvider(k),
   };
 
   const chain: VideoProvider[] = [];

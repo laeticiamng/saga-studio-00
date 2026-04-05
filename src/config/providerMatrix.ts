@@ -28,21 +28,21 @@ export interface ProviderRule {
 const PROVIDER_MATRIX: Record<ProjectMode, Record<QualityTier, ProviderRule>> = {
   music_video: {
     premium: {
-      allowedProviders: ["runway", "luma"],
+      allowedProviders: ["runway", "sora2", "google_veo", "luma"],
       acceptableOutputs: ["native_video"],
       allowSilentImageFallback: false,
       renderTarget: "server_required",
       description: "Clip musical premium — vidéo native uniquement, rendu serveur obligatoire",
     },
     standard: {
-      allowedProviders: ["runway", "luma", "openai_image"],
+      allowedProviders: ["runway", "sora2", "google_veo", "luma", "openai_image"],
       acceptableOutputs: ["native_video", "image_sequence"],
       allowSilentImageFallback: false,
       renderTarget: "server_preferred",
       description: "Clip musical standard — vidéo native préférée, image sequence tolérée si explicite",
     },
     economy: {
-      allowedProviders: ["openai_image", "runway", "luma"],
+      allowedProviders: ["openai_image", "runway", "sora2", "google_veo", "luma"],
       acceptableOutputs: ["native_video", "image_sequence", "browser_assembly_only"],
       allowSilentImageFallback: true,
       renderTarget: "browser_allowed",
@@ -51,21 +51,21 @@ const PROVIDER_MATRIX: Record<ProjectMode, Record<QualityTier, ProviderRule>> = 
   },
   clip: {
     premium: {
-      allowedProviders: ["runway", "luma"],
+      allowedProviders: ["runway", "sora2", "google_veo", "luma"],
       acceptableOutputs: ["native_video"],
       allowSilentImageFallback: false,
       renderTarget: "server_required",
       description: "Clip premium — vidéo native uniquement",
     },
     standard: {
-      allowedProviders: ["runway", "luma", "openai_image"],
+      allowedProviders: ["runway", "sora2", "google_veo", "luma", "openai_image"],
       acceptableOutputs: ["native_video", "image_sequence"],
       allowSilentImageFallback: false,
       renderTarget: "server_preferred",
       description: "Clip standard — fallback image autorisé si visible",
     },
     economy: {
-      allowedProviders: ["openai_image", "runway", "luma"],
+      allowedProviders: ["openai_image", "runway", "sora2", "google_veo", "luma"],
       acceptableOutputs: ["native_video", "image_sequence", "browser_assembly_only"],
       allowSilentImageFallback: true,
       renderTarget: "browser_allowed",
@@ -74,21 +74,21 @@ const PROVIDER_MATRIX: Record<ProjectMode, Record<QualityTier, ProviderRule>> = 
   },
   film: {
     premium: {
-      allowedProviders: ["runway", "luma"],
+      allowedProviders: ["runway", "sora2", "google_veo", "luma"],
       acceptableOutputs: ["native_video"],
       allowSilentImageFallback: false,
       renderTarget: "server_required",
       description: "Film premium — vidéo native uniquement",
     },
     standard: {
-      allowedProviders: ["runway", "luma", "openai_image"],
+      allowedProviders: ["runway", "sora2", "google_veo", "luma", "openai_image"],
       acceptableOutputs: ["native_video", "image_sequence"],
       allowSilentImageFallback: false,
       renderTarget: "server_preferred",
       description: "Film standard",
     },
     economy: {
-      allowedProviders: ["openai_image", "runway", "luma"],
+      allowedProviders: ["openai_image", "runway", "sora2", "google_veo", "luma"],
       acceptableOutputs: ["native_video", "image_sequence", "browser_assembly_only"],
       allowSilentImageFallback: true,
       renderTarget: "browser_allowed",
@@ -97,21 +97,21 @@ const PROVIDER_MATRIX: Record<ProjectMode, Record<QualityTier, ProviderRule>> = 
   },
   series: {
     premium: {
-      allowedProviders: ["runway", "luma"],
+      allowedProviders: ["runway", "sora2", "google_veo", "luma"],
       acceptableOutputs: ["native_video"],
       allowSilentImageFallback: false,
       renderTarget: "server_required",
       description: "Série premium — vidéo native uniquement",
     },
     standard: {
-      allowedProviders: ["runway", "luma", "openai_image"],
+      allowedProviders: ["runway", "sora2", "google_veo", "luma", "openai_image"],
       acceptableOutputs: ["native_video", "image_sequence"],
       allowSilentImageFallback: false,
       renderTarget: "server_preferred",
       description: "Série standard",
     },
     economy: {
-      allowedProviders: ["openai_image", "runway", "luma"],
+      allowedProviders: ["openai_image", "runway", "sora2", "google_veo", "luma"],
       acceptableOutputs: ["native_video", "image_sequence", "browser_assembly_only"],
       allowSilentImageFallback: true,
       renderTarget: "browser_allowed",
@@ -169,6 +169,8 @@ export function resolveProvider(
     if (availableProviders.includes(p)) {
       selectedProvider = p;
       outputNature = p === "openai_image" ? "image_sequence" : "native_video";
+      // mock provider uses image_sequence too
+      if (p === "mock") outputNature = "image_sequence";
       fallbackUsed = p !== rule.allowedProviders[0];
       log.push(`Selected: ${p} (${outputNature})${fallbackUsed ? " [FALLBACK]" : ""}`);
       break;
