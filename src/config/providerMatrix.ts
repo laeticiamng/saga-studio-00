@@ -97,7 +97,7 @@ const PROVIDER_MATRIX: Record<ProjectMode, Record<QualityTier, ProviderRule>> = 
   },
   series: {
     premium: {
-      allowedProviders: ["runway", "luma"],
+      allowedProviders: ["runway", "sora2", "google_veo", "luma"],
       acceptableOutputs: ["native_video"],
       allowSilentImageFallback: false,
       renderTarget: "server_required",
