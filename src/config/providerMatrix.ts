@@ -42,7 +42,7 @@ const PROVIDER_MATRIX: Record<ProjectMode, Record<QualityTier, ProviderRule>> = 
       description: "Clip musical standard — vidéo native préférée, image sequence tolérée si explicite",
     },
     economy: {
-      allowedProviders: ["openai_image", "runway", "luma"],
+      allowedProviders: ["openai_image", "runway", "sora2", "google_veo", "luma"],
       acceptableOutputs: ["native_video", "image_sequence", "browser_assembly_only"],
       allowSilentImageFallback: true,
       renderTarget: "browser_allowed",
