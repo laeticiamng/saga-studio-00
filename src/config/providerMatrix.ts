@@ -169,6 +169,8 @@ export function resolveProvider(
     if (availableProviders.includes(p)) {
       selectedProvider = p;
       outputNature = p === "openai_image" ? "image_sequence" : "native_video";
+      // mock provider uses image_sequence too
+      if (p === "mock") outputNature = "image_sequence";
       fallbackUsed = p !== rule.allowedProviders[0];
       log.push(`Selected: ${p} (${outputNature})${fallbackUsed ? " [FALLBACK]" : ""}`);
       break;
