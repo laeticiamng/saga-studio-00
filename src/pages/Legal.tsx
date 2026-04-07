@@ -18,7 +18,7 @@ export default function Legal() {
             Email : <a href="mailto:contact@emotionscare.com">contact@emotionscare.com</a>
           </p>
           <p>
-            CineClip AI est un service édité par EMOTIONSCARE SASU, spécialisé dans la génération vidéo par intelligence artificielle.
+            CineClip AI est un service édité par EMOTIONSCARE SASU, spécialisé dans la génération vidéo par intelligence artificielle. Désormais exploité sous le nom <strong>Saga Studio</strong>.
           </p>
 
           <h2>Directeur de la publication</h2>

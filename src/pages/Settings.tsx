@@ -325,7 +325,7 @@ export default function Settings() {
             </summary>
             <CardContent className="pt-0 space-y-4">
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Recevez un appel HTTP quand un rendu vidéo est terminé. Utile pour intégrer CineClip à votre propre application.
+                Recevez un appel HTTP quand un rendu vidéo est terminé. Utile pour intégrer Saga Studio à votre propre application.
               </p>
               <div className="flex gap-2">
                 <Input value={newWebhookUrl} onChange={(e) => setNewWebhookUrl(e.target.value)} placeholder="https://votre-service.com/webhook" className="flex-1" />
