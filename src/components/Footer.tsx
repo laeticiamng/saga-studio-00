@@ -51,11 +51,11 @@ const Footer = () => {
                   <Film className="w-5 h-5 text-primary-foreground" />
                 </div>
                 <span className="text-lg font-bold" style={{ fontFamily: "var(--font-display)" }}>
-                  CineClip AI
+                  Saga Studio
                 </span>
               </Link>
               <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
-                Créez des clips vidéo et courts-métrages complets grâce à l'IA, directement depuis votre navigateur.
+                Studio de production audiovisuelle IA. Créez des films, séries et clips musicaux complets.
               </p>
             </div>
 
@@ -97,7 +97,7 @@ const Footer = () => {
 
         <div className="border-t border-border/30 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
           <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} EMOTIONSCARE SASU — CineClip AI. Tous droits réservés.
+            © {new Date().getFullYear()} EMOTIONSCARE SASU — Saga Studio. Tous droits réservés.
           </p>
         </div>
       </div>

@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
 
 function UsageStats({ userId }: { userId: string | undefined }) {
@@ -97,6 +98,9 @@ export default function Settings() {
   const [deletingWebhook, setDeletingWebhook] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+  const [deleteAccountEmail, setDeleteAccountEmail] = useState("");
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -245,6 +249,29 @@ export default function Settings() {
     toast({ title: "Copié", description: "Secret copié dans le presse-papier." });
   };
 
+  const handleDeleteAccount = async () => {
+    if (!user || deleteAccountEmail !== user.email) {
+      toast({ title: "Erreur", description: "L'email ne correspond pas.", variant: "destructive" });
+      return;
+    }
+    setDeletingAccount(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-account");
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      await supabase.auth.signOut();
+      navigate("/");
+      toast({ title: "Compte supprimé", description: "Votre compte et toutes vos données ont été définitivement supprimés." });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erreur inattendue";
+      toast({ title: "Erreur", description: msg, variant: "destructive" });
+    } finally {
+      setDeletingAccount(false);
+      setDeleteAccountOpen(false);
+      setDeleteAccountEmail("");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -325,7 +352,7 @@ export default function Settings() {
             </summary>
             <CardContent className="pt-0 space-y-4">
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Recevez un appel HTTP quand un rendu vidéo est terminé. Utile pour intégrer CineClip à votre propre application.
+                Recevez un appel HTTP quand un rendu vidéo est terminé. Utile pour intégrer Saga Studio à votre propre application.
               </p>
               <div className="flex gap-2">
                 <Input value={newWebhookUrl} onChange={(e) => setNewWebhookUrl(e.target.value)} placeholder="https://votre-service.com/webhook" className="flex-1" />
@@ -433,6 +460,24 @@ export default function Settings() {
             )}
           </CardContent>
         </Card>
+
+        {/* Danger Zone */}
+        <Card className="border-destructive/30">
+          <CardHeader>
+            <CardTitle className="text-destructive flex items-center gap-2">
+              <Trash2 className="h-5 w-5" /> Zone de danger
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              La suppression de votre compte est irréversible. Tous vos projets, vidéos, crédits et données personnelles seront définitivement supprimés.
+            </p>
+            <Button variant="destructive" onClick={() => setDeleteAccountOpen(true)}>
+              <Trash2 className="h-4 w-4 mr-2" /> Supprimer mon compte
+            </Button>
+          </CardContent>
+        </Card>
+
         <ConfirmDialog
           open={!!webhookToDelete}
           onOpenChange={(open) => { if (!open) setWebhookToDelete(null); }}
@@ -442,6 +487,38 @@ export default function Settings() {
           onConfirm={handleDeleteWebhook}
           isPending={deletingWebhook}
         />
+
+        {/* Delete Account Dialog */}
+        <Dialog open={deleteAccountOpen} onOpenChange={(open) => { if (!open) { setDeleteAccountOpen(false); setDeleteAccountEmail(""); } }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Supprimer définitivement votre compte ?</DialogTitle>
+              <DialogDescription>
+                Cette action est <strong>irréversible</strong>. Toutes vos données seront supprimées : projets, vidéos, crédits, profil.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <p className="text-sm text-muted-foreground">Pour confirmer, saisissez votre adresse email :</p>
+              <Input
+                value={deleteAccountEmail}
+                onChange={(e) => setDeleteAccountEmail(e.target.value)}
+                placeholder={user?.email || "votre@email.com"}
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setDeleteAccountOpen(false); setDeleteAccountEmail(""); }}>
+                Annuler
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteAccount}
+                disabled={deletingAccount || deleteAccountEmail !== (user?.email || "")}
+              >
+                {deletingAccount ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Suppression…</> : "Supprimer définitivement"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
       <Footer />
     </div>

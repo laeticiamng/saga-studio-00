@@ -30,7 +30,7 @@ const values = [
   {
     icon: Users,
     title: "Pour tous les créateurs",
-    description: "Musiciens, réalisateurs indépendants, créateurs de contenu — CineClip AI est fait pour vous.",
+    description: "Musiciens, réalisateurs indépendants, créateurs de contenu — Saga Studio est fait pour vous.",
   },
 ];
 
@@ -109,7 +109,7 @@ export default function About() {
             <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
               <Film className="h-8 w-8 text-primary" />
             </div>
-            <h1>À propos de CineClip AI</h1>
+            <h1>À propos de Saga Studio</h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed mt-4">
               Nous croyons que tout le monde devrait pouvoir créer des vidéos de qualité professionnelle, sans compétence technique et sans budget de production.
             </p>
@@ -120,13 +120,13 @@ export default function About() {
           <div className="space-y-5 mb-16">
             <h2 className="text-2xl font-bold">Notre mission</h2>
             <p className="text-muted-foreground leading-relaxed">
-              CineClip AI est né d'un constat simple : produire une vidéo de qualité demande du temps, des compétences et des outils coûteux. Nous avons voulu changer cela.
+              Saga Studio est né d'un constat simple : produire une vidéo de qualité demande du temps, des compétences et des outils coûteux. Nous avons voulu changer cela.
             </p>
             <p className="text-muted-foreground leading-relaxed">
               Notre plateforme utilise l'intelligence artificielle pour transformer vos idées en vidéos complètes — clips musicaux, courts-métrages, contenus créatifs — en quelques minutes seulement.
             </p>
             <p className="text-muted-foreground leading-relaxed">
-              Que vous soyez musicien, créateur de contenu, réalisateur indépendant ou simplement curieux, CineClip AI met la création vidéo à votre portée.
+              Que vous soyez musicien, créateur de contenu, réalisateur indépendant ou simplement curieux, Saga Studio met la création vidéo à votre portée.
             </p>
           </div>
         </AnimatedSection>

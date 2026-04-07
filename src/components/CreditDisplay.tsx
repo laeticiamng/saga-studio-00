@@ -35,7 +35,7 @@ export function CreditDisplay() {
         </div>
       </TooltipTrigger>
       <TooltipContent side="bottom" className="max-w-[220px] text-center">
-        <p className="text-xs">Vos crédits CineClip. Chaque projet consomme des crédits. Rechargez dans Tarifs.</p>
+        <p className="text-xs">Vos crédits Saga Studio. Chaque projet consomme des crédits. Rechargez dans Tarifs.</p>
       </TooltipContent>
     </Tooltip>
   );

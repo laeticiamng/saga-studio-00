@@ -407,6 +407,13 @@ export default function ProjectView() {
           )}
         </div>
 
+        {/* Credits Error */}
+        {creditsError && (
+          <div className="mb-4">
+            <InsufficientCreditsAlert balance={0} required={10} />
+          </div>
+        )}
+
         {/* Pipeline Progress */}
         <div className="mb-8">
           <PipelineProgress projectId={project.id} status={project.status} completedShots={completedShots} totalShots={totalShots} />

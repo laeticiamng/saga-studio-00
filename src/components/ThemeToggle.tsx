@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 export default function ThemeToggle() {
   const [dark, setDark] = useState(() => {
     if (typeof window === "undefined") return true;
-    const stored = localStorage.getItem("cineclip-theme");
+    const stored = localStorage.getItem("saga-studio-theme");
     return stored ? stored === "dark" : true; // default dark
   });
 
@@ -18,7 +18,7 @@ export default function ThemeToggle() {
       root.classList.add("light");
       root.classList.remove("dark");
     }
-    localStorage.setItem("cineclip-theme", dark ? "dark" : "light");
+    localStorage.setItem("saga-studio-theme", dark ? "dark" : "light");
   }, [dark]);
 
   return (

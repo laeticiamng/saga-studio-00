@@ -13,11 +13,11 @@ export default function Privacy() {
           <p>Dernière mise à jour : 9 mars 2026</p>
 
           <p>
-            <strong>EMOTIONSCARE SASU</strong> (SIREN 944 505 445), dont le siège social est situé à 80000 Amiens, France, est responsable du traitement des données personnelles collectées via la plateforme CineClip AI.
+            <strong>EMOTIONSCARE SASU</strong> (SIREN 944 505 445), dont le siège social est situé à 80000 Amiens, France, est responsable du traitement des données personnelles collectées via la plateforme Saga Studio.
           </p>
 
           <h2>1. Collecte des données</h2>
-          <p>CineClip AI collecte les données suivantes lors de votre utilisation de la plateforme :</p>
+          <p>Saga Studio collecte les données suivantes lors de votre utilisation de la plateforme :</p>
           <ul>
             <li>Adresse email et nom d'affichage lors de l'inscription</li>
             <li>Fichiers médias (audio, images) uploadés pour la génération de vidéos</li>
