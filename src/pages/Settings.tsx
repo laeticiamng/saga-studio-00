@@ -488,26 +488,36 @@ export default function Settings() {
         />
 
         {/* Delete Account Dialog */}
-        <ConfirmDialog
-          open={deleteAccountOpen}
-          onOpenChange={(open) => { if (!open) { setDeleteAccountOpen(false); setDeleteAccountEmail(""); } }}
-          title="Supprimer définitivement votre compte ?"
-          description={
-            <div className="space-y-3">
-              <p>Cette action est <strong>irréversible</strong>. Toutes vos données seront supprimées : projets, vidéos, crédits, profil.</p>
-              <p className="text-sm">Pour confirmer, saisissez votre adresse email :</p>
+        <Dialog open={deleteAccountOpen} onOpenChange={(open) => { if (!open) { setDeleteAccountOpen(false); setDeleteAccountEmail(""); } }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Supprimer définitivement votre compte ?</DialogTitle>
+              <DialogDescription>
+                Cette action est <strong>irréversible</strong>. Toutes vos données seront supprimées : projets, vidéos, crédits, profil.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <p className="text-sm text-muted-foreground">Pour confirmer, saisissez votre adresse email :</p>
               <Input
                 value={deleteAccountEmail}
                 onChange={(e) => setDeleteAccountEmail(e.target.value)}
                 placeholder={user?.email || "votre@email.com"}
-                className="mt-1"
               />
             </div>
-          }
-          confirmLabel={deletingAccount ? "Suppression…" : "Supprimer définitivement"}
-          onConfirm={handleDeleteAccount}
-          isPending={deletingAccount || deleteAccountEmail !== (user?.email || "")}
-        />
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setDeleteAccountOpen(false); setDeleteAccountEmail(""); }}>
+                Annuler
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteAccount}
+                disabled={deletingAccount || deleteAccountEmail !== (user?.email || "")}
+              >
+                {deletingAccount ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Suppression…</> : "Supprimer définitivement"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
       <Footer />
     </div>
