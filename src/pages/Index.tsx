@@ -1,6 +1,8 @@
 import Hero from "@/components/Hero";
 import ClientLogos from "@/components/ClientLogos";
-import AnimatedCounters from "@/components/AnimatedCounters";
+import UseCases from "@/components/UseCases";
+import PipelineShowcase from "@/components/PipelineShowcase";
+import Differentiators from "@/components/Differentiators";
 import Features from "@/components/Features";
 import Gallery from "@/components/Gallery";
 import SocialProof from "@/components/SocialProof";
@@ -13,14 +15,16 @@ import Navbar from "@/components/Navbar";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 const Index = () => {
-  usePageTitle("Studio audiovisuel IA — Films, Séries & Clips");
+  usePageTitle("Saga Studio — Studio de production audiovisuelle IA");
   return (
     <div className="min-h-screen">
       <Navbar />
       <main id="main-content">
         <Hero />
         <ClientLogos />
-        <AnimatedCounters />
+        <UseCases />
+        <PipelineShowcase />
+        <Differentiators />
         <Features />
         <Gallery />
         <SocialProof />

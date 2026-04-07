@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Sparkles, Video } from "lucide-react";
+import { ArrowRight, Play } from "lucide-react";
 import { motion } from "framer-motion";
 import AnimatedSection from "./AnimatedSection";
 
@@ -10,36 +10,29 @@ const CTA = () => {
   const { user } = useAuth();
 
   return (
-    <section className="page-section relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10" />
+    <section className="py-24 sm:py-36 px-4 relative overflow-hidden">
+      {/* Cinematic background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-accent/10" />
       <motion.div
-        animate={{ scale: [1, 1.1, 1], opacity: [0.08, 0.16, 0.08] }}
-        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-1/2 left-1/4 w-64 sm:w-96 h-64 sm:h-96 bg-primary/15 rounded-full blur-[100px] motion-reduce:hidden"
+        animate={{ scale: [1, 1.15, 1], opacity: [0.1, 0.2, 0.1] }}
+        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/15 rounded-full blur-[150px] motion-reduce:hidden"
       />
 
       <div className="container mx-auto relative z-10">
         <AnimatedSection variant="blurIn">
-          <div className="max-w-3xl mx-auto text-center">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.04] backdrop-blur-xl border border-white/[0.08] mb-8 shadow-[0_2px_16px_rgba(0,0,0,0.15)]"
-            >
-              <Sparkles className="w-4 h-4 text-primary" />
-              <span className="text-sm text-muted-foreground">Votre premier projet offert — sans engagement</span>
-            </motion.div>
-
-            <h2 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-4 sm:mb-6">
-              Prêt à produire
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-6 sm:mb-8 leading-[0.95]">
+              Votre vision mérite
               <br />
-              <span className="text-primary">votre prochain projet ?</span>
+              <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                un vrai studio
+              </span>
             </h2>
 
-            <p className="text-base sm:text-xl text-muted-foreground mb-8 sm:mb-12 px-2">
-              Film, série ou clip musical — décrivez votre vision et laissez le studio IA orchestrer chaque étape de la production.
+            <p className="text-lg sm:text-xl text-muted-foreground mb-10 sm:mb-14 max-w-2xl mx-auto leading-relaxed">
+              Arrêtez de générer des clips isolés. Produisez des œuvres complètes
+              — du brief au master final, en un seul outil.
             </p>
 
             <motion.div
@@ -52,14 +45,14 @@ const CTA = () => {
               <Button
                 variant="hero"
                 size="lg"
-                className="group"
+                className="group text-base px-8 py-6"
                 onClick={() => navigate(user ? "/create" : "/auth?signup")}
               >
-                <Video className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                Créer un projet — Essai gratuit
+                <Play className="w-5 h-5 group-hover:scale-110 transition-transform fill-current" />
+                Créer mon projet — Essai gratuit
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Button>
-              <Button variant="glass" size="lg" onClick={() => navigate("/pricing")}>
+              <Button variant="glass" size="lg" className="text-base px-8 py-6" onClick={() => navigate("/pricing")}>
                 Voir les tarifs
               </Button>
             </motion.div>
@@ -68,10 +61,10 @@ const CTA = () => {
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.4 }}
+              transition={{ delay: 0.4 }}
               className="text-sm text-muted-foreground mt-8"
             >
-              1 projet complet offert • Timeline + Montage + Export • Résultat en ~10 minutes
+              1 projet complet offert • Pipeline end-to-end • Résultat en ~10 min
             </motion.p>
           </div>
         </AnimatedSection>
