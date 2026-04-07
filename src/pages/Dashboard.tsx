@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Film, Music, Plus, Clock, CheckCircle, AlertCircle, Loader2, Tv, Clapperboard, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Film, Music, Plus, Clock, CheckCircle, AlertCircle, Loader2, Tv, Clapperboard, Search, ChevronLeft, ChevronRight, ArrowUpDown, BarChart3 } from "lucide-react";
 import { OnboardingTour } from "@/components/OnboardingTour";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useFeatureFlag } from "@/hooks/useFeatureFlag";
@@ -38,6 +38,7 @@ export default function Dashboard() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("newest");
   const [page, setPage] = useState(0);
 
   type ProjectWithSeries = Database["public"]["Tables"]["projects"]["Row"] & { _seriesId: string | null };
@@ -73,7 +74,7 @@ export default function Dashboard() {
 
   const filtered = useMemo(() => {
     if (!projects) return [];
-    return projects.filter(p => {
+    let result = projects.filter(p => {
       if (typeFilter !== "all" && p.type !== typeFilter) return false;
       if (statusFilter !== "all" && p.status !== statusFilter) return false;
       if (search.trim()) {
@@ -82,7 +83,13 @@ export default function Dashboard() {
       }
       return true;
     });
-  }, [projects, search, typeFilter, statusFilter]);
+    // Sort
+    if (sortBy === "oldest") result = [...result].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    else if (sortBy === "name") result = [...result].sort((a, b) => a.title.localeCompare(b.title));
+    else if (sortBy === "status") result = [...result].sort((a, b) => a.status.localeCompare(b.status));
+    // "newest" is default from API
+    return result;
+  }, [projects, search, typeFilter, statusFilter, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -91,6 +98,15 @@ export default function Dashboard() {
   const handleSearch = (v: string) => { setSearch(v); setPage(0); };
   const handleType = (v: string) => { setTypeFilter(v); setPage(0); };
   const handleStatus = (v: string) => { setStatusFilter(v); setPage(0); };
+  const handleSort = (v: string) => { setSortBy(v); setPage(0); };
+
+  // Stats
+  const stats = useMemo(() => {
+    if (!projects) return null;
+    const completed = projects.filter(p => p.status === "completed").length;
+    const inProgress = projects.filter(p => ["analyzing", "planning", "generating", "stitching", "in_production"].includes(p.status)).length;
+    return { total: projects.length, completed, inProgress, draft: projects.filter(p => p.status === "draft").length };
+  }, [projects]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -122,6 +138,36 @@ export default function Dashboard() {
             )}
           </div>
         </div>
+
+        {/* Quick Stats */}
+        {stats && stats.total > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            <Card className="border-border/50 bg-card/40">
+              <CardContent className="py-3 px-4 text-center">
+                <p className="text-2xl font-bold">{stats.total}</p>
+                <p className="text-xs text-muted-foreground">Total projets</p>
+              </CardContent>
+            </Card>
+            <Card className="border-border/50 bg-card/40">
+              <CardContent className="py-3 px-4 text-center">
+                <p className="text-2xl font-bold text-green-500">{stats.completed}</p>
+                <p className="text-xs text-muted-foreground">Terminés</p>
+              </CardContent>
+            </Card>
+            <Card className="border-border/50 bg-card/40">
+              <CardContent className="py-3 px-4 text-center">
+                <p className="text-2xl font-bold text-primary">{stats.inProgress}</p>
+                <p className="text-xs text-muted-foreground">En cours</p>
+              </CardContent>
+            </Card>
+            <Card className="border-border/50 bg-card/40">
+              <CardContent className="py-3 px-4 text-center">
+                <p className="text-2xl font-bold text-muted-foreground">{stats.draft}</p>
+                <p className="text-xs text-muted-foreground">Brouillons</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Search & Filters */}
         {projects && projects.length > 0 && (
@@ -156,6 +202,18 @@ export default function Dashboard() {
                 <SelectItem value="completed">Terminé</SelectItem>
                 <SelectItem value="failed">Échoué</SelectItem>
                 <SelectItem value="generating">En cours</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sortBy} onValueChange={handleSort}>
+              <SelectTrigger className="w-[150px]">
+                <ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />
+                <SelectValue placeholder="Trier" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Plus récent</SelectItem>
+                <SelectItem value="oldest">Plus ancien</SelectItem>
+                <SelectItem value="name">Nom A-Z</SelectItem>
+                <SelectItem value="status">Statut</SelectItem>
               </SelectContent>
             </Select>
           </div>
