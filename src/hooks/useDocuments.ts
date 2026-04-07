@@ -252,7 +252,7 @@ export function useResolveConflict() {
       const { data, error } = await supabase
         .from("canonical_conflicts")
         .update({
-          canonical_value: canonical_value as Record<string, unknown>,
+          canonical_value: canonical_value as unknown as import("@/integrations/supabase/types").Json,
           resolution,
           resolved_by: user?.id,
           resolved_at: new Date().toISOString(),
