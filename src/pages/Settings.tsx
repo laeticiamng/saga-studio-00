@@ -200,6 +200,23 @@ export default function Settings() {
         <Card className="border-border/50 bg-card/60">
           <CardHeader><CardTitle className="text-lg">Profil</CardTitle></CardHeader>
           <CardContent className="space-y-4">
+            {/* Avatar */}
+            <div className="flex items-center gap-4">
+              <div className="relative group">
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src={avatarUrl || undefined} />
+                  <AvatarFallback className="text-lg">{displayName?.charAt(0)?.toUpperCase() || "U"}</AvatarFallback>
+                </Avatar>
+                <label className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
+                  {uploadingAvatar ? <Loader2 className="h-5 w-5 animate-spin text-white" /> : <Camera className="h-5 w-5 text-white" />}
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleAvatarUpload(e.target.files[0])} />
+                </label>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                <p className="font-medium text-foreground">{displayName || "Utilisateur"}</p>
+                <p className="text-xs">{user?.email}</p>
+              </div>
+            </div>
             <div className="space-y-2">
               <Label>Email</Label>
               <Input value={user?.email || ""} disabled className="text-muted-foreground" />
