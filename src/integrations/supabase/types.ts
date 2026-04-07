@@ -750,6 +750,168 @@ export type Database = {
           },
         ]
       }
+      canonical_conflicts: {
+        Row: {
+          canonical_value: Json | null
+          created_at: string
+          doc_a_id: string | null
+          doc_b_id: string | null
+          entity_type: string
+          field_key: string
+          id: string
+          notes: string | null
+          project_id: string
+          resolution: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          updated_at: string
+          value_a: Json | null
+          value_b: Json | null
+        }
+        Insert: {
+          canonical_value?: Json | null
+          created_at?: string
+          doc_a_id?: string | null
+          doc_b_id?: string | null
+          entity_type?: string
+          field_key: string
+          id?: string
+          notes?: string | null
+          project_id: string
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          updated_at?: string
+          value_a?: Json | null
+          value_b?: Json | null
+        }
+        Update: {
+          canonical_value?: Json | null
+          created_at?: string
+          doc_a_id?: string | null
+          doc_b_id?: string | null
+          entity_type?: string
+          field_key?: string
+          id?: string
+          notes?: string | null
+          project_id?: string
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          updated_at?: string
+          value_a?: Json | null
+          value_b?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "canonical_conflicts_doc_a_id_fkey"
+            columns: ["doc_a_id"]
+            isOneToOne: false
+            referencedRelation: "source_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "canonical_conflicts_doc_b_id_fkey"
+            columns: ["doc_b_id"]
+            isOneToOne: false
+            referencedRelation: "source_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "canonical_conflicts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "canonical_conflicts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      canonical_fields: {
+        Row: {
+          approved: boolean | null
+          approved_at: string | null
+          approved_by: string | null
+          canonical_value: Json
+          confidence: number | null
+          created_at: string
+          entity_name: string | null
+          entity_type: string
+          field_key: string
+          id: string
+          inferred: boolean | null
+          project_id: string
+          source_document_id: string | null
+          source_passage: string | null
+          updated_at: string
+        }
+        Insert: {
+          approved?: boolean | null
+          approved_at?: string | null
+          approved_by?: string | null
+          canonical_value: Json
+          confidence?: number | null
+          created_at?: string
+          entity_name?: string | null
+          entity_type?: string
+          field_key: string
+          id?: string
+          inferred?: boolean | null
+          project_id: string
+          source_document_id?: string | null
+          source_passage?: string | null
+          updated_at?: string
+        }
+        Update: {
+          approved?: boolean | null
+          approved_at?: string | null
+          approved_by?: string | null
+          canonical_value?: Json
+          confidence?: number | null
+          created_at?: string
+          entity_name?: string | null
+          entity_type?: string
+          field_key?: string
+          id?: string
+          inferred?: boolean | null
+          project_id?: string
+          source_document_id?: string | null
+          source_passage?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "canonical_fields_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "canonical_fields_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "canonical_fields_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "source_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       character_profiles: {
         Row: {
           arc: string | null
@@ -1845,6 +2007,148 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inferred_completions: {
+        Row: {
+          confidence: number | null
+          created_at: string
+          entity_name: string | null
+          entity_type: string
+          field_key: string
+          id: string
+          inferred_value: Json
+          project_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_context: string | null
+          source_document_ids: string[] | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string
+          entity_name?: string | null
+          entity_type?: string
+          field_key: string
+          id?: string
+          inferred_value: Json
+          project_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_context?: string | null
+          source_document_ids?: string[] | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string
+          entity_name?: string | null
+          entity_type?: string
+          field_key?: string
+          id?: string
+          inferred_value?: Json
+          project_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_context?: string | null
+          source_document_ids?: string[] | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inferred_completions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inferred_completions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ingestion_runs: {
+        Row: {
+          completed_at: string | null
+          conflicts_found: number | null
+          created_at: string
+          documents_processed: number | null
+          documents_total: number | null
+          entities_extracted: number | null
+          error_message: string | null
+          id: string
+          inferred_proposed: number | null
+          missing_detected: number | null
+          project_id: string
+          series_id: string | null
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          conflicts_found?: number | null
+          created_at?: string
+          documents_processed?: number | null
+          documents_total?: number | null
+          entities_extracted?: number | null
+          error_message?: string | null
+          id?: string
+          inferred_proposed?: number | null
+          missing_detected?: number | null
+          project_id: string
+          series_id?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          conflicts_found?: number | null
+          created_at?: string
+          documents_processed?: number | null
+          documents_total?: number | null
+          entities_extracted?: number | null
+          error_message?: string | null
+          id?: string
+          inferred_proposed?: number | null
+          missing_detected?: number | null
+          project_id?: string
+          series_id?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingestion_runs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingestion_runs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingestion_runs_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "series"
             referencedColumns: ["id"]
           },
         ]
@@ -3613,6 +3917,7 @@ export type Database = {
       source_documents: {
         Row: {
           created_at: string
+          document_role: string | null
           extraction_mode: string | null
           file_name: string
           file_size_bytes: number | null
@@ -3621,15 +3926,19 @@ export type Database = {
           metadata: Json | null
           parent_document_id: string | null
           project_id: string | null
+          role_confidence: number | null
           series_id: string | null
+          source_priority: string | null
           status: string
           storage_path: string | null
+          tags: string[] | null
           updated_at: string
           uploaded_by: string
           version: number
         }
         Insert: {
           created_at?: string
+          document_role?: string | null
           extraction_mode?: string | null
           file_name: string
           file_size_bytes?: number | null
@@ -3638,15 +3947,19 @@ export type Database = {
           metadata?: Json | null
           parent_document_id?: string | null
           project_id?: string | null
+          role_confidence?: number | null
           series_id?: string | null
+          source_priority?: string | null
           status?: string
           storage_path?: string | null
+          tags?: string[] | null
           updated_at?: string
           uploaded_by: string
           version?: number
         }
         Update: {
           created_at?: string
+          document_role?: string | null
           extraction_mode?: string | null
           file_name?: string
           file_size_bytes?: number | null
@@ -3655,9 +3968,12 @@ export type Database = {
           metadata?: Json | null
           parent_document_id?: string | null
           project_id?: string | null
+          role_confidence?: number | null
           series_id?: string | null
+          source_priority?: string | null
           status?: string
           storage_path?: string | null
+          tags?: string[] | null
           updated_at?: string
           uploaded_by?: string
           version?: number
