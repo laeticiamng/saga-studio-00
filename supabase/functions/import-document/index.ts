@@ -45,6 +45,7 @@ serve(async (req) => {
     if (action === "detect_missing") return await detectMissingInfo(supabase, body.project_id, user.id);
     if (action === "retrieve_context") return await retrieveContext(supabase, body);
     if (action === "extract" && body.document_id) return await processDocument(supabase, body.document_id, user.id);
+    if (action === "wizard_extract") return await wizardExtract(supabase, body, user.id);
 
     // Register + auto-extract a new document
     const { project_id, series_id, file_name, file_type, file_size_bytes, storage_path } = body;
