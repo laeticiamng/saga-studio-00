@@ -43,7 +43,13 @@ const ENTITY_ICONS: Record<string, React.ReactNode> = {
 const STATUS_LABELS: Record<string, string> = {
   uploaded: "Chargé",
   extracting: "Extraction…",
+  parsing: "Lecture du fichier…",
+  parsed: "Fichier lu",
+  parsing_failed: "Lecture échouée",
   analyzing: "Analyse IA…",
+  extracting_entities: "Extraction des entités…",
+  extracted_entities: "Entités extraites",
+  extraction_failed: "Extraction échouée",
   ready_for_review: "Prêt pour revue",
   reviewed: "Revu",
   applied: "Appliqué",
@@ -341,7 +347,10 @@ function DocumentCard({
               v{doc.version as number} · {new Date(doc.created_at as string).toLocaleDateString("fr-FR")}
             </p>
           </div>
-          <Badge variant={(doc.status as string) === "ready_for_review" ? "default" : "secondary"} className="text-xs">
+          <Badge variant={
+            (doc.status as string)?.includes("failed") ? "destructive" :
+            (doc.status as string) === "ready_for_review" ? "default" : "secondary"
+          } className="text-xs">
             {STATUS_LABELS[doc.status as string] || doc.status as string}
           </Badge>
         </div>
@@ -447,16 +456,32 @@ function DocumentDetail({
               </Badge>
             )}
           </div>
-          {/* Parser status warning */}
-          {(doc.extraction_mode as string)?.includes("failed") && (
+          {/* Parser status warning — detect all failure modes */}
+          {(
+            (doc.extraction_mode as string)?.includes("failed") ||
+            (doc.extraction_mode as string)?.includes("error") ||
+            (doc.status as string)?.includes("failed")
+          ) && (
             <div className="rounded-lg bg-destructive/10 p-3 text-sm mb-3 flex items-start gap-2">
               <XCircle className="h-4 w-4 text-destructive flex-shrink-0 mt-0.5" />
               <div>
                 <p className="font-medium text-destructive">Extraction du texte échouée</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Le contenu de ce fichier n'a pas pu être lu. Les entités affichées comme "manquantes" ne reflètent pas le contenu réel du document.
+                  Le contenu de ce fichier n'a pas pu être lu ({doc.extraction_mode as string || "erreur inconnue"}). Les entités affichées comme "manquantes" ne reflètent pas le contenu réel du document.
                 </p>
               </div>
+            </div>
+          )}
+          {/* Extraction debug panel */}
+          {(doc.metadata as Record<string, unknown>)?.extraction_debug && (
+            <div className="rounded-lg bg-secondary/30 p-3 text-xs mb-3 space-y-1 font-mono">
+              <p className="font-medium text-foreground text-sm mb-1">Diagnostic d'extraction</p>
+              {Object.entries((doc.metadata as Record<string, unknown>).extraction_debug as Record<string, unknown>).map(([k, v]) => (
+                <p key={k} className="text-muted-foreground">
+                  <span className="text-foreground">{k}:</span>{" "}
+                  {typeof v === "string" && v.length > 120 ? v.slice(0, 120) + "…" : String(v ?? "null")}
+                </p>
+              ))}
             </div>
           )}
         </CardContent>

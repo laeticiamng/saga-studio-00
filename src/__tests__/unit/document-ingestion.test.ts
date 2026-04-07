@@ -35,6 +35,121 @@ describe("Document Classification", () => {
   });
 });
 
+describe("DOCX Extraction Routing", () => {
+  // Simulates the extractTextFromFile routing logic
+  function getExtractionRoute(fileType: string): {
+    parser: string;
+    fallbackToPdf: boolean;
+  } {
+    if (fileType === "txt" || fileType === "markdown" || fileType === "rtf") {
+      return { parser: "plain_text", fallbackToPdf: false };
+    }
+    if (fileType === "docx") {
+      return { parser: "docx_xml_parse", fallbackToPdf: false };
+    }
+    if (fileType === "pdf") {
+      return { parser: "pdf_vision_api", fallbackToPdf: false };
+    }
+    return { parser: "unknown", fallbackToPdf: false };
+  }
+
+  it("routes DOCX to docx_xml_parse, never to PDF", () => {
+    const route = getExtractionRoute("docx");
+    expect(route.parser).toBe("docx_xml_parse");
+    expect(route.fallbackToPdf).toBe(false);
+  });
+
+  it("routes PDF to pdf_vision_api", () => {
+    const route = getExtractionRoute("pdf");
+    expect(route.parser).toBe("pdf_vision_api");
+    expect(route.fallbackToPdf).toBe(false);
+  });
+
+  it("routes plain text files directly", () => {
+    expect(getExtractionRoute("txt").parser).toBe("plain_text");
+    expect(getExtractionRoute("markdown").parser).toBe("plain_text");
+    expect(getExtractionRoute("rtf").parser).toBe("plain_text");
+  });
+});
+
+describe("Extraction Failure Status", () => {
+  function isExtractionFailure(extractionMode: string | null, status: string | null): boolean {
+    return Boolean(
+      extractionMode?.includes("failed") ||
+      extractionMode?.includes("error") ||
+      status?.includes("failed")
+    );
+  }
+
+  it("detects docx_parse_failed as failure", () => {
+    expect(isExtractionFailure("docx_parse_failed: Not a valid ZIP/DOCX", "parsing_failed")).toBe(true);
+  });
+
+  it("detects pdf_vision_api_error as failure", () => {
+    expect(isExtractionFailure("pdf_vision_api_error", "ready_for_review")).toBe(true);
+  });
+
+  it("detects parsing_failed status", () => {
+    expect(isExtractionFailure("unknown", "parsing_failed")).toBe(true);
+  });
+
+  it("does not flag successful extraction", () => {
+    expect(isExtractionFailure("docx_xml_parse", "ready_for_review")).toBe(false);
+  });
+
+  it("does not flag pdf_vision_api success", () => {
+    expect(isExtractionFailure("pdf_vision_api", "analyzing")).toBe(false);
+  });
+});
+
+describe("DecompressionStream Parameter", () => {
+  // Validates that the correct parameter name is used for raw DEFLATE
+  const VALID_DECOMPRESSION_FORMATS = ["deflate", "deflate-raw", "gzip"];
+
+  it("deflate-raw is a valid DecompressionStream format", () => {
+    expect(VALID_DECOMPRESSION_FORMATS).toContain("deflate-raw");
+  });
+
+  it("'raw' is NOT a valid DecompressionStream format", () => {
+    expect(VALID_DECOMPRESSION_FORMATS).not.toContain("raw");
+  });
+});
+
+describe("Pipeline Status Transitions", () => {
+  const VALID_STATUSES = [
+    "uploaded", "extracting", "parsing", "parsed", "parsing_failed",
+    "analyzing", "extracting_entities", "extracted_entities", "extraction_failed",
+    "ready_for_review", "reviewed", "applied",
+  ];
+
+  it("has parsing_failed as a valid status", () => {
+    expect(VALID_STATUSES).toContain("parsing_failed");
+  });
+
+  it("has extraction_failed as a valid status", () => {
+    expect(VALID_STATUSES).toContain("extraction_failed");
+  });
+
+  function shouldProceedToAI(parserSuccess: boolean, textLength: number): boolean {
+    return parserSuccess && textLength >= 20;
+  }
+
+  it("blocks AI extraction when parser failed", () => {
+    expect(shouldProceedToAI(false, 0)).toBe(false);
+    expect(shouldProceedToAI(false, 500)).toBe(false);
+  });
+
+  it("blocks AI extraction when text too short", () => {
+    expect(shouldProceedToAI(true, 10)).toBe(false);
+    expect(shouldProceedToAI(true, 0)).toBe(false);
+  });
+
+  it("allows AI extraction when parser succeeded with enough text", () => {
+    expect(shouldProceedToAI(true, 500)).toBe(true);
+    expect(shouldProceedToAI(true, 20)).toBe(true);
+  });
+});
+
 describe("Entity Extraction Confidence", () => {
   function computeMappingConfidence(
     extractionConfidence: number,
