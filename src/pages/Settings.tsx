@@ -459,6 +459,24 @@ export default function Settings() {
             )}
           </CardContent>
         </Card>
+
+        {/* Danger Zone */}
+        <Card className="border-destructive/30">
+          <CardHeader>
+            <CardTitle className="text-destructive flex items-center gap-2">
+              <Trash2 className="h-5 w-5" /> Zone de danger
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              La suppression de votre compte est irréversible. Tous vos projets, vidéos, crédits et données personnelles seront définitivement supprimés.
+            </p>
+            <Button variant="destructive" onClick={() => setDeleteAccountOpen(true)}>
+              <Trash2 className="h-4 w-4 mr-2" /> Supprimer mon compte
+            </Button>
+          </CardContent>
+        </Card>
+
         <ConfirmDialog
           open={!!webhookToDelete}
           onOpenChange={(open) => { if (!open) setWebhookToDelete(null); }}
@@ -467,6 +485,28 @@ export default function Settings() {
           confirmLabel="Supprimer"
           onConfirm={handleDeleteWebhook}
           isPending={deletingWebhook}
+        />
+
+        {/* Delete Account Dialog */}
+        <ConfirmDialog
+          open={deleteAccountOpen}
+          onOpenChange={(open) => { if (!open) { setDeleteAccountOpen(false); setDeleteAccountEmail(""); } }}
+          title="Supprimer définitivement votre compte ?"
+          description={
+            <div className="space-y-3">
+              <p>Cette action est <strong>irréversible</strong>. Toutes vos données seront supprimées : projets, vidéos, crédits, profil.</p>
+              <p className="text-sm">Pour confirmer, saisissez votre adresse email :</p>
+              <Input
+                value={deleteAccountEmail}
+                onChange={(e) => setDeleteAccountEmail(e.target.value)}
+                placeholder={user?.email || "votre@email.com"}
+                className="mt-1"
+              />
+            </div>
+          }
+          confirmLabel={deletingAccount ? "Suppression…" : "Supprimer définitivement"}
+          onConfirm={handleDeleteAccount}
+          isPending={deletingAccount || deleteAccountEmail !== (user?.email || "")}
         />
       </main>
       <Footer />
