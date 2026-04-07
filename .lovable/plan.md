@@ -1,24 +1,39 @@
+## Phase 1: Foundation (this message)
 
-# Frontend & UX Alignment Plan
+### 1. Database Migration
+Add to `source_documents`:
+- `document_role` (enum: script_master, episode_script, series_bible, character_sheet, moodboard_doc, music_doc, etc.)
+- `role_confidence` (float)
+- `source_priority` (enum: source_of_truth, preferred_source, supporting_reference, deprecated, draft_only)
+- `tags` (text[])
 
-## Phase 1 — Foundation (this message)
-1. **Homepage Repositioning**: Rewrite Hero, Features, HowItWorks, and CTA to reflect the full AI studio (series, films, music videos, timeline, review gates, finishing, export)
-2. **Global Navigation Redesign**: Rebuild Navbar with grouped navigation (Create, Projects, Studio, Reviews, Exports, Diagnostics, Governance)
-3. **Design System Alignment**: Add missing state badge variants (generating, awaiting_review, approved, rejected, blocked, exporting, failed, delivered) and standardize labels
-4. **Legacy Cleanup**: Remove/redirect old create pages (CreateClip, CreateFilm, CreateMusicVideo) in favor of unified CreateProject wizard
-5. **Unified Create Flow**: Polish CreateProject into a step-by-step wizard with progress bar, project type selection, brief, format, tone, and review
+New tables:
+- `canonical_conflicts` — detected conflicts between documents (field, doc_a, doc_b, severity, resolution, canonical_value)
+- `canonical_fields` — merged canonical project truth (project_id, field_key, canonical_value, source_document_id, approved)
+- `ingestion_runs` — batch ingestion tracking (project_id, status, docs_processed, entities_extracted, conflicts_found, missing_detected)
+- `inferred_completions` — AI-suggested gap fills (project_id, field_key, inferred_value, source_context, status)
 
-## Phase 2 — Studio & Dashboard (next message)
-- Project dashboard rebuild with lifecycle rail, action cards, and status widgets
-- Timeline Studio UX upgrade with scene navigator and inspector panels
-- Review/Approval UX rebuild
-- Finishing panel polish
-- Export center UX
+### 2. Edge Function Upgrade (`import-document`)
+- Document role auto-classification via AI
+- Enhanced extraction with 25+ entity types (props, locations, wardrobe, continuity, legal, VFX, dialogue)
+- Conflict detection across existing entities
+- Missing information detection
+- Image/photo role classification
+- Multi-file batch support
+- Canonical merge logic
 
-## Phase 3 — Polish (follow-up)
-- Responsive/mobile validation
-- Empty/loading/error states for all modules
-- Onboarding tooltips for advanced features
-- Diagnostics & Governance UX humanization
+### 3. Frontend Upgrade (`DocumentsCenter`)
+- Multi-file drag-and-drop upload
+- Project-level (not just series) support
+- Document role badges + editor
+- Source priority selector
+- Conflict resolution panel
+- Missing info panel
+- Canonical project view
+- Batch upload progress
+- Image upload support
 
-Each phase delivers a usable, coherent increment. Phase 1 tackles the most visible user-facing gaps.
+### 4. Hooks Enhancement
+- `useCanonicalConflicts`, `useCanonicalFields`, `useInferredCompletions`
+- `useBatchUpload` for multi-file
+- `useUpdateDocumentRole`, `useUpdateSourcePriority`
