@@ -12,7 +12,7 @@ import { GOVERNANCE_STATE_LABELS, type GovernanceState } from "@/lib/governance-
 import { IncidentFeed } from "@/components/studio/IncidentFeed";
 import { PolicyViolationAlert } from "@/components/studio/PolicyViolationAlert";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import usePageTitle from "@/hooks/usePageTitle";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 export default function GovernanceDashboard() {
   usePageTitle("Governance");
@@ -75,7 +75,7 @@ export default function GovernanceDashboard() {
           <Card>
             <CardContent className="pt-4 text-center">
               <p className="text-xs text-muted-foreground mb-1">Violations</p>
-              <p className="text-2xl font-bold text-yellow-500">{unresolvedViolations.length}</p>
+              <p className="text-2xl font-bold text-accent-foreground">{unresolvedViolations.length}</p>
             </CardContent>
           </Card>
         </div>
