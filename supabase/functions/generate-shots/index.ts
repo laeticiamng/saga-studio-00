@@ -10,8 +10,8 @@ const corsHeaders = {
 
 interface VideoProvider {
   name: string;
-  /** "video" = real video file, "image" = still image (e.g. DALL-E) */
-  outputType: "video" | "image";
+  outputType: "video" | "image" | "utility";
+  modelId: string;
   generateVideo(prompt: string, duration: number, style: string, seed: number): Promise<{ job_id: string }>;
   checkStatus(job_id: string): Promise<{ status: "pending" | "completed" | "failed"; url?: string; error?: string }>;
 }
@@ -26,57 +26,52 @@ function isPlaceholderUrl(url?: string | null): boolean {
 class MockProvider implements VideoProvider {
   name = "mock";
   outputType = "image" as const;
-  async generateVideo() {
-    return { job_id: `mock-${crypto.randomUUID()}` };
-  }
+  modelId = "mock";
+  async generateVideo() { return { job_id: `mock-${crypto.randomUUID()}` }; }
   async checkStatus(job_id: string) {
-    return {
-      status: "completed" as const,
-      url: `https://placehold.co/1920x1080/1a1a1a/ff8c00?text=Shot+${job_id.slice(-4)}`,
-    };
+    return { status: "completed" as const, url: `https://placehold.co/1920x1080/1a1a1a/ff8c00?text=Shot+${job_id.slice(-4)}` };
   }
 }
 
-/**
- * OpenAI Image Provider (DALL-E 3)
- * Generates still frames, NOT video. Named clearly to avoid confusion.
- * Output is an image URL that FFmpeg will convert to a video segment.
- */
+// ── OpenAI GPT Image 1.5 (replaces DALL-E 3) ───────────────────────────────
 class OpenAIImageProvider implements VideoProvider {
   name = "openai_image";
   outputType = "image" as const;
+  modelId = "gpt-image-1.5";
   private apiKey: string;
   constructor(apiKey: string) { this.apiKey = apiKey; }
-  async generateVideo(prompt: string, duration: number, style: string) {
+  async generateVideo(prompt: string, _duration: number, style: string) {
     const res = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
       headers: { "Authorization": `Bearer ${this.apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "dall-e-3",
+        model: "gpt-image-1.5",
         prompt: `${style} style cinematic video frame, film still. ${prompt}`.slice(0, 4000),
         n: 1,
-        size: "1792x1024",
-        response_format: "url",
+        size: "1536x1024",
       }),
     });
     const data = await res.json();
-    console.log("[openai_image] response status:", res.status, "has url:", !!data.data?.[0]?.url);
+    console.log("[openai_image] gpt-image-1.5 response:", res.status);
     if (!res.ok) throw new Error(data.error?.message || "OpenAI API error");
-    const url = data.data?.[0]?.url;
-    if (!url) throw new Error("OpenAI returned no image URL");
+    // gpt-image-1.5 returns b64_json by default; check for url first
+    const url = data.data?.[0]?.url || (data.data?.[0]?.b64_json ? `data:image/png;base64,${data.data[0].b64_json}` : null);
+    if (!url) throw new Error("OpenAI returned no image");
     return { job_id: url };
   }
   async checkStatus(job_id: string) {
-    if (job_id.startsWith("http")) {
+    if (job_id.startsWith("http") || job_id.startsWith("data:")) {
       return { status: "completed" as const, url: job_id };
     }
-    return { status: "failed" as const, url: undefined, error: "Invalid OpenAI image reference" };
+    return { status: "failed" as const, error: "Invalid OpenAI image reference" };
   }
 }
 
+// ── Runway Gen-4.5 (backbone narratif) ──────────────────────────────────────
 class RunwayProvider implements VideoProvider {
   name = "runway";
   outputType = "video" as const;
+  modelId = "gen4.5";
   private apiKey: string;
   constructor(apiKey: string) { this.apiKey = apiKey; }
   async generateVideo(prompt: string, duration: number) {
@@ -95,91 +90,317 @@ class RunwayProvider implements VideoProvider {
       }),
     });
     const data = await res.json();
-    console.log("[runway] text_to_video response:", res.status, JSON.stringify(data));
+    console.log("[runway] gen4.5 response:", res.status);
     if (!res.ok) throw new Error(data.error || data.message || JSON.stringify(data));
     return { job_id: data.id };
   }
   async checkStatus(job_id: string) {
     const res = await fetch(`https://api.dev.runwayml.com/v1/tasks/${job_id}`, {
-      headers: {
-        "Authorization": `Bearer ${Deno.env.get("RUNWAY_API_KEY")}`,
-        "X-Runway-Version": "2024-11-06",
-      },
+      headers: { "Authorization": `Bearer ${Deno.env.get("RUNWAY_API_KEY")}`, "X-Runway-Version": "2024-11-06" },
     });
     const data = await res.json();
-    console.log("[runway] status response:", JSON.stringify(data));
     const status = data.status === "SUCCEEDED" ? "completed" : data.status === "FAILED" ? "failed" : "pending";
     return { status: status as any, url: data.output?.[0], error: data.failure };
   }
 }
 
+// ── Runway Act-Two (performance capture) ────────────────────────────────────
+class RunwayActTwoProvider implements VideoProvider {
+  name = "runway_act_two";
+  outputType = "video" as const;
+  modelId = "act_two";
+  private apiKey: string;
+  constructor(apiKey: string) { this.apiKey = apiKey; }
+  async generateVideo(prompt: string, duration: number) {
+    // Act-Two requires a driving video reference; for text-only, fall back to gen4.5 with acting prompt
+    const res = await fetch("https://api.dev.runwayml.com/v1/text_to_video", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${this.apiKey}`,
+        "Content-Type": "application/json",
+        "X-Runway-Version": "2024-11-06",
+      },
+      body: JSON.stringify({
+        model: "gen4.5",
+        promptText: `[ACTING PERFORMANCE] ${prompt}`.slice(0, 1000),
+        ratio: "1280:720",
+        duration: duration <= 5 ? 5 : 10,
+      }),
+    });
+    const data = await res.json();
+    console.log("[runway_act_two] response:", res.status);
+    if (!res.ok) throw new Error(data.error || data.message || JSON.stringify(data));
+    return { job_id: data.id };
+  }
+  async checkStatus(job_id: string) {
+    const res = await fetch(`https://api.dev.runwayml.com/v1/tasks/${job_id}`, {
+      headers: { "Authorization": `Bearer ${Deno.env.get("RUNWAY_API_KEY")}`, "X-Runway-Version": "2024-11-06" },
+    });
+    const data = await res.json();
+    const status = data.status === "SUCCEEDED" ? "completed" : data.status === "FAILED" ? "failed" : "pending";
+    return { status: status as any, url: data.output?.[0], error: data.failure };
+  }
+}
+
+// ── Runway Gen-4 Aleph (video transform) ────────────────────────────────────
+class RunwayAlephProvider implements VideoProvider {
+  name = "runway_aleph";
+  outputType = "video" as const;
+  modelId = "gen4_aleph";
+  private apiKey: string;
+  constructor(apiKey: string) { this.apiKey = apiKey; }
+  async generateVideo(prompt: string, duration: number) {
+    const res = await fetch("https://api.dev.runwayml.com/v1/text_to_video", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${this.apiKey}`,
+        "Content-Type": "application/json",
+        "X-Runway-Version": "2024-11-06",
+      },
+      body: JSON.stringify({
+        model: "gen4_aleph",
+        promptText: `[TRANSFORM/STYLIZE] ${prompt}`.slice(0, 1000),
+        ratio: "1280:720",
+        duration: duration <= 5 ? 5 : 10,
+      }),
+    });
+    const data = await res.json();
+    console.log("[runway_aleph] response:", res.status);
+    if (!res.ok) throw new Error(data.error || data.message || JSON.stringify(data));
+    return { job_id: data.id };
+  }
+  async checkStatus(job_id: string) {
+    const res = await fetch(`https://api.dev.runwayml.com/v1/tasks/${job_id}`, {
+      headers: { "Authorization": `Bearer ${Deno.env.get("RUNWAY_API_KEY")}`, "X-Runway-Version": "2024-11-06" },
+    });
+    const data = await res.json();
+    const status = data.status === "SUCCEEDED" ? "completed" : data.status === "FAILED" ? "failed" : "pending";
+    return { status: status as any, url: data.output?.[0], error: data.failure };
+  }
+}
+
+// ── Luma Ray-2 (video utility/fallback) ─────────────────────────────────────
 class LumaProvider implements VideoProvider {
   name = "luma";
   outputType = "video" as const;
+  modelId = "ray-2";
   private apiKey: string;
   constructor(apiKey: string) { this.apiKey = apiKey; }
   async generateVideo(prompt: string, duration: number) {
     const lumaDuration = duration <= 5 ? "5s" : duration <= 9 ? "9s" : "10s";
     const res = await fetch("https://api.lumalabs.ai/dream-machine/v1/generations", {
       method: "POST",
-      headers: {
-        "Authorization": `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      },
-      body: JSON.stringify({
-        prompt: prompt.slice(0, 2000),
-        model: "ray-2",
-        resolution: "720p",
-        duration: lumaDuration,
-        generation_type: "video",
-      }),
+      headers: { "Authorization": `Bearer ${this.apiKey}`, "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({ prompt: prompt.slice(0, 2000), model: "ray-2", resolution: "720p", duration: lumaDuration, generation_type: "video" }),
     });
     const data = await res.json();
-    console.log("[luma] create response:", JSON.stringify(data));
+    console.log("[luma] ray-2 response:", res.status);
     if (!res.ok) throw new Error(data.detail || data.message || JSON.stringify(data));
     return { job_id: data.id };
   }
   async checkStatus(job_id: string) {
     const res = await fetch(`https://api.lumalabs.ai/dream-machine/v1/generations/${job_id}`, {
-      headers: {
-        "Authorization": `Bearer ${Deno.env.get("LUMA_API_KEY")}`,
-        "Accept": "application/json",
-      },
+      headers: { "Authorization": `Bearer ${Deno.env.get("LUMA_API_KEY")}`, "Accept": "application/json" },
     });
     const data = await res.json();
-    console.log("[luma] status response:", JSON.stringify(data));
     const status = data.state === "completed" ? "completed" : data.state === "failed" ? "failed" : "pending";
     return { status: status as any, url: data.assets?.video, error: data.failure_reason };
   }
 }
 
-/**
- * OpenAI Sora 2 Provider — native video generation via /v1/videos
- * Async: submit job, poll for completion.
- */
-class Sora2Provider implements VideoProvider {
-  name = "sora2";
+// ── Luma Photon-1 (identity/character reference) ────────────────────────────
+class LumaPhotonProvider implements VideoProvider {
+  name = "luma_photon";
+  outputType = "image" as const;
+  modelId = "photon-1";
+  private apiKey: string;
+  constructor(apiKey: string) { this.apiKey = apiKey; }
+  async generateVideo(prompt: string) {
+    const res = await fetch("https://api.lumalabs.ai/dream-machine/v1/generations/image", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${this.apiKey}`, "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({ prompt: prompt.slice(0, 2000), model: "photon-1", aspect_ratio: "16:9" }),
+    });
+    const data = await res.json();
+    console.log("[luma_photon] response:", res.status);
+    if (!res.ok) throw new Error(data.detail || data.message || JSON.stringify(data));
+    return { job_id: data.id };
+  }
+  async checkStatus(job_id: string) {
+    const res = await fetch(`https://api.lumalabs.ai/dream-machine/v1/generations/${job_id}`, {
+      headers: { "Authorization": `Bearer ${Deno.env.get("LUMA_API_KEY")}`, "Accept": "application/json" },
+    });
+    const data = await res.json();
+    const status = data.state === "completed" ? "completed" : data.state === "failed" ? "failed" : "pending";
+    return { status: status as any, url: data.assets?.image, error: data.failure_reason };
+  }
+}
+
+// ── Google Nano Banana 2 (fast image via Gemini) ────────────────────────────
+class NanoBanana2Provider implements VideoProvider {
+  name = "google_nano_banana_2";
+  outputType = "image" as const;
+  modelId = "gemini-3.1-flash-image-preview";
+  private apiKey: string;
+  constructor(apiKey: string) { this.apiKey = apiKey; }
+  async generateVideo(prompt: string) {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${this.modelId}:generateContent?key=${this.apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `Generate a cinematic film still: ${prompt}`.slice(0, 2000) }] }],
+          generationConfig: { responseModalities: ["IMAGE", "TEXT"], imageDimension: { width: 1024, height: 576 } },
+        }),
+      }
+    );
+    const data = await res.json();
+    console.log("[nano_banana_2] response:", res.status);
+    if (!res.ok) throw new Error(data.error?.message || JSON.stringify(data));
+    const imagePart = data.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData);
+    if (!imagePart?.inlineData?.data) throw new Error("Nano Banana 2 returned no image");
+    const url = `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`;
+    return { job_id: url };
+  }
+  async checkStatus(job_id: string) {
+    if (job_id.startsWith("data:") || job_id.startsWith("http")) return { status: "completed" as const, url: job_id };
+    return { status: "failed" as const, error: "Invalid reference" };
+  }
+}
+
+// ── Google Nano Banana Pro (premium image via Gemini) ───────────────────────
+class NanoBananaProProvider implements VideoProvider {
+  name = "google_nano_banana_pro";
+  outputType = "image" as const;
+  modelId = "gemini-3-pro-image-preview";
+  private apiKey: string;
+  constructor(apiKey: string) { this.apiKey = apiKey; }
+  async generateVideo(prompt: string) {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${this.modelId}:generateContent?key=${this.apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `Generate a premium cinematic production still: ${prompt}`.slice(0, 2000) }] }],
+          generationConfig: { responseModalities: ["IMAGE", "TEXT"], imageDimension: { width: 1024, height: 576 } },
+        }),
+      }
+    );
+    const data = await res.json();
+    console.log("[nano_banana_pro] response:", res.status);
+    if (!res.ok) throw new Error(data.error?.message || JSON.stringify(data));
+    const imagePart = data.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData);
+    if (!imagePart?.inlineData?.data) throw new Error("Nano Banana Pro returned no image");
+    const url = `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`;
+    return { job_id: url };
+  }
+  async checkStatus(job_id: string) {
+    if (job_id.startsWith("data:") || job_id.startsWith("http")) return { status: "completed" as const, url: job_id };
+    return { status: "failed" as const, error: "Invalid reference" };
+  }
+}
+
+// ── Google Veo 3.1 (hero shots / premium video) ────────────────────────────
+class Veo31Provider implements VideoProvider {
+  name = "google_veo_31";
   outputType = "video" as const;
+  modelId = "veo-3.1-generate-preview";
   private apiKey: string;
   constructor(apiKey: string) { this.apiKey = apiKey; }
   async generateVideo(prompt: string, duration: number) {
-    const res = await fetch("https://api.openai.com/v1/videos", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "sora-2",
-        prompt: prompt.slice(0, 4000),
-        size: "1280x720",
-        duration: Math.min(20, Math.max(5, duration)),
-        n: 1,
-      }),
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${this.modelId}:predictLongRunning?key=${this.apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          instances: [{ prompt: prompt.slice(0, 2000) }],
+          parameters: { aspectRatio: "16:9", durationSeconds: Math.min(8, Math.max(5, duration)), sampleCount: 1 },
+        }),
+      }
+    );
+    const data = await res.json();
+    console.log("[veo_31] response:", res.status);
+    if (!res.ok) throw new Error(data.error?.message || JSON.stringify(data));
+    if (!data.name) throw new Error("Veo 3.1 returned no operation name");
+    return { job_id: data.name };
+  }
+  async checkStatus(job_id: string) {
+    const apiKey = Deno.env.get("GOOGLE_VEO_API_KEY");
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/${job_id}?key=${apiKey}`, {
+      headers: { "Content-Type": "application/json" },
     });
     const data = await res.json();
-    console.log("[sora2] create response:", res.status, JSON.stringify(data));
+    if (data.done === true) {
+      const videoUri = data.response?.predictions?.[0]?.uri;
+      const video = data.response?.predictions?.[0]?.bytesBase64Encoded;
+      if (videoUri) return { status: "completed" as const, url: videoUri };
+      if (video) return { status: "completed" as const, url: `data:video/mp4;base64,${video}` };
+      return { status: "failed" as const, error: "Veo 3.1 completed without video output" };
+    }
+    if (data.error) return { status: "failed" as const, error: data.error.message || "Veo 3.1 failed" };
+    return { status: "pending" as const };
+  }
+}
+
+// ── Google Veo 3.1 Lite (cheaper iterations) ────────────────────────────────
+class Veo31LiteProvider implements VideoProvider {
+  name = "google_veo_31_lite";
+  outputType = "video" as const;
+  modelId = "veo-3.1-lite-generate-preview";
+  private apiKey: string;
+  constructor(apiKey: string) { this.apiKey = apiKey; }
+  async generateVideo(prompt: string, duration: number) {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${this.modelId}:predictLongRunning?key=${this.apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          instances: [{ prompt: prompt.slice(0, 2000) }],
+          parameters: { aspectRatio: "16:9", durationSeconds: Math.min(8, Math.max(5, duration)), sampleCount: 1 },
+        }),
+      }
+    );
+    const data = await res.json();
+    console.log("[veo_31_lite] response:", res.status);
+    if (!res.ok) throw new Error(data.error?.message || JSON.stringify(data));
+    if (!data.name) throw new Error("Veo 3.1 Lite returned no operation name");
+    return { job_id: data.name };
+  }
+  async checkStatus(job_id: string) {
+    const apiKey = Deno.env.get("GOOGLE_VEO_API_KEY");
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/${job_id}?key=${apiKey}`, {
+      headers: { "Content-Type": "application/json" },
+    });
+    const data = await res.json();
+    if (data.done === true) {
+      const videoUri = data.response?.predictions?.[0]?.uri;
+      if (videoUri) return { status: "completed" as const, url: videoUri };
+      return { status: "failed" as const, error: "Veo 3.1 Lite completed without video" };
+    }
+    if (data.error) return { status: "failed" as const, error: data.error.message || "Veo 3.1 Lite failed" };
+    return { status: "pending" as const };
+  }
+}
+
+// ── Sora 2 (LEGACY — kept for backward compat) ─────────────────────────────
+class Sora2Provider implements VideoProvider {
+  name = "sora2";
+  outputType = "video" as const;
+  modelId = "sora-2";
+  private apiKey: string;
+  constructor(apiKey: string) { this.apiKey = apiKey; }
+  async generateVideo(prompt: string, duration: number) {
+    console.warn("[sora2] WARNING: Sora 2 is LEGACY. API shutdown Sept 2026. Consider migrating.");
+    const res = await fetch("https://api.openai.com/v1/videos", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${this.apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "sora-2", prompt: prompt.slice(0, 4000), size: "1280x720", duration: Math.min(20, Math.max(5, duration)), n: 1 }),
+    });
+    const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || JSON.stringify(data));
     return { job_id: data.id };
   }
@@ -188,97 +409,65 @@ class Sora2Provider implements VideoProvider {
       headers: { "Authorization": `Bearer ${Deno.env.get("OPENAI_API_KEY")}` },
     });
     const data = await res.json();
-    console.log("[sora2] status response:", JSON.stringify(data));
-    if (data.status === "completed") {
-      const url = data.result?.url || data.outputs?.[0]?.url;
-      return { status: "completed" as const, url };
-    }
-    if (data.status === "failed") return { status: "failed" as const, error: data.error?.message || "Sora 2 generation failed" };
-    return { status: "pending" as const };
-  }
-}
-
-/**
- * Google Veo Provider — video generation via Gemini API predictLongRunning
- * Async: submit job, poll operation for completion.
- */
-class VeoProvider implements VideoProvider {
-  name = "google_veo";
-  outputType = "video" as const;
-  private apiKey: string;
-  constructor(apiKey: string) { this.apiKey = apiKey; }
-  async generateVideo(prompt: string, duration: number) {
-    const model = "veo-3.0-generate-preview";
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:predictLongRunning?key=${this.apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          instances: [{ prompt: prompt.slice(0, 2000) }],
-          parameters: {
-            aspectRatio: "16:9",
-            durationSeconds: Math.min(8, Math.max(5, duration)),
-            sampleCount: 1,
-          },
-        }),
-      }
-    );
-    const data = await res.json();
-    console.log("[veo] create response:", res.status, JSON.stringify(data));
-    if (!res.ok) throw new Error(data.error?.message || JSON.stringify(data));
-    // Returns an operation name like "operations/xxx"
-    const opName = data.name;
-    if (!opName) throw new Error("Veo returned no operation name");
-    return { job_id: opName };
-  }
-  async checkStatus(job_id: string) {
-    const apiKey = Deno.env.get("GOOGLE_VEO_API_KEY");
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/${job_id}?key=${apiKey}`,
-      { headers: { "Content-Type": "application/json" } }
-    );
-    const data = await res.json();
-    console.log("[veo] status response:", JSON.stringify(data));
-    if (data.done === true) {
-      const video = data.response?.predictions?.[0]?.bytesBase64Encoded;
-      const videoUri = data.response?.predictions?.[0]?.uri;
-      if (videoUri) return { status: "completed" as const, url: videoUri };
-      if (video) return { status: "completed" as const, url: `data:video/mp4;base64,${video}` };
-      return { status: "failed" as const, error: "Veo completed without video output" };
-    }
-    if (data.error) return { status: "failed" as const, error: data.error.message || "Veo generation failed" };
+    if (data.status === "completed") return { status: "completed" as const, url: data.result?.url || data.outputs?.[0]?.url };
+    if (data.status === "failed") return { status: "failed" as const, error: data.error?.message || "Sora 2 failed" };
     return { status: "pending" as const };
   }
 }
 
 // ─── Provider Fallback Chain ────────────────────────────────────────────────
 
-// Priority: native video providers first, then image fallback
-const PROVIDER_PRIORITY = ["runway", "sora2", "google_veo", "luma", "openai_image"] as const;
+// New priority: Runway → Veo 3.1 → Veo 3.1 Lite → Luma Ray-2 → Nano Banana Pro → GPT Image 1.5
+const PROVIDER_PRIORITY = [
+  "runway", "google_veo_31", "google_veo_31_lite", "luma",
+  "runway_act_two", "runway_aleph",
+  "luma_photon", "google_nano_banana_pro", "google_nano_banana_2",
+  "openai_image",
+] as const;
 
 function normalizeProviderName(provider?: string | null): string | undefined {
   if (!provider) return undefined;
-  if (provider === "sora" || provider === "openai_sora") return "sora2";
-  if (provider === "veo" || provider === "veo3") return "google_veo";
-  if (provider === "openai") return "openai_image";
-  return provider;
+  const aliases: Record<string, string> = {
+    sora: "sora2", openai_sora: "sora2",
+    veo: "google_veo_31", veo3: "google_veo_31", google_veo: "google_veo_31",
+    veo_lite: "google_veo_31_lite",
+    openai: "openai_image", dall_e_3: "openai_image", "dall-e-3": "openai_image",
+    gen4: "runway", "gen4.5": "runway",
+    act_two: "runway_act_two", act2: "runway_act_two",
+    aleph: "runway_aleph", gen4_aleph: "runway_aleph",
+    photon: "luma_photon", "photon-1": "luma_photon",
+    nano_banana: "google_nano_banana_2",
+    nano_banana_pro: "google_nano_banana_pro",
+  };
+  return aliases[provider] || provider;
 }
 
 function buildProviderChain(preferredProvider?: string): VideoProvider[] {
   const keys: Record<string, string | undefined> = {
     openai_image: Deno.env.get("OPENAI_API_KEY"),
     runway: Deno.env.get("RUNWAY_API_KEY"),
+    runway_act_two: Deno.env.get("RUNWAY_API_KEY"),
+    runway_aleph: Deno.env.get("RUNWAY_API_KEY"),
     luma: Deno.env.get("LUMA_API_KEY"),
+    luma_photon: Deno.env.get("LUMA_API_KEY"),
+    google_veo_31: Deno.env.get("GOOGLE_VEO_API_KEY"),
+    google_veo_31_lite: Deno.env.get("GOOGLE_VEO_API_KEY"),
+    google_nano_banana_2: Deno.env.get("GOOGLE_VEO_API_KEY"),
+    google_nano_banana_pro: Deno.env.get("GOOGLE_VEO_API_KEY"),
     sora2: Deno.env.get("OPENAI_API_KEY"),
-    google_veo: Deno.env.get("GOOGLE_VEO_API_KEY"),
   };
   const factories: Record<string, (k: string) => VideoProvider> = {
     openai_image: (k) => new OpenAIImageProvider(k),
     runway: (k) => new RunwayProvider(k),
+    runway_act_two: (k) => new RunwayActTwoProvider(k),
+    runway_aleph: (k) => new RunwayAlephProvider(k),
     luma: (k) => new LumaProvider(k),
+    luma_photon: (k) => new LumaPhotonProvider(k),
+    google_veo_31: (k) => new Veo31Provider(k),
+    google_veo_31_lite: (k) => new Veo31LiteProvider(k),
+    google_nano_banana_2: (k) => new NanoBanana2Provider(k),
+    google_nano_banana_pro: (k) => new NanoBananaProProvider(k),
     sora2: (k) => new Sora2Provider(k),
-    google_veo: (k) => new VeoProvider(k),
   };
 
   const chain: VideoProvider[] = [];
@@ -287,15 +476,13 @@ function buildProviderChain(preferredProvider?: string): VideoProvider[] {
   const addProvider = (name?: string) => {
     if (!name || seen.has(name)) return;
     if (name === "mock") {
-      if (ALLOW_PLACEHOLDER_PROVIDERS) {
-        chain.push(new MockProvider());
-        seen.add(name);
-      }
+      if (ALLOW_PLACEHOLDER_PROVIDERS) { chain.push(new MockProvider()); seen.add(name); }
       return;
     }
     const key = keys[name];
-    if (!key) return;
-    chain.push(factories[name](key));
+    const factory = factories[name];
+    if (!key || !factory) return;
+    chain.push(factory(key));
     seen.add(name);
   };
 
@@ -379,21 +566,15 @@ function buildStyleConsistentPrompt(
   const cameraOptions = CAMERA_BY_SHOT_TYPE[shotType] || CAMERA_BY_SHOT_TYPE.medium;
   const selectedCamera = shotMeta?.camera_movement || cameraOptions[shotIdx % cameraOptions.length];
   parts.push(`[FRAMING] ${shotType} shot, ${selectedCamera}`);
-
-  const energyLevel = shotMeta?.energy_level || "medium";
-  parts.push(`[CAMERA ENERGY] ${ENERGY_TO_CAMERA[energyLevel] || ENERGY_TO_CAMERA.medium}`);
+  parts.push(`[CAMERA ENERGY] ${ENERGY_TO_CAMERA[shotMeta?.energy_level || "medium"] || ENERGY_TO_CAMERA.medium}`);
 
   const section = shotMeta?.section || "verse";
-  const lightingStyle = styleBible?.lighting || LIGHTING_BY_MOOD[section] || LIGHTING_BY_MOOD.verse;
-  parts.push(`[LIGHTING] ${lightingStyle}`);
+  parts.push(`[LIGHTING] ${styleBible?.lighting || LIGHTING_BY_MOOD[section] || LIGHTING_BY_MOOD.verse}`);
 
   if (characterBible) {
-    const chars = Array.isArray(characterBible) ? characterBible : Object.entries(characterBible).map(([name, desc]) => ({ name, description: typeof desc === 'string' ? desc : JSON.stringify(desc) }));
+    const chars = Array.isArray(characterBible) ? characterBible : Object.entries(characterBible).map(([name, desc]) => ({ name, description: typeof desc === "string" ? desc : JSON.stringify(desc) }));
     if (chars.length > 0) {
-      const charDescs = chars.map((c: any) => {
-        const desc = c.visual_description || c.description || JSON.stringify(c);
-        return `${c.name}: ${desc}`;
-      }).join("; ");
+      const charDescs = chars.map((c: any) => `${c.name}: ${c.visual_description || c.description || JSON.stringify(c)}`).join("; ");
       parts.push(`[CHARACTERS] ${charDescs}`);
     }
   }
@@ -404,7 +585,6 @@ function buildStyleConsistentPrompt(
   else if (position >= 0.95) parts.push("[NARRATIVE] Final image");
 
   parts.push(`[CONSISTENCY] Style: ${stylePreset}. Maintain visual coherence.`);
-
   return parts.join(". ") + ".\n\n" + basePrompt;
 }
 
@@ -414,11 +594,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const { project_id, batch_size = 10 } = await req.json();
     if (!project_id) throw new Error("project_id required");
 
@@ -442,7 +618,7 @@ serve(async (req) => {
       throw new Error("No generation provider configured. Add at least one valid provider API key.");
     }
 
-    console.log(`[generate-shots] Provider chain: ${providerChain.map(p => `${p.name}(${p.outputType})`).join(" → ")}`);
+    console.log(`[generate-shots] Provider chain: ${providerChain.map(p => `${p.name}(${p.outputType}/${p.modelId})`).join(" → ")}`);
 
     const { data: pendingShots } = await supabase
       .from("shots")
@@ -461,7 +637,6 @@ serve(async (req) => {
       const { data: allShots } = await supabase.from("shots").select("status").eq("project_id", project_id);
       const completed = allShots?.filter(s => s.status === "completed").length || 0;
       const allDone = allShots?.every(s => s.status === "completed" || s.status === "failed");
-
       if (allDone && completed > 0) {
         await supabase.from("projects").update({ status: "stitching" }).eq("id", project_id);
         return jsonResponse({ success: true, message: "All shots done, moving to stitch", completed });
@@ -469,30 +644,17 @@ serve(async (req) => {
       return jsonResponse({ success: true, message: "No pending shots", provider_chain: providerChain.map(p => p.name) });
     }
 
-    const results = [];
+    const results: any[] = [];
     let creditsUsed = 0;
 
-    const { data: isAdmin } = await supabase.rpc("has_role", {
-      _user_id: project.user_id,
-      _role: "admin",
-    });
+    const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: project.user_id, _role: "admin" });
 
     const totalEstimatedCredits = pendingShots.length * 2;
     if (!isAdmin) {
-      const { data: wallet } = await supabase
-        .from("credit_wallets")
-        .select("balance")
-        .eq("id", project.user_id)
-        .single();
-
+      const { data: wallet } = await supabase.from("credit_wallets").select("balance").eq("id", project.user_id).single();
       if (!wallet || wallet.balance < totalEstimatedCredits) {
         await supabase.from("projects").update({ status: "failed" }).eq("id", project_id);
-        return jsonResponse({
-          success: false,
-          error: "Insufficient credits",
-          required: totalEstimatedCredits,
-          available: wallet?.balance || 0,
-        });
+        return jsonResponse({ success: false, error: "Insufficient credits", required: totalEstimatedCredits, available: wallet?.balance || 0 });
       }
     }
 
@@ -504,114 +666,60 @@ serve(async (req) => {
         const totalShots = totalShotsCount || shotlistJson.length || pendingShots.length;
 
         const enrichedPrompt = buildStyleConsistentPrompt(
-          shot.prompt || "",
-          styleBible,
-          characterBible,
-          project.style_preset || "cinematic",
-          shot.idx,
-          totalShots,
-          shotMeta ? {
-            shot_type: shotMeta.shot_type,
-            section: shotMeta.section,
-            energy_level: shotMeta.energy_level,
-            camera_movement: shotMeta.camera_movement,
-          } : undefined
+          shot.prompt || "", styleBible, characterBible, project.style_preset || "cinematic",
+          shot.idx, totalShots,
+          shotMeta ? { shot_type: shotMeta.shot_type, section: shotMeta.section, energy_level: shotMeta.energy_level, camera_movement: shotMeta.camera_movement } : undefined
         );
 
         const { provider: usedProvider, job_id, attempts } = await generateWithFallback(
-          providerChain,
-          enrichedPrompt,
-          shot.duration_sec || 7,
-          project.style_preset || "cinematic",
-          shot.seed || Math.floor(Math.random() * 999999)
+          providerChain, enrichedPrompt, shot.duration_sec || 7, project.style_preset || "cinematic", shot.seed || Math.floor(Math.random() * 999999)
         );
 
-        // Store both provider name and output type
-        await supabase.from("shots").update({
-          provider: usedProvider.name,
-          provider_type: usedProvider.outputType,
-        }).eq("id", shot.id);
+        await supabase.from("shots").update({ provider: usedProvider.name, provider_type: usedProvider.outputType }).eq("id", shot.id);
 
-        const isSynchronousProvider = usedProvider.name === "openai_image" || job_id.startsWith("http");
+        const isSynchronous = usedProvider.outputType === "image" || job_id.startsWith("http") || job_id.startsWith("data:");
 
-        if (isSynchronousProvider) {
+        if (isSynchronous) {
           const result = await usedProvider.checkStatus(job_id);
-
-          if (result.status === "failed") {
-            throw new Error(result.error || `${usedProvider.name} generation failed`);
-          }
-
+          if (result.status === "failed") throw new Error(result.error || `${usedProvider.name} failed`);
           if (result.status === "completed") {
-            if (!result.url) {
-              throw new Error(`${usedProvider.name} completed without output URL`);
-            }
-            if (!ALLOW_PLACEHOLDER_PROVIDERS && isPlaceholderUrl(result.url)) {
-              throw new Error(`${usedProvider.name} returned placeholder media.`);
-            }
-
-            await supabase.from("shots").update({
-              status: "completed",
-              output_url: result.url,
-              cost_credits: 2,
-              error_message: null,
-            }).eq("id", shot.id);
+            if (!result.url) throw new Error(`${usedProvider.name} completed without URL`);
+            if (!ALLOW_PLACEHOLDER_PROVIDERS && isPlaceholderUrl(result.url)) throw new Error(`${usedProvider.name} returned placeholder`);
+            await supabase.from("shots").update({ status: "completed", output_url: result.url, cost_credits: 2, error_message: null }).eq("id", shot.id);
             creditsUsed += 2;
-            results.push({ shot_id: shot.id, provider: usedProvider.name, output_type: usedProvider.outputType, status: "completed" });
+            results.push({ shot_id: shot.id, provider: usedProvider.name, model: usedProvider.modelId, output_type: usedProvider.outputType, status: "completed" });
             continue;
           }
         }
 
-        // Async provider (Runway, Luma) — store job reference
-        await supabase.from("shots").update({
-          status: "generating",
-          output_url: `job:${usedProvider.name}:${job_id}`,
-          error_message: null,
-        }).eq("id", shot.id);
-
-        results.push({ shot_id: shot.id, provider: usedProvider.name, output_type: usedProvider.outputType, status: "generating" });
+        // Async provider — store job reference
+        await supabase.from("shots").update({ status: "generating", output_url: `job:${usedProvider.name}:${job_id}`, error_message: null }).eq("id", shot.id);
+        results.push({ shot_id: shot.id, provider: usedProvider.name, model: usedProvider.modelId, output_type: usedProvider.outputType, status: "generating" });
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "Unknown error";
         console.error(`[generate-shots] Shot ${shot.idx} failed:`, message);
-        await supabase.from("shots").update({
-          status: "failed",
-          error_message: message,
-        }).eq("id", shot.id);
+        await supabase.from("shots").update({ status: "failed", error_message: message }).eq("id", shot.id);
         results.push({ shot_id: shot.id, error: message });
       }
     }
 
     if (creditsUsed > 0) {
       const batchRef = `${project_id}_gen_${Date.now()}`;
-      const { data: debited } = await supabase.rpc("debit_credits", {
-        p_user_id: project.user_id,
-        p_amount: creditsUsed,
+      await supabase.rpc("debit_credits", {
+        p_user_id: project.user_id, p_amount: creditsUsed,
         p_reason: `Shot generation (${results.filter((r: any) => r.status === "completed" || r.status === "generating").length} shots)`,
-        p_ref_id: batchRef,
-        p_ref_type: "shot_generation",
+        p_ref_id: batchRef, p_ref_type: "shot_generation",
       });
-      if (!debited) {
-        console.error(`[generate-shots] Credit debit failed for user ${project.user_id}`);
-      }
     }
 
-    return jsonResponse({
-      success: true,
-      results,
-      credits_used: creditsUsed,
-      provider_chain: providerChain.map(p => ({ name: p.name, type: p.outputType })),
-    });
+    return jsonResponse({ success: true, results, credits_used: creditsUsed, provider_chain: providerChain.map(p => ({ name: p.name, model: p.modelId, type: p.outputType })) });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[generate-shots] Fatal error:", message);
-    return new Response(JSON.stringify({ error: message }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(JSON.stringify({ error: message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
 
 function jsonResponse(data: any) {
-  return new Response(JSON.stringify(data), {
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+  return new Response(JSON.stringify(data), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }

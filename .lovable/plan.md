@@ -1,52 +1,45 @@
 
-# Ticket Maître — Plan d'exécution
+# Refonte Provider Matrix & Pipelines
 
-## Phase 1 : P0 — Bloquants Prod
+## Phase 1 — Registry & Types
+- Mettre à jour `provider_registry` en DB avec tous les nouveaux modèles :
+  - **Google** : `gemini-3.1-flash-image-preview` (Nano Banana 2), `gemini-3-pro-image-preview` (Nano Banana Pro), `veo-3.1-generate-preview`, `veo-3.1-lite-generate-preview`
+  - **Runway** : `gen4.5` (garder), `act_two` (ajouter), `gen4_aleph` (ajouter)
+  - **Luma** : `photon-1`, `photon-flash-1`, `ray-2` (garder), `ray-flash-2`, `reframe_video`, `modify_video`
+  - **OpenAI** : `gpt-image-1.5` (remplace DALL-E 3 comme défaut)
+  - **Retirer du cœur** : `sora-2` (legacy only), `veo-3.0-generate-preview` (shutdown)
+- Ajouter les types : `ProviderCapability` (image_gen, video_gen, video_transform, image_reference, video_reframe, performance_capture)
 
-### P0.1 — Mode `music_video` explicite
-- Ajouter `music_video` au type enum projet (migration DB)
-- Créer `src/pages/CreateMusicVideo.tsx` avec formulaire spécialisé (clip type, artist presence, refs, style)
-- Ajouter route `/create/music-video`
-- Adapter `ProjectView` pour afficher le type correctement
-- Labels UI distincts pour chaque mode
+## Phase 2 — Provider Matrix refactorisée
+- Refactorer `src/config/providerMatrix.ts` en plusieurs fichiers :
+  - `src/config/providers/types.ts` — types et interfaces
+  - `src/config/providers/registry.ts` — registre statique des modèles et capacités
+  - `src/config/providers/matrix.ts` — matrice mode×tier
+  - `src/config/providers/resolver.ts` — logique de résolution
+  - `src/config/providers/pipelines.ts` — définition des pipelines par workflow_type (series, film, music_video)
+- Nouvelles règles de routage :
+  - Par **capacité** (image, video, transform, reframe, performance) pas par marque
+  - Pipeline en **étapes séquentielles** avec `user_gate` optionnel
+  - Fallback chain par étape
 
-### P0.2 — Matrice provider stricte
-- Créer `src/config/providerMatrix.ts` : providers autorisés par mode × qualité
-- Créer `docs/PROVIDER_MATRIX.md`
-- Intégrer la résolution provider dans `generate-shots` et `pipeline-worker`
-- Bloquer fallback silencieux pour modes premium
-- UI : afficher provider réel + mode de rendu dans ProjectView/Diagnostics
+## Phase 3 — Edge Functions
+- Mettre à jour `generate-shots` pour supporter les nouveaux modèles Runway (gen4.5, act_two, gen4_aleph), Google (Veo 3.1, Nano Banana), Luma (photon-1, reframe), OpenAI (gpt-image-1.5)
+- Mettre à jour `check-shot-status` pour les nouveaux endpoints de polling
+- Marquer Sora 2 comme legacy (log warning si utilisé)
+- Retirer `veo-3.0-generate-preview`
 
-### P0.3 — Rendu serveur obligatoire pour exports premium
-- Ajouter notion `render_target` (server_required / server_preferred / browser_allowed)
-- Adapter `RenderExportPanel` : distinguer preview locale vs master final
-- Pour `music_video` premium → server_required
-- Renforcer queue de rendu + reprise idempotente + journal
+## Phase 4 — Pipeline Orchestrator
+- Créer une nouvelle Edge Function `pipeline-orchestrator` qui :
+  - Reçoit un `workflow_type` + `input_profile`
+  - Calcule la route optimale (séquence d'étapes)
+  - Crée les jobs dans `job_queue` avec les bonnes étapes
+  - Gère les `user_gate` (pause pipeline pour validation)
 
-### P0.4 — Machine d'état pipeline stricte
-- Créer `src/lib/pipeline-state-machine.ts` avec états, transitions, validations
-- Créer `docs/PIPELINE_STATES.md`
-- Intégrer dans hooks et edge functions
-- Refuser transitions illégales, codifier erreurs
-- Reprise depuis dernier jalon stable
+## Phase 5 — DB Schema
+- Table `pipeline_steps` pour tracer chaque étape d'un pipeline
+- Ajouter colonne `model` dans `episode_shots` et `shots` 
+- Ajouter colonnes `step_type` et `pipeline_run_id`
 
-### P0.5 — Tests E2E d'intégration
-- Créer 8 scénarios E2E réels (happy path, face refs, no provider, render failure, credits, bad URL, multi-format, retry)
-- Refactorer le fichier test existant en modules focalisés
-
-## Phase 2 : P1 — Qualité Premium
-
-### P1.1 — Storyboard preview avant génération
-### P1.2 — Quality scoring automatique (`src/lib/quality-scoring.ts`)
-### P1.3 — Continuity validator (`src/lib/continuity-validator.ts`)
-### P1.4 — Sync musicale native (`src/lib/music-structure.ts`)
-### P1.5 — Dashboard observabilité admin
-
-## Phase 3 : P2 — Ambition
-### P2.1 — Personas créatifs
-### P2.2 — Presets clip métier
-### P2.3 — Asset governance
-
----
-
-**Approche** : On attaque P0.1 → P0.4 en parallèle (code + docs + migration), puis P0.5 (tests), puis P1 bloc par bloc.
+## Hors scope initial
+- UI des gates de validation (sera fait après)
+- Intégration Act-Two avec driving performance video (nécessite upload vidéo)
