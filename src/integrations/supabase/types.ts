@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      aberration_categories: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          repair_action_default: string
+          severity_default: string
+          subcategory: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          repair_action_default?: string
+          severity_default?: string
+          subcategory: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          repair_action_default?: string
+          severity_default?: string
+          subcategory?: string
+        }
+        Relationships: []
+      }
       agent_outputs: {
         Row: {
           agent_run_id: string
@@ -211,6 +241,59 @@ export type Database = {
             columns: ["series_id"]
             isOneToOne: false
             referencedRelation: "series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      anomaly_events: {
+        Row: {
+          auto_fix_attempted: boolean
+          auto_fix_result: string | null
+          blocking: boolean
+          category: string
+          confidence: number | null
+          created_at: string
+          explanation: string | null
+          id: string
+          severity: string
+          subcategory: string | null
+          suggested_fix: string | null
+          validation_id: string
+        }
+        Insert: {
+          auto_fix_attempted?: boolean
+          auto_fix_result?: string | null
+          blocking?: boolean
+          category: string
+          confidence?: number | null
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          severity?: string
+          subcategory?: string | null
+          suggested_fix?: string | null
+          validation_id: string
+        }
+        Update: {
+          auto_fix_attempted?: boolean
+          auto_fix_result?: string | null
+          blocking?: boolean
+          category?: string
+          confidence?: number | null
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          severity?: string
+          subcategory?: string | null
+          suggested_fix?: string | null
+          validation_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anomaly_events_validation_id_fkey"
+            columns: ["validation_id"]
+            isOneToOne: false
+            referencedRelation: "asset_validations"
             referencedColumns: ["id"]
           },
         ]
@@ -423,6 +506,86 @@ export type Database = {
             columns: ["series_id"]
             isOneToOne: false
             referencedRelation: "series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      asset_validations: {
+        Row: {
+          asset_id: string | null
+          asset_type: string
+          blocking: boolean
+          created_at: string
+          episode_shot_id: string | null
+          explanation: string | null
+          id: string
+          pass_results: Json | null
+          project_id: string
+          scene_id: string | null
+          scores: Json
+          updated_at: string
+          validation_status: string
+          validator_type: string
+        }
+        Insert: {
+          asset_id?: string | null
+          asset_type?: string
+          blocking?: boolean
+          created_at?: string
+          episode_shot_id?: string | null
+          explanation?: string | null
+          id?: string
+          pass_results?: Json | null
+          project_id: string
+          scene_id?: string | null
+          scores?: Json
+          updated_at?: string
+          validation_status?: string
+          validator_type?: string
+        }
+        Update: {
+          asset_id?: string | null
+          asset_type?: string
+          blocking?: boolean
+          created_at?: string
+          episode_shot_id?: string | null
+          explanation?: string | null
+          id?: string
+          pass_results?: Json | null
+          project_id?: string
+          scene_id?: string | null
+          scores?: Json
+          updated_at?: string
+          validation_status?: string
+          validator_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_validations_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "project_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_validations_episode_shot_id_fkey"
+            columns: ["episode_shot_id"]
+            isOneToOne: false
+            referencedRelation: "episode_shots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_validations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_validations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects_public"
             referencedColumns: ["id"]
           },
         ]
@@ -2037,6 +2200,54 @@ export type Database = {
           },
         ]
       }
+      project_validation_reports: {
+        Row: {
+          blocking_count: number
+          created_at: string
+          id: string
+          premium_readiness_score: number | null
+          project_id: string
+          report: Json
+          timeline_version: string | null
+          total_anomalies: number
+        }
+        Insert: {
+          blocking_count?: number
+          created_at?: string
+          id?: string
+          premium_readiness_score?: number | null
+          project_id: string
+          report?: Json
+          timeline_version?: string | null
+          total_anomalies?: number
+        }
+        Update: {
+          blocking_count?: number
+          created_at?: string
+          id?: string
+          premium_readiness_score?: number | null
+          project_id?: string
+          report?: Json
+          timeline_version?: string | null
+          total_anomalies?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_validation_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_validation_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           artist_presence: string | null
@@ -2618,6 +2829,81 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      repair_attempts: {
+        Row: {
+          anomaly_event_id: string
+          attempt_number: number
+          created_at: string
+          id: string
+          provider_used: string | null
+          repair_mode: string
+          result_asset_id: string | null
+          status: string
+        }
+        Insert: {
+          anomaly_event_id: string
+          attempt_number?: number
+          created_at?: string
+          id?: string
+          provider_used?: string | null
+          repair_mode?: string
+          result_asset_id?: string | null
+          status?: string
+        }
+        Update: {
+          anomaly_event_id?: string
+          attempt_number?: number
+          created_at?: string
+          id?: string
+          provider_used?: string | null
+          repair_mode?: string
+          result_asset_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "repair_attempts_anomaly_event_id_fkey"
+            columns: ["anomaly_event_id"]
+            isOneToOne: false
+            referencedRelation: "anomaly_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repair_attempts_result_asset_id_fkey"
+            columns: ["result_asset_id"]
+            isOneToOne: false
+            referencedRelation: "project_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      repair_policies: {
+        Row: {
+          category: string
+          created_at: string
+          default_action: string
+          escalation_action: string
+          id: string
+          max_retries: number
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          default_action?: string
+          escalation_action?: string
+          id?: string
+          max_retries?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          default_action?: string
+          escalation_action?: string
+          id?: string
+          max_retries?: number
+        }
+        Relationships: []
       }
       review_gates: {
         Row: {

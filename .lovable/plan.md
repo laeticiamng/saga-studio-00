@@ -2,29 +2,33 @@
 # Production Studio — Master Plan
 
 ## Phase 1–6: Core Platform ✅
-- Project wizard, scene planning, timeline engine, review gates, finishing, export, auto-assembly, routing
-
 ## Phase 7: Production Robustness, QC & Cost Governance ✅
-- Asset normalization, candidate ranking, QC layer, render robustness, cost governance, diagnostics, export presets
-
 ## Phase 8: Platform Governance Layer ✅
 
-### Implemented:
-- **Database**: governance_policies, governance_transitions, governance_violations, incidents tables
-- **Column extensions**: governance_state on projects; version_ref/approved_by/gate_owner/stale/superseded_by on review_gates; approved_by/timeline_version_ref on export_versions; created_by/locked_by on timelines; created_by on project_assets
-- **Seeded data**: 10 governance policies, 18 state transitions, 7 feature flags
-- **Engine**: `src/lib/governance-engine.ts` — state transition checker, policy checker, violation logger, incident creator
-- **Hooks**: `src/hooks/useGovernance.ts` — useGovernancePolicies, useGovernanceTransitions, useGovernanceViolations, useIncidents, useProjectGovernanceState, useGovernanceTransition, useProjectGovernanceDashboard
-- **UI**: GovernanceDashboard page (`/project/:id/governance`) with 6 tabs (State, Reviews, Violations, Incidents, Cost, Exports)
-- **Components**: IncidentFeed, PolicyViolationAlert
-- **Route**: wired in App.tsx
+## Phase 9: Anti-Aberrations Validation Layer ✅
 
-### Governance domains covered:
-1. Project Governance — 18-state lifecycle with explicit transitions
-2. Review Governance — version-aware gates with stale detection fields
-3. Cost Governance — budget ceilings, cost modes, spending tracking
-4. Export Governance — version-linked exports with approval tracking
-5. Provider Governance — payload logging, fallback rules
-6. Data Governance — asset lifecycle states
-7. Operational Governance — structured incidents with severity levels
-8. Policy Engine — 10 non-negotiable rules enforced centrally
+### Database:
+- **aberration_categories** — 33 seeded categories across 9 groups (anatomy, object, temporal, physics, semantic, identity, framing, text_graphic, audio)
+- **asset_validations** — Per-asset validation with multi-dimensional scores, blocking flags, pass results
+- **anomaly_events** — Individual anomaly detections linked to validations with severity, confidence, explanation, suggested_fix
+- **repair_attempts** — Tracks repair actions with attempt numbering and result status
+- **repair_policies** — 9 seeded default repair actions per category with max retries and escalation
+- **project_validation_reports** — Project-level sweep results with premium readiness score
+
+### Engine:
+- **`src/lib/aberration-taxonomy.ts`** — Type-safe taxonomy, severity weights, score computation, status derivation
+- **`src/lib/validation-engine.ts`** — Multi-pass validation orchestrator, requestValidation(), isAssetCleared(), getProjectAnomalySummary()
+- **`src/lib/repair-router.ts`** — Repair decision logic with retry tracking and escalation
+
+### Edge Function:
+- **`supabase/functions/validate-asset/index.ts`** — AI-powered validation using Gemini multimodal via Lovable AI. Analyzes images against prompts/scripts, produces structured scores and anomaly events via tool calling.
+
+### Hooks:
+- useAssetValidations, useAssetValidation, useAnomalyEvents, useProjectAnomalyEvents
+- useRepairAttempts, useProjectValidationReport, useAberrationCategories, useRequestValidation
+
+### UI:
+- **ValidationBadge** — Status badge (pending/running/passed/failed/blocked)
+- **AnomalyDetailsDrawer** — Slide-out panel with anomaly list, severity, repair buttons
+- **ProjectValidationPanel** — Project-level summary: pass/fail/blocked counts, premium readiness score bar
+- Wired as "Anti-Aberrations" tab in TimelineStudio
