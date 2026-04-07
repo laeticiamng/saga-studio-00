@@ -150,18 +150,18 @@ export default function TimelineStudio() {
         ]} />
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Film className="h-6 w-6 text-primary" />
-              Studio — {project.title}
+            <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+              <Film className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+              <span className="truncate">Studio — {project.title}</span>
             </h1>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
             {/* Timeline selector */}
             {timelines && timelines.length > 0 && (
               <Select value={selectedTimelineId || ""} onValueChange={setSelectedTimelineId}>
-                <SelectTrigger className="w-[200px]">
+                <SelectTrigger className="w-[160px] sm:w-[200px]">
                   <SelectValue placeholder="Sélectionner timeline" />
                 </SelectTrigger>
                 <SelectContent>
@@ -182,7 +182,8 @@ export default function TimelineStudio() {
               disabled={createTimeline.isPending}
             >
               <Plus className="h-4 w-4 mr-1" />
-              {timelines?.length ? "Nouvelle version" : "Créer timeline"}
+              <span className="hidden sm:inline">{timelines?.length ? "Nouvelle version" : "Créer timeline"}</span>
+              <span className="sm:hidden">+</span>
             </Button>
             <Button
               variant="default"
@@ -191,7 +192,7 @@ export default function TimelineStudio() {
               disabled={assembling}
             >
               {assembling ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Wand2 className="h-4 w-4 mr-1" />}
-              Assembler
+              <span className="hidden sm:inline">Assembler</span>
             </Button>
           </div>
         </div>
@@ -211,9 +212,9 @@ export default function TimelineStudio() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 overflow-x-hidden">
             <Tabs defaultValue="timeline" className="space-y-4">
-              <TabsList className="bg-secondary/40 p-1 rounded-xl flex-wrap">
+              <TabsList className="bg-secondary/40 p-1 rounded-xl flex-wrap gap-1 overflow-x-auto">
                 <TabsTrigger value="timeline" className="gap-1.5 rounded-lg">
                   <Layers className="h-4 w-4" /> Timeline
                 </TabsTrigger>
