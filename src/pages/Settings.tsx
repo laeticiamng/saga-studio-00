@@ -12,12 +12,71 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { Loader2, ArrowUp, ArrowDown, Webhook, Plus, Trash2, Eye, EyeOff, Copy, KeyRound, CreditCard, Camera } from "lucide-react";
+import { Loader2, ArrowUp, ArrowDown, Webhook, Plus, Trash2, Eye, EyeOff, Copy, KeyRound, CreditCard, Camera, BarChart3, Film, CheckCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useNavigate } from "react-router-dom";
+
+function UsageStats({ userId }: { userId: string | undefined }) {
+  const { data: stats } = useQuery({
+    queryKey: ["usage-stats", userId],
+    queryFn: async () => {
+      const [projectsRes, rendersRes, creditsRes] = await Promise.all([
+        supabase.from("projects").select("id, status, type", { count: "exact", head: false }),
+        supabase.from("renders").select("id, status", { count: "exact", head: false }),
+        supabase.from("credit_ledger").select("delta").lt("delta", 0),
+      ]);
+      const projects = projectsRes.data || [];
+      const renders = rendersRes.data || [];
+      const totalSpent = (creditsRes.data || []).reduce((s, e) => s + Math.abs(e.delta), 0);
+      return {
+        totalProjects: projects.length,
+        completedProjects: projects.filter(p => p.status === "completed").length,
+        totalRenders: renders.filter(r => r.status === "completed").length,
+        creditsSpent: totalSpent,
+      };
+    },
+    enabled: !!userId,
+  });
+
+  if (!stats) return null;
+
+  return (
+    <Card className="border-border/50 bg-card/60">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <BarChart3 className="h-5 w-5 text-primary" /> Statistiques d'utilisation
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="text-center p-3 rounded-lg bg-secondary/30">
+            <Film className="h-5 w-5 mx-auto mb-1 text-primary" />
+            <p className="text-2xl font-bold">{stats.totalProjects}</p>
+            <p className="text-xs text-muted-foreground">Projets créés</p>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-secondary/30">
+            <CheckCircle className="h-5 w-5 mx-auto mb-1 text-green-500" />
+            <p className="text-2xl font-bold">{stats.completedProjects}</p>
+            <p className="text-xs text-muted-foreground">Terminés</p>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-secondary/30">
+            <Film className="h-5 w-5 mx-auto mb-1 text-accent" />
+            <p className="text-2xl font-bold">{stats.totalRenders}</p>
+            <p className="text-xs text-muted-foreground">Rendus export</p>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-secondary/30">
+            <CreditCard className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
+            <p className="text-2xl font-bold">{stats.creditsSpent}</p>
+            <p className="text-xs text-muted-foreground">Crédits utilisés</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function Settings() {
   const { user } = useAuth();
@@ -317,6 +376,10 @@ export default function Settings() {
           </details>
         </Card>
 
+        {/* Usage Stats */}
+        <UsageStats userId={user?.id} />
+
+        
         {/* Credit history */}
         <Card className="border-border/50 bg-card/60">
           <CardHeader>
