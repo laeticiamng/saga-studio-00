@@ -54,6 +54,10 @@ const STATUS_LABELS: Record<string, string> = {
   ready_for_review: "Prêt pour revue",
   reviewed: "Revu",
   applied: "Appliqué",
+  // Legacy migration statuses
+  legacy_result_detected: "Ancien parseur détecté",
+  reprocess_pending: "Ré-analyse en attente",
+  reprocessing: "Ré-analyse en cours…",
 };
 
 /** Human-readable parser failure messages keyed by extraction_mode */
@@ -66,8 +70,8 @@ const PARSER_FAILURE_LABELS: Record<string, string> = {
   download_failed: "Impossible de télécharger le fichier depuis le stockage",
   no_api_key: "Clé API manquante pour l'extraction PDF",
   // Legacy status from old edge function version — reprocessable with current parser
-  pdf_vision_api_error: "Ancien parseur — cliquez « Ré-analyser » pour utiliser le parseur actuel",
-  pdf_vision_api: "Ancien parseur — cliquez « Ré-analyser » pour utiliser le parseur actuel",
+  pdf_vision_api_error: "Résultat ancien parseur — en attente de ré-analyse",
+  pdf_vision_api: "Résultat ancien parseur — en attente de ré-analyse",
 };
 
 function getParserFailureMessage(extractionMode: string | null | undefined): string | null {
@@ -468,19 +472,28 @@ function DocumentCard({
             </p>
           </div>
           <Badge variant={
+            isLegacy ? "outline" :
             (doc.status as string)?.includes("failed") ? "destructive" :
-            (doc.status as string) === "ready_for_review" ? "default" : "secondary"
-          } className="text-xs">
-            {STATUS_LABELS[doc.status as string] || doc.status as string}
+            (doc.status as string) === "ready_for_review" ? "default" :
+            (doc.status as string) === "reprocessing" ? "secondary" : "secondary"
+          } className={`text-xs ${isLegacy ? "border-yellow-500/50 text-yellow-700" : ""}`}>
+            {isLegacy && !(doc.status as string)?.includes("reprocess")
+              ? "Ancien parseur"
+              : STATUS_LABELS[doc.status as string] || doc.status as string}
           </Badge>
         </div>
-        {/* Show specific parser failure message */}
-        {getParserFailureMessage(doc.extraction_mode as string) && (
+        {/* Show specific parser failure message — legacy docs get info style, not error */}
+        {isLegacy ? (
+          <p className="text-xs text-yellow-700 flex items-center gap-1">
+            <AlertTriangle className="h-3 w-3 shrink-0" />
+            Résultat ancien parseur — ré-analyse disponible
+          </p>
+        ) : getParserFailureMessage(doc.extraction_mode as string) ? (
           <p className="text-xs text-destructive flex items-center gap-1">
             <XCircle className="h-3 w-3 shrink-0" />
             {getParserFailureMessage(doc.extraction_mode as string)}
           </p>
-        )}
+        ) : null}
         {/* Reprocess button for legacy documents */}
         {isLegacy && onReprocess && (
           <div onClick={e => e.stopPropagation()}>
@@ -607,8 +620,39 @@ function DocumentDetail({
               </Badge>
             )}
           </div>
-          {/* Parser status warning — granular failure messages */}
-          {(
+          {/* Legacy document — show reprocess prompt, NOT old error */}
+          {isLegacy && (
+            <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-3 text-sm mb-3 flex items-start gap-2">
+              <RefreshCw className="h-4 w-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-yellow-700">
+                  Résultat ancien parseur — en attente de ré-analyse
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Ce document a été traité par une version précédente du parseur. Le résultat affiché n'est plus fiable.
+                  Lancez la ré-analyse pour obtenir un résultat avec le parseur actuel.
+                </p>
+                {onReprocess && (
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className="mt-2 h-7 text-xs"
+                    disabled={isReprocessing}
+                    onClick={() => onReprocess(documentId)}
+                  >
+                    {isReprocessing ? (
+                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                    ) : (
+                      <RefreshCw className="h-3 w-3 mr-1" />
+                    )}
+                    Ré-analyser avec le parseur actuel
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+          {/* Parser status warning — granular failure messages (non-legacy only) */}
+          {!isLegacy && (
             (doc.extraction_mode as string)?.includes("failed") ||
             (doc.extraction_mode as string)?.includes("error") ||
             (doc.extraction_mode as string)?.includes("unsupported") ||
@@ -626,8 +670,6 @@ function DocumentDetail({
                     ? "Lecture du PDF échouée"
                     : (doc.extraction_mode as string) === "download_failed"
                     ? "Téléchargement du fichier échoué"
-                    : (doc.extraction_mode as string) === "pdf_vision_api_error"
-                    ? "Ancien parseur (DOCX envoyé à PDF Vision par erreur)"
                     : "Extraction du texte échouée"}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -638,22 +680,6 @@ function DocumentDetail({
                   <p className="text-xs text-muted-foreground mt-1 font-medium">
                     Ouvrez le fichier dans Word ou LibreOffice et enregistrez-le au format .docx avant de le ré-importer.
                   </p>
-                )}
-                {isLegacy && onReprocess && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="mt-2 h-7 text-xs border-yellow-500/30 text-yellow-700 hover:bg-yellow-500/10"
-                    disabled={isReprocessing}
-                    onClick={() => onReprocess(documentId)}
-                  >
-                    {isReprocessing ? (
-                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                    ) : (
-                      <RefreshCw className="h-3 w-3 mr-1" />
-                    )}
-                    Ré-analyser avec le parseur actuel
-                  </Button>
                 )}
               </div>
             </div>
@@ -666,11 +692,14 @@ function DocumentDetail({
             const parserDebug = debug?.parser_debug as Record<string, unknown> | undefined;
             return (
               <div className="rounded-lg bg-secondary/30 p-3 text-xs mb-3 space-y-2 font-mono">
-                <p className="font-medium text-foreground text-sm mb-1">Diagnostic d'extraction</p>
+                <p className="font-medium text-foreground text-sm mb-1">
+                  {debug.parser_version ? "Diagnostic d'extraction" : "Diagnostic d'extraction (ancien parseur)"}
+                </p>
                 {/* Key metrics */}
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                   <p><span className="text-foreground font-medium">parser:</span> {String(debug.parser_chosen ?? "—")}</p>
                   <p><span className="text-foreground font-medium">status:</span> {String(debug.parser_status ?? "—")}</p>
+                  <p><span className="text-foreground font-medium">version:</span> {String(debug.parser_version ?? "legacy")}</p>
                   <p><span className="text-foreground font-medium">file_type:</span> {String(debug.file_type_detected ?? "—")}</p>
                   <p><span className="text-foreground font-medium">text_length:</span> {String(textLen ?? 0)} chars</p>
                   <p><span className="text-foreground font-medium">fallback:</span> {String(debug.fallback_attempted ?? false)}</p>
@@ -709,7 +738,7 @@ function DocumentDetail({
       {/* Previous run history */}
       {(() => {
         const meta = doc.metadata as Record<string, unknown> | null;
-        const previousRuns = (meta?.previous_runs || []) as Array<Record<string, unknown>>;
+        const previousRuns = (meta?.run_history || meta?.previous_runs || []) as Array<Record<string, unknown>>;
         if (previousRuns.length === 0) return null;
         return (
           <Card>
@@ -760,8 +789,12 @@ function DocumentDetail({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {latestRun.status === "failed" ? (
+            {isLegacy && latestRun.status === "failed" ? (
+              <p className="text-sm text-yellow-700">Résultat de l'ancien parseur (non fiable). Lancez la ré-analyse pour obtenir un résultat actuel.</p>
+            ) : latestRun.status === "failed" ? (
               <p className="text-sm text-destructive">L'analyse de ce document a échoué. Vérifiez que le fichier est lisible.</p>
+            ) : latestRun.total_fields === 0 && isLegacy ? (
+              <p className="text-sm text-yellow-700">Aucune entité extraite par l'ancien parseur. La ré-analyse avec le parseur actuel peut donner de meilleurs résultats.</p>
             ) : latestRun.total_fields === 0 ? (
               <p className="text-sm text-muted-foreground">Aucune entité extraite. Le document est peut-être trop court, protégé ou dans un format non supporté.</p>
             ) : (

@@ -1015,12 +1015,14 @@ async function processDocument(
 
   // If extraction failed, mark document and return honest failure — do NOT proceed to AI
   if (!parserSuccess || textContent.length < 20) {
+    const currentRun = { ...extractionDebug, completed_at: new Date().toISOString() };
     await supabase.from("source_documents").update({
       status: "parsing_failed",
       extraction_mode: extractionMethod,
       metadata: {
         ...(typeof doc.metadata === "object" && doc.metadata ? doc.metadata : {}),
         extraction_debug: extractionDebug,
+        current_active_run: currentRun,
       },
     }).eq("id", documentId);
 
@@ -1058,15 +1060,14 @@ async function processDocument(
     });
   }
 
+  const analyzingRun = { ...extractionDebug, chunk_count: chunks.length };
   await supabase.from("source_documents").update({
     status: "analyzing",
     extraction_mode: extractionMethod,
     metadata: {
       ...(typeof doc.metadata === "object" && doc.metadata ? doc.metadata : {}),
-      extraction_debug: {
-        ...extractionDebug,
-        chunk_count: chunks.length,
-      },
+      extraction_debug: analyzingRun,
+      current_active_run: analyzingRun,
     },
   }).eq("id", documentId);
 
@@ -1175,7 +1176,24 @@ async function processDocument(
     completed_at: new Date().toISOString(),
   });
 
-  await supabase.from("source_documents").update({ status: "ready_for_review" }).eq("id", documentId);
+  const finalRun = {
+    ...extractionDebug,
+    chunk_count: chunks.length,
+    ai_parser_status: aiParserStatus,
+    entities_extracted: entities.length,
+    completed_at: new Date().toISOString(),
+  };
+  const existingMeta = (typeof doc.metadata === "object" && doc.metadata ? doc.metadata : {}) as Record<string, unknown>;
+  await supabase.from("source_documents").update({
+    status: "ready_for_review",
+    metadata: {
+      ...existingMeta,
+      extraction_debug: finalRun,
+      current_active_run: finalRun,
+      // Preserve run_history from reprocess if present
+      run_history: existingMeta.run_history || existingMeta.previous_runs || [],
+    },
+  }).eq("id", documentId);
 
   await supabase.from("audit_logs").insert({
     user_id: userId,
@@ -1195,6 +1213,7 @@ async function processDocument(
       text_length: textContent.length,
       chunks_count: chunks.length,
       ai_parser_status: aiParserStatus,
+      parser_version: PARSER_VERSION,
     },
   });
 
@@ -1207,15 +1226,11 @@ async function processDocument(
     role_confidence: roleConfidence,
     status: "ready_for_review",
     parser_status: aiParserStatus === "success" ? "success" : (parserSuccess ? "partial" : "failed"),
+    parser_version: PARSER_VERSION,
     extraction_method: extractionMethod,
     text_length: textContent.length,
     chunks_count: chunks.length,
-    extraction_debug: {
-      ...extractionDebug,
-      chunk_count: chunks.length,
-      ai_parser_status: aiParserStatus,
-      entities_extracted: entities.length,
-    },
+    extraction_debug: finalRun,
   }), { headers });
 }
 
@@ -2131,16 +2146,18 @@ async function reprocessDocument(
     }), { status: 400, headers });
   }
 
-  // Archive old extraction results in metadata before clearing
+  // Archive old extraction results into run_history (not as active truth)
   const oldMeta = (typeof doc.metadata === "object" && doc.metadata ? doc.metadata : {}) as Record<string, unknown>;
-  const previousRuns = (oldMeta.previous_runs || []) as Array<Record<string, unknown>>;
-  if (oldMeta.extraction_debug) {
-    previousRuns.push({
-      ...(oldMeta.extraction_debug as Record<string, unknown>),
+  const runHistory = (oldMeta.run_history || oldMeta.previous_runs || []) as Array<Record<string, unknown>>;
+  const oldDebug = oldMeta.extraction_debug || oldMeta.current_active_run;
+  if (oldDebug) {
+    runHistory.push({
+      ...(oldDebug as Record<string, unknown>),
       archived_at: new Date().toISOString(),
       old_status: doc.status,
       old_extraction_mode: doc.extraction_mode,
       old_version: doc.version,
+      parser_version: (oldDebug as Record<string, unknown>).parser_version || "legacy",
     });
   }
 
@@ -2156,13 +2173,19 @@ async function reprocessDocument(
       .eq("source_document_id", documentId);
   }
 
-  // Increment version, reset status, store run history
+  // Increment version, set status to reprocessing, clear stale state
   const newVersion = (doc.version || 1) + 1;
   await supabase.from("source_documents").update({
     version: newVersion,
-    status: "uploaded",
+    status: "reprocessing",
     extraction_mode: null,
-    metadata: { ...oldMeta, previous_runs: previousRuns, extraction_debug: null },
+    metadata: {
+      ...oldMeta,
+      run_history: runHistory,
+      previous_runs: runHistory, // backward compat
+      current_active_run: null,
+      extraction_debug: null,
+    },
   }).eq("id", documentId);
 
   // Log the reprocess action
@@ -2189,7 +2212,8 @@ async function reprocessDocument(
     reprocessed: true,
     document_id: documentId,
     new_version: newVersion,
-    previous_runs_count: previousRuns.length,
+    previous_runs_count: runHistory.length,
+    parser_version: PARSER_VERSION,
     ...resultData,
   }), { headers });
 }

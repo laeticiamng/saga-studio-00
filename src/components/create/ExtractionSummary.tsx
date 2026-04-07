@@ -121,7 +121,8 @@ export default function ExtractionSummary({ result, onReprocessDocument, onRepro
               {legacyDocs.length} document{legacyDocs.length > 1 ? "s" : ""} analysé{legacyDocs.length > 1 ? "s" : ""} avec l'ancien parseur
             </p>
             <p className="text-muted-foreground text-xs mb-2">
-              Ces documents ont été traités par une version précédente du parseur. Relancez l'analyse avec le parseur actuel pour de meilleurs résultats.
+              Ces documents ont été traités par une version précédente du parseur.
+              Le résultat affiché n'est plus fiable. Relancez l'analyse pour obtenir un résultat avec le parseur actuel.
             </p>
             {legacyDocs.map(d => (
               <div key={d.id} className="flex items-center justify-between text-xs mt-1">
@@ -306,6 +307,10 @@ export default function ExtractionSummary({ result, onReprocessDocument, onRepro
                           </Badge>
                         ) : d.fileType === "image" ? (
                           <Badge variant="secondary" className="text-[10px]">Image</Badge>
+                        ) : isLegacyDoc(d) ? (
+                          <Badge variant="outline" className="text-[10px] border-yellow-500/50 text-yellow-700">
+                            Ancien parseur
+                          </Badge>
                         ) : (
                           <Badge variant="destructive" className="text-[10px]">
                             {d.extractionMode?.includes("failed") || d.extractionMode?.includes("error") || d.extractionMode?.includes("unsupported")

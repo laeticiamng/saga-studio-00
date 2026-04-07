@@ -169,7 +169,33 @@ export function useReprocessDocument() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    // Optimistic update: immediately show reprocessing state
+    onMutate: async ({ documentId }) => {
+      await queryClient.cancelQueries({ queryKey: ["source_documents"] });
+      const previous = queryClient.getQueriesData({ queryKey: ["source_documents"] });
+
+      queryClient.setQueriesData(
+        { queryKey: ["source_documents"] },
+        (old: Array<Record<string, unknown>> | undefined) => {
+          if (!old) return old;
+          return old.map((doc) =>
+            doc.id === documentId
+              ? { ...doc, status: "reprocessing", extraction_mode: null }
+              : doc
+          );
+        }
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      // Rollback on error
+      if (context?.previous) {
+        for (const [key, data] of context.previous) {
+          queryClient.setQueryData(key, data);
+        }
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["source_documents"] });
       queryClient.invalidateQueries({ queryKey: ["document_entities"] });
       queryClient.invalidateQueries({ queryKey: ["document_chunks"] });
@@ -181,6 +207,19 @@ export function useReprocessDocument() {
 }
 
 // ——— Reprocess all legacy documents ———
+
+/** Legacy extraction modes from older parser versions */
+const LEGACY_EXTRACTION_MODES = ["pdf_vision_api_error", "pdf_vision_api", "vision_api", "pdf_vision"];
+
+function isLegacyDoc(doc: Record<string, unknown>): boolean {
+  const mode = doc.extraction_mode as string | null;
+  if (!mode) return false;
+  if (LEGACY_EXTRACTION_MODES.some(m => mode === m || mode.startsWith(m))) return true;
+  const meta = doc.metadata as Record<string, unknown> | null;
+  const debug = meta?.extraction_debug as Record<string, unknown> | undefined;
+  if (debug && !debug.parser_version) return true;
+  return false;
+}
 
 export function useReprocessLegacyDocuments() {
   const queryClient = useQueryClient();
@@ -205,7 +244,35 @@ export function useReprocessLegacyDocuments() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    // Optimistic update: mark all legacy docs as reprocessing
+    onMutate: async ({ documentIds }) => {
+      await queryClient.cancelQueries({ queryKey: ["source_documents"] });
+      const previous = queryClient.getQueriesData({ queryKey: ["source_documents"] });
+
+      queryClient.setQueriesData(
+        { queryKey: ["source_documents"] },
+        (old: Array<Record<string, unknown>> | undefined) => {
+          if (!old) return old;
+          return old.map((doc) => {
+            const shouldUpdate = documentIds
+              ? documentIds.includes(doc.id as string)
+              : isLegacyDoc(doc);
+            return shouldUpdate
+              ? { ...doc, status: "reprocessing", extraction_mode: null }
+              : doc;
+          });
+        }
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        for (const [key, data] of context.previous) {
+          queryClient.setQueryData(key, data);
+        }
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["source_documents"] });
       queryClient.invalidateQueries({ queryKey: ["document_entities"] });
       queryClient.invalidateQueries({ queryKey: ["document_chunks"] });

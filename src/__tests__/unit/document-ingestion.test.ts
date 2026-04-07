@@ -144,6 +144,8 @@ describe("Pipeline Status Transitions", () => {
     "uploaded", "extracting", "parsing", "parsed", "parsing_failed",
     "analyzing", "extracting_entities", "extracted_entities", "extraction_failed",
     "ready_for_review", "reviewed", "applied",
+    // Legacy migration statuses
+    "legacy_result_detected", "reprocess_pending", "reprocessing",
   ];
 
   it("has parsing_failed as a valid status", () => {
@@ -152,6 +154,12 @@ describe("Pipeline Status Transitions", () => {
 
   it("has extraction_failed as a valid status", () => {
     expect(VALID_STATUSES).toContain("extraction_failed");
+  });
+
+  it("has legacy migration statuses", () => {
+    expect(VALID_STATUSES).toContain("legacy_result_detected");
+    expect(VALID_STATUSES).toContain("reprocess_pending");
+    expect(VALID_STATUSES).toContain("reprocessing");
   });
 
   function shouldProceedToAI(parserSuccess: boolean, textLength: number): boolean {
@@ -405,7 +413,7 @@ describe("Legacy Status Backward Compatibility", () => {
   const PARSER_FAILURE_LABELS: Record<string, string> = {
     docx_parse_failed: "Le fichier DOCX n'a pas pu être lu",
     pdf_parse_failed: "Le PDF n'a pas pu être analysé",
-    pdf_vision_api_error: "Ancien parseur — re-importez le document",
+    pdf_vision_api_error: "Résultat ancien parseur — en attente de ré-analyse",
     pdf_vision_api: "Ancien mode d'extraction",
     doc_legacy_unsupported: "Format .doc ancien",
     download_failed: "Téléchargement échoué",
@@ -414,7 +422,7 @@ describe("Legacy Status Backward Compatibility", () => {
 
   it("has a label for legacy pdf_vision_api_error status", () => {
     expect(PARSER_FAILURE_LABELS["pdf_vision_api_error"]).toBeDefined();
-    expect(PARSER_FAILURE_LABELS["pdf_vision_api_error"]).toContain("re-importez");
+    expect(PARSER_FAILURE_LABELS["pdf_vision_api_error"]).toContain("ré-analyse");
   });
 
   it("has a label for legacy pdf_vision_api status", () => {
@@ -441,6 +449,112 @@ describe("Legacy Status Backward Compatibility", () => {
     expect(isExtractionFailure("docx_parse_succeeded")).toBe(false);
     expect(isExtractionFailure("pdf_parse_succeeded")).toBe(false);
     expect(isExtractionFailure("text_parse_succeeded")).toBe(false);
+  });
+});
+
+// ═══════════════════════════════════════════════════
+// LEGACY DOCUMENT DETECTION & REPROCESS FLOW
+// ═══════════════════════════════════════════════════
+
+describe("Legacy Document Detection", () => {
+  const LEGACY_EXTRACTION_MODES = ["pdf_vision_api_error", "pdf_vision_api", "vision_api", "pdf_vision"];
+
+  function isLegacyDocument(doc: { extraction_mode: string | null; metadata?: { extraction_debug?: { parser_version?: string } } }): boolean {
+    const mode = doc.extraction_mode;
+    if (!mode) return false;
+    if (LEGACY_EXTRACTION_MODES.some(m => mode === m || mode.startsWith(m))) return true;
+    if (doc.metadata?.extraction_debug && !doc.metadata.extraction_debug.parser_version) return true;
+    return false;
+  }
+
+  it("detects pdf_vision_api_error as legacy", () => {
+    expect(isLegacyDocument({ extraction_mode: "pdf_vision_api_error" })).toBe(true);
+  });
+
+  it("detects pdf_vision_api as legacy", () => {
+    expect(isLegacyDocument({ extraction_mode: "pdf_vision_api" })).toBe(true);
+  });
+
+  it("detects vision_api as legacy", () => {
+    expect(isLegacyDocument({ extraction_mode: "vision_api" })).toBe(true);
+  });
+
+  it("detects documents without parser_version as legacy", () => {
+    expect(isLegacyDocument({
+      extraction_mode: "some_mode",
+      metadata: { extraction_debug: {} },
+    })).toBe(true);
+  });
+
+  it("does NOT flag current parser documents as legacy", () => {
+    expect(isLegacyDocument({
+      extraction_mode: "docx_xml_parse",
+      metadata: { extraction_debug: { parser_version: "2.0.0" } },
+    })).toBe(false);
+  });
+
+  it("does NOT flag null extraction_mode as legacy", () => {
+    expect(isLegacyDocument({ extraction_mode: null })).toBe(false);
+  });
+});
+
+describe("Reprocess Run History", () => {
+  function archiveRun(
+    metadata: { run_history?: Array<Record<string, unknown>>; extraction_debug?: Record<string, unknown> },
+    oldStatus: string,
+    oldExtractionMode: string
+  ) {
+    const runHistory = [...(metadata.run_history || [])];
+    if (metadata.extraction_debug) {
+      runHistory.push({
+        ...metadata.extraction_debug,
+        archived_at: new Date().toISOString(),
+        old_status: oldStatus,
+        old_extraction_mode: oldExtractionMode,
+        parser_version: metadata.extraction_debug.parser_version || "legacy",
+      });
+    }
+    return {
+      run_history: runHistory,
+      current_active_run: null,
+      extraction_debug: null,
+    };
+  }
+
+  it("archives old run into run_history", () => {
+    const result = archiveRun(
+      { extraction_debug: { parser_version: "legacy", parser_chosen: "pdf_vision_api" } },
+      "parsing_failed",
+      "pdf_vision_api_error"
+    );
+    expect(result.run_history).toHaveLength(1);
+    expect(result.run_history[0].old_status).toBe("parsing_failed");
+    expect(result.run_history[0].old_extraction_mode).toBe("pdf_vision_api_error");
+    expect(result.run_history[0].parser_version).toBe("legacy");
+  });
+
+  it("clears current_active_run on reprocess", () => {
+    const result = archiveRun(
+      { extraction_debug: { parser_version: "1.0.0" } },
+      "ready_for_review",
+      "docx_xml_parse"
+    );
+    expect(result.current_active_run).toBeNull();
+    expect(result.extraction_debug).toBeNull();
+  });
+
+  it("preserves existing run history", () => {
+    const result = archiveRun(
+      {
+        run_history: [{ parser_version: "legacy", archived_at: "2024-01-01" }],
+        extraction_debug: { parser_version: "1.0.0" },
+      },
+      "ready_for_review",
+      "docx_xml_parse"
+    );
+    expect(result.run_history).toHaveLength(2);
+    expect(result.run_history[0].parser_version).toBe("legacy");
+    expect(result.run_history[1].parser_version).toBe("1.0.0");
   });
 });
 
