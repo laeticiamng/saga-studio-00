@@ -86,6 +86,26 @@ export default function Settings() {
     enabled: !!user,
   });
 
+  const handleAvatarUpload = async (file: File) => {
+    if (!user) return;
+    setUploadingAvatar(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${user.id}/avatar.${ext}`;
+      const { error: upErr } = await supabase.storage.from("face-references").upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from("face-references").getPublicUrl(path);
+      const publicUrl = urlData.publicUrl + `?t=${Date.now()}`;
+      await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", user.id);
+      setAvatarUrl(publicUrl);
+      toast({ title: "Avatar mis à jour" });
+    } catch (err: unknown) {
+      toast({ title: "Erreur", description: err instanceof Error ? err.message : "Upload échoué", variant: "destructive" });
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!user) return;
     setLoading(true);
