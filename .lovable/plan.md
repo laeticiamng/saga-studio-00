@@ -189,21 +189,47 @@
 
 ---
 
+## Phase 7: Production Robustness, QC, and Cost Governance ✅ DB + UI
+
+### New tables:
+- `asset_normalization_results` — normalized metadata per asset (width, height, fps, codec, duration, audio, poster)
+- `scene_clip_candidates` — ranked candidates per scene with multi-dimensional scoring
+- `export_presets` — versioned reproducible export configs (5 default presets seeded)
+- `project_budgets` — per-project cost governance (limit, mode, estimated/actual cost)
+- `diagnostic_events` — human-readable diagnostic entries grouped by scope
+
+### Column additions:
+- `export_versions`: retry_count, checksum, failure_stage, preset_name
+- `project_assets`: lifecycle_state
+- `job_queue`: estimated_cost, actual_cost
+- `timeline_tracks`: gain, solo
+- `qc_reports`: timeline_id, has_blocking_issues
+
+### UI:
+- Diagnostics tab in Timeline Studio
+- Cost governance card (sidebar)
+- QC report panel component
+- Candidate ranking hooks
+
+### P0 inside Phase 7:
+- asset normalization, candidate ranking, QC layer, render robustness, cost governance
+
+### P1 inside Phase 7:
+- diagnostics tab enhancements, storage lifecycle, stronger audio track model, safe export presets
+
+---
+
 ## Implementation Order
 
 | Phase | Priority | Depends On | Estimated Scope |
 |-------|----------|------------|-----------------|
-| Phase 1: DB Schema | P0 | Nothing | Migration only |
-| Phase 2: Project Wizard | P0 | Phase 1 | 3-4 new files |
+| Phase 1: DB Schema | P0 ✅ | Nothing | Migration only |
+| Phase 2: Project Wizard | P0 ✅ | Phase 1 | 3-4 new files |
 | Phase 3: Scene Planner | P0 | Phase 1 | 2-3 files + edge fn updates |
-| Phase 4: Timeline Engine | P0 | Phase 1, 3 | 5-6 new files (biggest phase) |
-| Phase 5: Review Gates + Finishing | P0 | Phase 4 | 3-4 files + edge fn |
-| Phase 6: Export Engine | P0 | Phase 4, 5 | 2-3 files + edge fn |
-
-**Total new files**: ~20-25 components/pages/hooks
-**Total modified files**: ~10-15 existing files
-**New edge functions**: 3-4
-**DB migrations**: 1 large migration
+| Phase 4: Timeline Engine | P0 ✅ | Phase 1, 3 | 5-6 new files (biggest phase) |
+| Phase 5: Review Gates + Finishing | P0 ✅ | Phase 4 | 3-4 files + edge fn |
+| Phase 6: Export Engine | P0 ✅ | Phase 4, 5 | 2-3 files + edge fn |
+| Phase 7: Robustness + QC | P0 ✅ | Phase 1-6 | 5 tables + 7 files |
 
 ---
 
