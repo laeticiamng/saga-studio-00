@@ -22,9 +22,10 @@ import { FinishingPanel } from "@/components/studio/FinishingPanel";
 import { ExportPanel } from "@/components/studio/ExportPanel";
 import { DiagnosticsPanel } from "@/components/studio/DiagnosticsPanel";
 import { CostEstimationCard } from "@/components/studio/CostEstimationCard";
+import { ProjectValidationPanel } from "@/components/studio/ProjectValidationPanel";
 import {
   Loader2, Film, Layers, Play, CheckCircle, Lock, Unlock,
-  Plus, Download, Palette, Shield, Eye, Activity, DollarSign, Wand2,
+  Plus, Download, Palette, Shield, Eye, Activity, DollarSign, Wand2, ShieldCheck,
 } from "lucide-react";
 
 export default function TimelineStudio() {
