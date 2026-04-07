@@ -20,9 +20,11 @@ import { TimelineView } from "@/components/studio/TimelineView";
 import { ReviewGatesPanel } from "@/components/studio/ReviewGatesPanel";
 import { FinishingPanel } from "@/components/studio/FinishingPanel";
 import { ExportPanel } from "@/components/studio/ExportPanel";
+import { DiagnosticsPanel } from "@/components/studio/DiagnosticsPanel";
+import { CostEstimationCard } from "@/components/studio/CostEstimationCard";
 import {
   Loader2, Film, Layers, Play, CheckCircle, Lock, Unlock,
-  Plus, Download, Palette, Shield, Eye,
+  Plus, Download, Palette, Shield, Eye, Activity, DollarSign,
 } from "lucide-react";
 
 export default function TimelineStudio() {
@@ -176,63 +178,77 @@ export default function TimelineStudio() {
             </CardContent>
           </Card>
         ) : (
-          <Tabs defaultValue="timeline" className="space-y-4">
-            <TabsList className="bg-secondary/40 p-1 rounded-xl">
-              <TabsTrigger value="timeline" className="gap-1.5 rounded-lg">
-                <Layers className="h-4 w-4" /> Timeline
-              </TabsTrigger>
-              <TabsTrigger value="gates" className="gap-1.5 rounded-lg">
-                <Shield className="h-4 w-4" /> Validations
-                {gates?.filter(g => g.status === "pending").length ? (
-                  <Badge variant="destructive" className="ml-1 text-[10px] px-1.5">
-                    {gates.filter(g => g.status === "pending").length}
-                  </Badge>
-                ) : null}
-              </TabsTrigger>
-              <TabsTrigger value="finishing" className="gap-1.5 rounded-lg">
-                <Palette className="h-4 w-4" /> Finishing
-              </TabsTrigger>
-              <TabsTrigger value="exports" className="gap-1.5 rounded-lg">
-                <Download className="h-4 w-4" /> Export
-                {exports?.length ? (
-                  <Badge variant="secondary" className="ml-1 text-[10px] px-1.5">
-                    {exports.length}
-                  </Badge>
-                ) : null}
-              </TabsTrigger>
-            </TabsList>
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
+            <Tabs defaultValue="timeline" className="space-y-4">
+              <TabsList className="bg-secondary/40 p-1 rounded-xl flex-wrap">
+                <TabsTrigger value="timeline" className="gap-1.5 rounded-lg">
+                  <Layers className="h-4 w-4" /> Timeline
+                </TabsTrigger>
+                <TabsTrigger value="gates" className="gap-1.5 rounded-lg">
+                  <Shield className="h-4 w-4" /> Validations
+                  {gates?.filter(g => g.status === "pending").length ? (
+                    <Badge variant="destructive" className="ml-1 text-[10px] px-1.5">
+                      {gates.filter(g => g.status === "pending").length}
+                    </Badge>
+                  ) : null}
+                </TabsTrigger>
+                <TabsTrigger value="finishing" className="gap-1.5 rounded-lg">
+                  <Palette className="h-4 w-4" /> Finishing
+                </TabsTrigger>
+                <TabsTrigger value="exports" className="gap-1.5 rounded-lg">
+                  <Download className="h-4 w-4" /> Export
+                  {exports?.length ? (
+                    <Badge variant="secondary" className="ml-1 text-[10px] px-1.5">
+                      {exports.length}
+                    </Badge>
+                  ) : null}
+                </TabsTrigger>
+                <TabsTrigger value="diagnostics" className="gap-1.5 rounded-lg">
+                  <Activity className="h-4 w-4" /> Diagnostics
+                </TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="timeline">
-              <TimelineView
-                timeline={activeTimeline}
-                tracks={tracks || []}
-                clips={clips || []}
-                projectId={id!}
-              />
-            </TabsContent>
+              <TabsContent value="timeline">
+                <TimelineView
+                  timeline={activeTimeline}
+                  tracks={tracks || []}
+                  clips={clips || []}
+                  projectId={id!}
+                />
+              </TabsContent>
 
-            <TabsContent value="gates">
-              <ReviewGatesPanel
-                projectId={id!}
-                gates={gates || []}
-              />
-            </TabsContent>
+              <TabsContent value="gates">
+                <ReviewGatesPanel
+                  projectId={id!}
+                  gates={gates || []}
+                />
+              </TabsContent>
 
-            <TabsContent value="finishing">
-              <FinishingPanel
-                timeline={activeTimeline}
-                projectId={id!}
-              />
-            </TabsContent>
+              <TabsContent value="finishing">
+                <FinishingPanel
+                  timeline={activeTimeline}
+                  projectId={id!}
+                />
+              </TabsContent>
 
-            <TabsContent value="exports">
-              <ExportPanel
-                projectId={id!}
-                exports={exports || []}
-                timelineId={selectedTimelineId}
-              />
-            </TabsContent>
-          </Tabs>
+              <TabsContent value="exports">
+                <ExportPanel
+                  projectId={id!}
+                  exports={exports || []}
+                  timelineId={selectedTimelineId}
+                />
+              </TabsContent>
+
+              <TabsContent value="diagnostics">
+                <DiagnosticsPanel projectId={id!} />
+              </TabsContent>
+            </Tabs>
+
+            {/* Right sidebar — cost governance */}
+            <div className="space-y-4 hidden lg:block">
+              <CostEstimationCard projectId={id!} />
+            </div>
+          </div>
         )}
       </main>
     </div>
