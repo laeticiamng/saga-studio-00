@@ -12,6 +12,8 @@ export interface DocumentDiagnostic {
   extractionMode?: string;
   status: string;
   entitiesCount: number;
+  textLength?: number;
+  parserError?: string;
 }
 
 export interface ExtractionResult {
@@ -53,8 +55,15 @@ export default function ExtractionSummary({ result }: Props) {
   const [showDiagnostics, setShowDiagnostics] = useState(false);
 
   const hasRealExtraction = result.totalEntities > 0;
-  const hasParserFailures = result.diagnostics?.some(d => d.entitiesCount === 0 && d.fileType !== "image");
-  const allFailed = result.diagnostics?.every(d => d.entitiesCount === 0 && d.fileType !== "image");
+  const isParserFailure = (d: DocumentDiagnostic) =>
+    d.fileType !== "image" && (
+      d.entitiesCount === 0 ||
+      d.extractionMode?.includes("failed") ||
+      d.extractionMode?.includes("error") ||
+      d.status?.includes("failed")
+    );
+  const hasParserFailures = result.diagnostics?.some(isParserFailure);
+  const allFailed = result.diagnostics?.filter(d => d.fileType !== "image").every(isParserFailure);
 
   const stats = [
     { icon: FileText, label: "Documents analysés", value: result.documentsProcessed },
@@ -214,12 +223,19 @@ export default function ExtractionSummary({ result }: Props) {
                         <Badge variant="secondary" className="text-[10px]">Image</Badge>
                       ) : (
                         <Badge variant="destructive" className="text-[10px]">
-                          0 entités
+                          {d.extractionMode?.includes("failed") || d.extractionMode?.includes("error")
+                            ? "Lecture échouée"
+                            : "0 entités"}
                         </Badge>
+                      )}
+                      {d.textLength !== undefined && d.textLength > 0 && (
+                        <span className="text-muted-foreground text-[10px]">
+                          {d.textLength} chars
+                        </span>
                       )}
                       {d.extractionMode && (
                         <span className="text-muted-foreground text-[10px]">
-                          {d.extractionMode}
+                          {d.extractionMode.length > 30 ? d.extractionMode.slice(0, 30) + "…" : d.extractionMode}
                         </span>
                       )}
                     </div>

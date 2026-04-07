@@ -182,8 +182,8 @@ async function extractDocxText(fileBytes: Uint8Array): Promise<{ text: string; m
     } else if (documentXmlMethod === 8) {
       // Deflated — use DecompressionStream
       const compressedData = zipData.slice(dataStart, dataStart + documentXmlCompressedSize);
-      // Create a raw deflate stream (no zlib header)
-      const ds = new DecompressionStream("raw");
+      // Create a raw deflate stream (no zlib header) — Deno requires "deflate-raw"
+      const ds = new DecompressionStream("deflate-raw");
       const writer = ds.writable.getWriter();
       writer.write(compressedData);
       writer.close();
@@ -243,12 +243,13 @@ async function extractDocxText(fileBytes: Uint8Array): Promise<{ text: string; m
       .replace(/&#x([0-9A-Fa-f]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
       .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)));
 
-    if (text.length < 20) throw new Error("DOCX extracted text too short — likely corrupted");
+    if (text.length < 20) throw new Error(`DOCX extracted text too short (${text.length} chars) — likely corrupted or empty document`);
 
     return { text, method: "docx_xml_parse", success: true };
   } catch (e) {
-    console.error("DOCX extraction error:", e);
-    return { text: "", method: "docx_xml_parse_failed", success: false };
+    const errMsg = e instanceof Error ? e.message : String(e);
+    console.error("DOCX extraction error:", errMsg);
+    return { text: "", method: `docx_parse_failed: ${errMsg.slice(0, 200)}`, success: false };
   }
 }
 
@@ -344,17 +345,21 @@ async function extractTextFromFile(
 
   const bytes = new Uint8Array(await fileData.arrayBuffer());
 
-  // DOCX files — parse XML from ZIP
+  // DOCX files — parse XML from ZIP (NEVER fallback to PDF vision)
   if (fileType === "docx") {
     const result = await extractDocxText(bytes);
     if (result.success && result.text.length > 20) {
       console.log(`DOCX extraction success: ${fileName} → ${result.text.length} chars`);
       return { ...result, charCount: result.text.length };
     }
-    // Fallback to Vision API for failed DOCX
-    console.log(`DOCX native parse failed for ${fileName}, falling back to Vision API`);
-    const fallback = await extractPdfText(bytes);
-    return { ...fallback, charCount: fallback.text.length };
+    // DOCX failed — report honestly as DOCX failure, do NOT send to PDF extractor
+    console.error(`DOCX native parse failed for ${fileName}: method=${result.method}, textLen=${result.text.length}`);
+    return {
+      text: result.text,
+      method: result.method || "docx_parse_failed",
+      success: false,
+      charCount: result.text.length,
+    };
   }
 
   // PDF files — use Vision API
@@ -652,11 +657,25 @@ async function processDocument(
     textContent = "";
   }
 
-  // If extraction failed, mark document and return honest failure
+  // If extraction failed, mark document and return honest failure — do NOT proceed to AI
   if (!parserSuccess || textContent.length < 20) {
+    const failureStatus = doc.file_type === "docx" ? "parsing_failed" : "parsing_failed";
     await supabase.from("source_documents").update({
-      status: "ready_for_review",
+      status: failureStatus,
       extraction_mode: extractionMethod,
+      metadata: {
+        ...(typeof doc.metadata === "object" && doc.metadata ? doc.metadata : {}),
+        extraction_debug: {
+          parser_chosen: doc.file_type === "docx" ? "docx_xml_parse" : doc.file_type === "pdf" ? "pdf_vision_api" : "plain_text",
+          parser_success: false,
+          extracted_text_length: textContent.length,
+          text_preview: textContent.slice(0, 500) || "(empty)",
+          fallback_taken: "none",
+          final_extraction_mode: extractionMethod,
+          error_message: `Extraction échouée (${extractionMethod}). Le fichier n'a pas pu être lu.`,
+          timestamp: new Date().toISOString(),
+        },
+      },
     }).eq("id", documentId);
 
     // Create autofill run with failure
@@ -677,6 +696,14 @@ async function processDocument(
       parser_status: "failed",
       parser_error: `Extraction échouée (${extractionMethod}). Le fichier n'a pas pu être lu.`,
       extraction_method: extractionMethod,
+      extraction_debug: {
+        parser_chosen: doc.file_type === "docx" ? "docx_xml_parse" : doc.file_type === "pdf" ? "pdf_vision_api" : "plain_text",
+        parser_success: false,
+        extracted_text_length: textContent.length,
+        text_preview: textContent.slice(0, 500) || "(empty)",
+        fallback_taken: "none",
+        final_extraction_mode: extractionMethod,
+      },
       text_length: textContent.length,
     }), { headers });
   }
@@ -695,6 +722,19 @@ async function processDocument(
   await supabase.from("source_documents").update({
     status: "analyzing",
     extraction_mode: extractionMethod,
+    metadata: {
+      ...(typeof doc.metadata === "object" && doc.metadata ? doc.metadata : {}),
+      extraction_debug: {
+        parser_chosen: extractionMethod,
+        parser_success: true,
+        extracted_text_length: textContent.length,
+        text_preview: textContent.slice(0, 500),
+        fallback_taken: "none",
+        final_extraction_mode: extractionMethod,
+        error_message: null,
+        timestamp: new Date().toISOString(),
+      },
+    },
   }).eq("id", documentId);
 
   // Determine project type for workflow-specific prompts
@@ -837,6 +877,15 @@ async function processDocument(
     extraction_method: extractionMethod,
     text_length: textContent.length,
     chunks_count: chunks.length,
+    extraction_debug: {
+      parser_chosen: extractionMethod,
+      parser_success: parserSuccess,
+      extracted_text_length: textContent.length,
+      text_preview: textContent.slice(0, 500),
+      fallback_taken: "none",
+      final_extraction_mode: extractionMethod,
+      ai_parser_status: aiParserStatus,
+    },
   }), { headers });
 }
 
@@ -1332,7 +1381,7 @@ async function wizardExtract(
       .select("status")
       .eq("id", docId)
       .single();
-    if (doc?.status === "ready_for_review") continue;
+    if (doc?.status === "ready_for_review" || doc?.status === "reviewed" || doc?.status === "applied") continue;
     await processDocumentWithType(supabase, docId, userId, project_type);
   }
 
@@ -1463,7 +1512,9 @@ async function wizardExtract(
   };
 
   // Only declare missing if extraction actually ran successfully on at least one doc
-  const anyDocProcessed = (docMeta || []).some(d => d.status === "ready_for_review");
+  const anyDocProcessed = (docMeta || []).some(d =>
+    d.status === "ready_for_review" || d.status === "reviewed" || d.status === "applied"
+  );
   if (anyDocProcessed) {
     prefill.missingFields = required
       .filter(f => !extractedTypes.has(f))
@@ -1550,11 +1601,24 @@ async function processDocumentWithType(
     parserSuccess = false;
   }
 
-  // If extraction failed, mark and return
+  // If extraction failed, mark honestly and stop — do NOT proceed to AI
   if (!parserSuccess || textContent.length < 20) {
     await supabase.from("source_documents").update({
-      status: "ready_for_review",
+      status: "parsing_failed",
       extraction_mode: extractionMethod,
+      metadata: {
+        ...(typeof doc.metadata === "object" && doc.metadata ? doc.metadata : {}),
+        extraction_debug: {
+          parser_chosen: doc.file_type === "docx" ? "docx_xml_parse" : doc.file_type === "pdf" ? "pdf_vision_api" : "plain_text",
+          parser_success: false,
+          extracted_text_length: textContent.length,
+          text_preview: textContent.slice(0, 500) || "(empty)",
+          fallback_taken: "none",
+          final_extraction_mode: extractionMethod,
+          error_message: `Extraction échouée (${extractionMethod})`,
+          timestamp: new Date().toISOString(),
+        },
+      },
     }).eq("id", documentId);
     return;
   }
