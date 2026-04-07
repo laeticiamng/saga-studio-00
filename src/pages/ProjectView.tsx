@@ -328,7 +328,10 @@ export default function ProjectView() {
               )}
             </div>
 
-            <div className="flex gap-2 shrink-0">
+            <div className="flex gap-2 shrink-0 flex-wrap">
+              <Button variant="ghost" size="sm" onClick={openEdit} className="gap-1.5 text-muted-foreground">
+                <Pencil className="h-3.5 w-3.5" /> Modifier
+              </Button>
               {project.status === "completed" && (
                 <Button variant="glass" size="sm" onClick={handleShare} className="gap-2">
                   <Share2 className="h-4 w-4" /> Partager
@@ -345,6 +348,9 @@ export default function ProjectView() {
                   <RefreshCw className="h-4 w-4" /> Réessayer
                 </Button>
               )}
+              <Button variant="ghost" size="sm" onClick={() => setDeleteOpen(true)} className="gap-1.5 text-destructive hover:text-destructive">
+                <Trash2 className="h-3.5 w-3.5" /> Supprimer
+              </Button>
             </div>
           </div>
 
