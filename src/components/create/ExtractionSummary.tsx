@@ -1,13 +1,25 @@
-import { FileText, Users, MapPin, Layers, Music, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { FileText, Users, MapPin, Layers, Music, AlertTriangle, CheckCircle2, XCircle, Info, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
+
+export interface DocumentDiagnostic {
+  id: string;
+  fileName: string;
+  role: string;
+  roleConfidence: number;
+  fileType: string;
+  extractionMode?: string;
+  status: string;
+  entitiesCount: number;
+}
 
 export interface ExtractionResult {
   title?: string;
   synopsis?: string;
   genre?: string;
   tone?: string;
-  characters: { name: string; role?: string }[];
+  characters: { name: string; role?: string; age?: string }[];
   episodes: { title: string; number?: number }[];
   locations: string[];
   scenes: number;
@@ -15,13 +27,35 @@ export interface ExtractionResult {
   documentsProcessed: number;
   conflicts: number;
   missingFields: string[];
+  diagnostics?: DocumentDiagnostic[];
 }
 
 interface Props {
   result: ExtractionResult;
 }
 
+const ROLE_LABELS: Record<string, string> = {
+  script_master: "Script principal",
+  episode_script: "Script épisode",
+  film_script: "Script film",
+  series_bible: "Bible de série",
+  short_pitch: "Pitch court",
+  producer_bible: "Bible producteur",
+  one_pager: "One pager",
+  governance_doc: "Gouvernance",
+  character_sheet: "Fiche personnage",
+  continuity_doc: "Continuité",
+  reference_images: "Réf. visuelles",
+  unknown: "Non classé",
+};
+
 export default function ExtractionSummary({ result }: Props) {
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+
+  const hasRealExtraction = result.totalEntities > 0;
+  const hasParserFailures = result.diagnostics?.some(d => d.entitiesCount === 0 && d.fileType !== "image");
+  const allFailed = result.diagnostics?.every(d => d.entitiesCount === 0 && d.fileType !== "image");
+
   const stats = [
     { icon: FileText, label: "Documents analysés", value: result.documentsProcessed },
     { icon: Users, label: "Personnages détectés", value: result.characters.length },
@@ -34,34 +68,56 @@ export default function ExtractionSummary({ result }: Props) {
   }
 
   return (
-    <Card className="border-primary/20 bg-primary/[0.02]">
+    <Card className={`border-${allFailed ? "destructive" : hasParserFailures ? "yellow-500" : "primary"}/20 bg-${allFailed ? "destructive" : "primary"}/[0.02]`}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-green-500" />
-            Résumé de l'analyse
+            {allFailed ? (
+              <XCircle className="h-5 w-5 text-destructive" />
+            ) : hasRealExtraction ? (
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+            ) : (
+              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+            )}
+            {allFailed
+              ? "Échec de l'analyse"
+              : hasRealExtraction
+              ? "Résumé de l'analyse"
+              : "Analyse partielle"}
           </CardTitle>
-          <Badge variant="secondary" className="text-xs">
+          <Badge variant={hasRealExtraction ? "secondary" : "destructive"} className="text-xs">
             {result.totalEntities} entité{result.totalEntities !== 1 ? "s" : ""} extraite{result.totalEntities !== 1 ? "s" : ""}
           </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Parser failure warning */}
+        {allFailed && (
+          <div className="rounded-lg bg-destructive/10 p-3 text-sm">
+            <p className="font-medium text-destructive mb-1">L'extraction a échoué sur tous les documents</p>
+            <p className="text-muted-foreground text-xs">
+              Les fichiers n'ont pas pu être lus correctement. Vérifiez qu'il s'agit bien de documents textuels (PDF, DOCX, TXT) et non de fichiers corrompus ou protégés.
+            </p>
+          </div>
+        )}
+
         {/* Stats grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {stats.map((s) => {
-            const Icon = s.icon;
-            return (
-              <div key={s.label} className="flex items-center gap-2 rounded-lg bg-secondary/50 p-3">
-                <Icon className="h-4 w-4 text-primary flex-shrink-0" />
-                <div>
-                  <p className="text-lg font-bold leading-none">{s.value}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{s.label}</p>
+        {hasRealExtraction && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {stats.map((s) => {
+              const Icon = s.icon;
+              return (
+                <div key={s.label} className="flex items-center gap-2 rounded-lg bg-secondary/50 p-3">
+                  <Icon className="h-4 w-4 text-primary flex-shrink-0" />
+                  <div>
+                    <p className="text-lg font-bold leading-none">{s.value}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{s.label}</p>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Characters preview */}
         {result.characters.length > 0 && (
@@ -72,11 +128,31 @@ export default function ExtractionSummary({ result }: Props) {
                 <Badge key={c.name} variant="outline" className="text-xs">
                   {c.name}
                   {c.role && <span className="text-muted-foreground ml-1">({c.role})</span>}
+                  {c.age && <span className="text-muted-foreground ml-1">{c.age}</span>}
                 </Badge>
               ))}
               {result.characters.length > 8 && (
                 <Badge variant="outline" className="text-xs text-muted-foreground">
                   +{result.characters.length - 8}
+                </Badge>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Locations preview */}
+        {result.locations.length > 0 && (
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Lieux</p>
+            <div className="flex flex-wrap gap-2">
+              {result.locations.slice(0, 6).map((l) => (
+                <Badge key={l} variant="outline" className="text-xs">
+                  <MapPin className="h-3 w-3 mr-1" />{l}
+                </Badge>
+              ))}
+              {result.locations.length > 6 && (
+                <Badge variant="outline" className="text-xs text-muted-foreground">
+                  +{result.locations.length - 6}
                 </Badge>
               )}
             </div>
@@ -91,15 +167,66 @@ export default function ExtractionSummary({ result }: Props) {
           </div>
         )}
 
-        {/* Missing fields */}
-        {result.missingFields.length > 0 && (
+        {/* Missing fields — only shown if extraction actually succeeded */}
+        {hasRealExtraction && result.missingFields.length > 0 && (
           <div className="rounded-lg bg-orange-500/10 p-3">
-            <p className="text-sm font-medium text-orange-600 mb-1">Données manquantes :</p>
+            <p className="text-sm font-medium text-orange-600 mb-1">Données non trouvées dans le corpus :</p>
             <ul className="text-xs text-muted-foreground space-y-0.5">
               {result.missingFields.map((f) => (
                 <li key={f}>• {f}</li>
               ))}
             </ul>
+            <p className="text-xs text-muted-foreground mt-2 italic">
+              Ces champs pourront être renseignés manuellement à l'étape suivante.
+            </p>
+          </div>
+        )}
+
+        {/* Diagnostics toggle */}
+        {result.diagnostics && result.diagnostics.length > 0 && (
+          <div>
+            <button
+              onClick={() => setShowDiagnostics(!showDiagnostics)}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Info className="h-3.5 w-3.5" />
+              Détail par document
+              {showDiagnostics ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            </button>
+
+            {showDiagnostics && (
+              <div className="mt-2 space-y-1.5">
+                {result.diagnostics.map((d) => (
+                  <div key={d.id} className="flex items-center justify-between rounded-md bg-secondary/30 px-3 py-2 text-xs">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileText className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                      <span className="truncate font-medium">{d.fileName}</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <Badge variant="outline" className="text-[10px]">
+                        {ROLE_LABELS[d.role] || d.role}
+                      </Badge>
+                      {d.entitiesCount > 0 ? (
+                        <Badge variant="secondary" className="text-[10px]">
+                          {d.entitiesCount} entités
+                        </Badge>
+                      ) : d.fileType === "image" ? (
+                        <Badge variant="secondary" className="text-[10px]">Image</Badge>
+                      ) : (
+                        <Badge variant="destructive" className="text-[10px]">
+                          0 entités
+                        </Badge>
+                      )}
+                      {d.extractionMode && (
+                        <span className="text-muted-foreground text-[10px]">
+                          {d.extractionMode}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </CardContent>

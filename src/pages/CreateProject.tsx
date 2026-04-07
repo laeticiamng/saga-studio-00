@@ -267,6 +267,7 @@ export default function CreateProject() {
             documentsProcessed: extractData.documentsProcessed || 0,
             conflicts: extractData.prefill?.conflicts || 0,
             missingFields: extractData.prefill?.missingFields || [],
+            diagnostics: extractData.diagnostics || [],
           });
           setExtractedFields(extractData.extractedFields || []);
 
