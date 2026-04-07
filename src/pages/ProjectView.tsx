@@ -164,6 +164,48 @@ export default function ProjectView() {
     toast({ title: "Lien copié !", description: "Le lien de partage a été copié dans le presse-papier" });
   };
 
+  const handleDelete = async () => {
+    if (!project) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase.from("projects").delete().eq("id", project.id);
+      if (error) throw error;
+      toast({ title: "Projet supprimé" });
+      navigate("/dashboard");
+    } catch (err: unknown) {
+      toast({ title: "Erreur", description: err instanceof Error ? err.message : "Impossible de supprimer", variant: "destructive" });
+    } finally {
+      setDeleting(false);
+      setDeleteOpen(false);
+    }
+  };
+
+  const openEdit = () => {
+    if (!project) return;
+    setEditTitle(project.title);
+    setEditSynopsis(project.synopsis || "");
+    setEditOpen(true);
+  };
+
+  const handleEditSave = async () => {
+    if (!project || !editTitle.trim()) return;
+    setEditSaving(true);
+    try {
+      const { error } = await supabase.from("projects").update({
+        title: editTitle.trim(),
+        synopsis: editSynopsis.trim() || null,
+      }).eq("id", project.id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["project", id] });
+      toast({ title: "Projet mis à jour" });
+      setEditOpen(false);
+    } catch (err: unknown) {
+      toast({ title: "Erreur", description: err instanceof Error ? err.message : "Impossible de sauvegarder", variant: "destructive" });
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   const handleEnrichSynopsis = async () => {
     if (!project || !session || enriching) return;
     setEnriching(true);
