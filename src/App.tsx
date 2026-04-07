@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { GlobalNotifications } from "@/components/GlobalNotifications";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -19,9 +19,6 @@ import Index from "./pages/Index";
 // Lazy: everything else
 const Auth = lazy(() => import("./pages/Auth"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
-const CreateClip = lazy(() => import("./pages/CreateClip"));
-const CreateFilm = lazy(() => import("./pages/CreateFilm"));
-const CreateMusicVideo = lazy(() => import("./pages/CreateMusicVideo"));
 const ProjectView = lazy(() => import("./pages/ProjectView"));
 const Pricing = lazy(() => import("./pages/Pricing"));
 const Settings = lazy(() => import("./pages/Settings"));
@@ -91,14 +88,20 @@ const App = () => (
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                <Route path="/create/clip" element={<ProtectedRoute><CreateClip /></ProtectedRoute>} />
-                <Route path="/create/film" element={<ProtectedRoute><CreateFilm /></ProtectedRoute>} />
-                <Route path="/create/music-video" element={<ProtectedRoute><CreateMusicVideo /></ProtectedRoute>} />
+
+                {/* Unified create flow */}
+                <Route path="/create" element={<ProtectedRoute><CreateProject /></ProtectedRoute>} />
+
+                {/* Legacy create routes → redirect to unified wizard */}
+                <Route path="/create/clip" element={<Navigate to="/create" replace />} />
+                <Route path="/create/film" element={<Navigate to="/create" replace />} />
+                <Route path="/create/music-video" element={<Navigate to="/create" replace />} />
+                <Route path="/create/series" element={<ProtectedRoute><CreateSeries /></ProtectedRoute>} />
+
                 <Route path="/project/:id" element={<ProtectedRoute><ProjectView /></ProtectedRoute>} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 <Route path="/share/:id" element={<ShareView />} />
-                <Route path="/create/series" element={<ProtectedRoute><CreateSeries /></ProtectedRoute>} />
                 <Route path="/series/:id" element={<ProtectedRoute><SeriesView /></ProtectedRoute>} />
                 <Route path="/series/:id/season/:seasonId" element={<ProtectedRoute><SeasonView /></ProtectedRoute>} />
                 <Route path="/series/:id/episode/:episodeId" element={<ProtectedRoute><EpisodeView /></ProtectedRoute>} />
@@ -110,7 +113,6 @@ const App = () => (
                 <Route path="/series/:id/continuity" element={<ProtectedRoute><ContinuityCenter /></ProtectedRoute>} />
                 <Route path="/series/:id/delivery" element={<ProtectedRoute><DeliveryCenter /></ProtectedRoute>} />
                 <Route path="/series/:id/documents" element={<ProtectedRoute><DocumentsCenter /></ProtectedRoute>} />
-                <Route path="/create" element={<ProtectedRoute><CreateProject /></ProtectedRoute>} />
                 <Route path="/project/:id/studio" element={<ProtectedRoute><TimelineStudio /></ProtectedRoute>} />
                 <Route path="/project/:id/governance" element={<ProtectedRoute><GovernanceDashboard /></ProtectedRoute>} />
                 <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
@@ -132,4 +134,3 @@ const App = () => (
 );
 
 export default App;
-
