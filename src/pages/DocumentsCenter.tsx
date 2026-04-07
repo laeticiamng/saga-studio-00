@@ -55,6 +55,31 @@ const STATUS_LABELS: Record<string, string> = {
   applied: "Appliqué",
 };
 
+/** Human-readable parser failure messages keyed by extraction_mode */
+const PARSER_FAILURE_LABELS: Record<string, string> = {
+  docx_parse_failed: "Le fichier DOCX n'a pas pu être lu (format ZIP/XML invalide)",
+  pdf_parse_failed: "Le PDF n'a pas pu être analysé par l'IA",
+  text_parse_failed: "Le fichier texte est vide",
+  doc_legacy_unsupported: "Format .doc ancien non supporté — convertissez en .docx",
+  unsupported_file_type: "Type de fichier non supporté pour l'extraction de texte",
+  download_failed: "Impossible de télécharger le fichier depuis le stockage",
+  no_api_key: "Clé API manquante pour l'extraction PDF",
+};
+
+function getParserFailureMessage(extractionMode: string | null | undefined): string | null {
+  if (!extractionMode) return null;
+  // Check exact match first
+  if (PARSER_FAILURE_LABELS[extractionMode]) return PARSER_FAILURE_LABELS[extractionMode];
+  // Check prefix match (e.g. "docx_parse_failed: some detail")
+  for (const [key, label] of Object.entries(PARSER_FAILURE_LABELS)) {
+    if (extractionMode.startsWith(key)) return label;
+  }
+  if (extractionMode.includes("failed") || extractionMode.includes("error")) {
+    return `Extraction échouée (${extractionMode})`;
+  }
+  return null;
+}
+
 const ROLE_LABELS: Record<string, string> = {
   script_master: "Script principal",
   episode_script: "Script épisode",
@@ -345,6 +370,7 @@ function DocumentCard({
             <p className="font-medium text-sm truncate">{doc.file_name as string}</p>
             <p className="text-xs text-muted-foreground">
               v{doc.version as number} · {new Date(doc.created_at as string).toLocaleDateString("fr-FR")}
+              {doc.file_type && <span className="ml-1 uppercase">· {doc.file_type as string}</span>}
             </p>
           </div>
           <Badge variant={
@@ -354,6 +380,13 @@ function DocumentCard({
             {STATUS_LABELS[doc.status as string] || doc.status as string}
           </Badge>
         </div>
+        {/* Show specific parser failure message */}
+        {getParserFailureMessage(doc.extraction_mode as string) && (
+          <p className="text-xs text-destructive flex items-center gap-1">
+            <XCircle className="h-3 w-3 shrink-0" />
+            {getParserFailureMessage(doc.extraction_mode as string)}
+          </p>
+        )}
 
         <div className="flex flex-wrap gap-1.5">
           <Badge variant="outline" className="text-xs">
@@ -456,19 +489,36 @@ function DocumentDetail({
               </Badge>
             )}
           </div>
-          {/* Parser status warning — detect all failure modes */}
+          {/* Parser status warning — granular failure messages */}
           {(
             (doc.extraction_mode as string)?.includes("failed") ||
             (doc.extraction_mode as string)?.includes("error") ||
+            (doc.extraction_mode as string)?.includes("unsupported") ||
             (doc.status as string)?.includes("failed")
           ) && (
             <div className="rounded-lg bg-destructive/10 p-3 text-sm mb-3 flex items-start gap-2">
               <XCircle className="h-4 w-4 text-destructive flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-medium text-destructive">Extraction du texte échouée</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Le contenu de ce fichier n'a pas pu être lu ({doc.extraction_mode as string || "erreur inconnue"}). Les entités affichées comme "manquantes" ne reflètent pas le contenu réel du document.
+                <p className="font-medium text-destructive">
+                  {(doc.extraction_mode as string) === "doc_legacy_unsupported"
+                    ? "Format .doc non supporté"
+                    : (doc.extraction_mode as string)?.startsWith("docx_parse_failed")
+                    ? "Lecture du fichier DOCX échouée"
+                    : (doc.extraction_mode as string)?.startsWith("pdf_parse_failed")
+                    ? "Lecture du PDF échouée"
+                    : (doc.extraction_mode as string) === "download_failed"
+                    ? "Téléchargement du fichier échoué"
+                    : "Extraction du texte échouée"}
                 </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {getParserFailureMessage(doc.extraction_mode as string) ||
+                    `Le contenu n'a pas pu être lu (${doc.extraction_mode as string || "erreur inconnue"}).`}
+                </p>
+                {(doc.extraction_mode as string) === "doc_legacy_unsupported" && (
+                  <p className="text-xs text-muted-foreground mt-1 font-medium">
+                    Ouvrez le fichier dans Word ou LibreOffice et enregistrez-le au format .docx avant de le ré-importer.
+                  </p>
+                )}
               </div>
             </div>
           )}

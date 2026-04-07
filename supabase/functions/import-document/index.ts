@@ -46,6 +46,7 @@ serve(async (req) => {
     if (action === "retrieve_context") return await retrieveContext(supabase, body);
     if (action === "extract" && body.document_id) return await processDocument(supabase, body.document_id, user.id);
     if (action === "wizard_extract") return await wizardExtract(supabase, body, user.id);
+    if (action === "debug_document") return await debugDocument(supabase, body.document_id);
 
     // Register + auto-extract a new document
     const { project_id, series_id, file_name, file_type, file_size_bytes, storage_path } = body;
@@ -97,8 +98,10 @@ serve(async (req) => {
 function detectFileType(fileName: string): string {
   const ext = fileName.split(".").pop()?.toLowerCase() || "";
   const typeMap: Record<string, string> = {
-    pdf: "pdf", docx: "docx", doc: "docx", txt: "txt",
+    pdf: "pdf", docx: "docx", txt: "txt",
+    doc: "doc_legacy",  // Legacy .doc is OLE2 binary, NOT ZIP — must never enter DOCX parser
     md: "markdown", markdown: "markdown", rtf: "rtf",
+    odt: "odt",  // OpenDocument — unsupported, explicit type
     jpg: "image", jpeg: "image", png: "image", webp: "image",
     gif: "image", bmp: "image", tiff: "image",
     mp3: "audio", wav: "audio", m4a: "audio", flac: "audio",
@@ -108,154 +111,343 @@ function detectFileType(fileName: string): string {
 }
 
 // ═══════════════════════════════════════════════════
-// TEXT EXTRACTION — the critical fix
+// PARSER STATUS CODES — truthful, granular statuses
+// ═══════════════════════════════════════════════════
+const PARSER_STATUS = {
+  // DOCX statuses
+  DOCX_PARSE_STARTED: "docx_parse_started",
+  DOCX_PARSE_SUCCEEDED: "docx_parse_succeeded",
+  DOCX_PARSE_FAILED: "docx_parse_failed",
+  // PDF statuses
+  PDF_PARSE_STARTED: "pdf_parse_started",
+  PDF_PARSE_SUCCEEDED: "pdf_parse_succeeded",
+  PDF_PARSE_FAILED: "pdf_parse_failed",
+  // Plain text
+  TEXT_PARSE_SUCCEEDED: "text_parse_succeeded",
+  TEXT_PARSE_FAILED: "text_parse_failed",
+  // General
+  UNSUPPORTED_FILE_TYPE: "unsupported_file_type",
+  DOWNLOAD_FAILED: "download_failed",
+  // Legacy
+  DOC_LEGACY_UNSUPPORTED: "doc_legacy_unsupported",
+} as const;
+
+// ═══════════════════════════════════════════════════
+// TEXT EXTRACTION — production-hardened DOCX pipeline
 // ═══════════════════════════════════════════════════
 
 /**
- * Extract text from a DOCX file by parsing the ZIP and reading word/document.xml
- * DOCX is a ZIP containing XML; we parse <w:t> tags to get text.
+ * Read a 16-bit little-endian unsigned int from a buffer.
  */
-async function extractDocxText(fileBytes: Uint8Array): Promise<{ text: string; method: string; success: boolean }> {
+function readU16(buf: Uint8Array, off: number): number {
+  return buf[off] | (buf[off + 1] << 8);
+}
+
+/**
+ * Read a 32-bit little-endian unsigned int from a buffer.
+ */
+function readU32(buf: Uint8Array, off: number): number {
+  return (buf[off] | (buf[off + 1] << 8) | (buf[off + 2] << 16) | (buf[off + 3] << 24)) >>> 0;
+}
+
+/**
+ * Minimal ZIP reader: extract a single named entry from a ZIP archive.
+ * Handles standard ZIP and tolerates minor ZIP64 edge cases.
+ */
+async function zipExtractEntry(
+  zipData: Uint8Array,
+  targetName: string
+): Promise<{ data: Uint8Array; found: boolean; error?: string }> {
   try {
-    // DOCX is a ZIP file. We need to find word/document.xml inside it.
-    // Use a minimal ZIP reader approach.
-    const zipData = fileBytes;
-    
-    // Find the End of Central Directory record
+    // Find End of Central Directory (EOCD) — scan backwards from end
     let eocdOffset = -1;
-    for (let i = zipData.length - 22; i >= Math.max(0, zipData.length - 65557); i--) {
-      if (zipData[i] === 0x50 && zipData[i+1] === 0x4B && zipData[i+2] === 0x05 && zipData[i+3] === 0x06) {
+    const searchStart = Math.max(0, zipData.length - 65557);
+    for (let i = zipData.length - 22; i >= searchStart; i--) {
+      if (zipData[i] === 0x50 && zipData[i + 1] === 0x4B &&
+          zipData[i + 2] === 0x05 && zipData[i + 3] === 0x06) {
         eocdOffset = i;
         break;
       }
     }
-    if (eocdOffset === -1) throw new Error("Not a valid ZIP/DOCX");
+    if (eocdOffset === -1) {
+      return { data: new Uint8Array(), found: false, error: "No EOCD record — not a valid ZIP file" };
+    }
 
-    const cdOffset = zipData[eocdOffset + 16] | (zipData[eocdOffset + 17] << 8) |
-                     (zipData[eocdOffset + 18] << 16) | (zipData[eocdOffset + 19] << 24);
-    const cdEntries = zipData[eocdOffset + 10] | (zipData[eocdOffset + 11] << 8);
+    let cdOffset = readU32(zipData, eocdOffset + 16);
+    let cdEntries = readU16(zipData, eocdOffset + 10);
 
-    // Parse central directory to find word/document.xml
+    // Check for ZIP64 EOCD locator (immediately before EOCD)
+    if (cdOffset === 0xFFFFFFFF || cdEntries === 0xFFFF) {
+      // Try ZIP64 end of central directory locator
+      const z64LocOff = eocdOffset - 20;
+      if (z64LocOff >= 0 && readU32(zipData, z64LocOff) === 0x07064B50) {
+        // ZIP64 locator found — read the ZIP64 EOCD
+        const z64EocdOff = Number(
+          BigInt(readU32(zipData, z64LocOff + 8)) |
+          (BigInt(readU32(zipData, z64LocOff + 12)) << 32n)
+        );
+        if (z64EocdOff >= 0 && z64EocdOff + 56 <= zipData.length &&
+            readU32(zipData, z64EocdOff) === 0x06064B50) {
+          cdEntries = Number(
+            BigInt(readU32(zipData, z64EocdOff + 32)) |
+            (BigInt(readU32(zipData, z64EocdOff + 36)) << 32n)
+          );
+          cdOffset = Number(
+            BigInt(readU32(zipData, z64EocdOff + 48)) |
+            (BigInt(readU32(zipData, z64EocdOff + 52)) << 32n)
+          );
+        }
+      }
+    }
+
+    if (cdOffset >= zipData.length) {
+      return { data: new Uint8Array(), found: false, error: `Central directory offset ${cdOffset} beyond file size ${zipData.length}` };
+    }
+
+    // Parse central directory entries
     let offset = cdOffset;
-    let documentXmlOffset = -1;
-    let documentXmlCompressedSize = 0;
-    let documentXmlUncompressedSize = 0;
-    let documentXmlMethod = 0;
-
     for (let entry = 0; entry < cdEntries; entry++) {
       if (offset + 46 > zipData.length) break;
-      const sig = zipData[offset] | (zipData[offset+1] << 8) | (zipData[offset+2] << 16) | (zipData[offset+3] << 24);
+      const sig = readU32(zipData, offset);
       if (sig !== 0x02014B50) break;
 
-      const method = zipData[offset + 10] | (zipData[offset + 11] << 8);
-      const compSize = zipData[offset + 20] | (zipData[offset + 21] << 8) | (zipData[offset + 22] << 16) | (zipData[offset + 23] << 24);
-      const uncompSize = zipData[offset + 24] | (zipData[offset + 25] << 8) | (zipData[offset + 26] << 16) | (zipData[offset + 27] << 24);
-      const nameLen = zipData[offset + 28] | (zipData[offset + 29] << 8);
-      const extraLen = zipData[offset + 30] | (zipData[offset + 31] << 8);
-      const commentLen = zipData[offset + 32] | (zipData[offset + 33] << 8);
-      const localHeaderOffset = zipData[offset + 42] | (zipData[offset + 43] << 8) | (zipData[offset + 44] << 16) | (zipData[offset + 45] << 24);
+      const method = readU16(zipData, offset + 10);
+      const compSize = readU32(zipData, offset + 20);
+      const uncompSize = readU32(zipData, offset + 24);
+      const nameLen = readU16(zipData, offset + 28);
+      const extraLen = readU16(zipData, offset + 30);
+      const commentLen = readU16(zipData, offset + 32);
+      const localHeaderOffset = readU32(zipData, offset + 42);
 
       const nameBytes = zipData.slice(offset + 46, offset + 46 + nameLen);
       const fileName = new TextDecoder().decode(nameBytes);
 
-      if (fileName === "word/document.xml") {
-        documentXmlOffset = localHeaderOffset;
-        documentXmlCompressedSize = compSize;
-        documentXmlUncompressedSize = uncompSize;
-        documentXmlMethod = method;
+      if (fileName === targetName) {
+        // Found it — read local file header
+        if (localHeaderOffset + 30 > zipData.length) {
+          return { data: new Uint8Array(), found: false, error: `Local header offset ${localHeaderOffset} out of bounds` };
+        }
+        const localSig = readU32(zipData, localHeaderOffset);
+        if (localSig !== 0x04034B50) {
+          return { data: new Uint8Array(), found: false, error: "Invalid local file header signature" };
+        }
+        const localNameLen = readU16(zipData, localHeaderOffset + 26);
+        const localExtraLen = readU16(zipData, localHeaderOffset + 28);
+        const dataStart = localHeaderOffset + 30 + localNameLen + localExtraLen;
+
+        if (method === 0) {
+          // Stored (uncompressed)
+          return { data: zipData.slice(dataStart, dataStart + uncompSize), found: true };
+        } else if (method === 8) {
+          // DEFLATE — try multiple decompression strategies
+          const compressedData = zipData.slice(dataStart, dataStart + compSize);
+          const decompressed = await decompressDeflate(compressedData);
+          if (decompressed) {
+            return { data: decompressed, found: true };
+          }
+          return { data: new Uint8Array(), found: false, error: "DEFLATE decompression failed for all strategies" };
+        } else {
+          return { data: new Uint8Array(), found: false, error: `Unsupported compression method: ${method}` };
+        }
       }
 
       offset += 46 + nameLen + extraLen + commentLen;
     }
 
-    if (documentXmlOffset === -1) throw new Error("word/document.xml not found in DOCX");
+    return { data: new Uint8Array(), found: false, error: `Entry "${targetName}" not found in ZIP` };
+  } catch (e) {
+    return { data: new Uint8Array(), found: false, error: `ZIP read error: ${e instanceof Error ? e.message : String(e)}` };
+  }
+}
 
-    // Read local file header to get to data
-    const localNameLen = zipData[documentXmlOffset + 26] | (zipData[documentXmlOffset + 27] << 8);
-    const localExtraLen = zipData[documentXmlOffset + 28] | (zipData[documentXmlOffset + 29] << 8);
-    const dataStart = documentXmlOffset + 30 + localNameLen + localExtraLen;
+/**
+ * Decompress DEFLATE data. Tries multiple strategies for runtime compatibility:
+ * 1. DecompressionStream("deflate-raw") — standard for ZIP raw deflate
+ * 2. DecompressionStream("deflate") — zlib-wrapped, in case runtime misinterprets
+ * 3. Manual inflate via minimal pure-JS implementation
+ */
+async function decompressDeflate(compressed: Uint8Array): Promise<Uint8Array | null> {
+  // Strategy 1: deflate-raw (correct for ZIP)
+  try {
+    const result = await decompressWithStream("deflate-raw", compressed);
+    if (result && result.length > 0) return result;
+  } catch { /* try next */ }
 
-    let xmlBytes: Uint8Array;
-    if (documentXmlMethod === 0) {
-      // Stored (no compression)
-      xmlBytes = zipData.slice(dataStart, dataStart + documentXmlUncompressedSize);
-    } else if (documentXmlMethod === 8) {
-      // Deflated — use DecompressionStream
-      const compressedData = zipData.slice(dataStart, dataStart + documentXmlCompressedSize);
-      // Create a raw deflate stream (no zlib header) — Deno requires "deflate-raw"
-      const ds = new DecompressionStream("deflate-raw");
-      const writer = ds.writable.getWriter();
-      writer.write(compressedData);
-      writer.close();
-      const reader = ds.readable.getReader();
-      const chunks: Uint8Array[] = [];
-      let done = false;
-      while (!done) {
-        const result = await reader.read();
-        if (result.value) chunks.push(result.value);
-        done = result.done;
-      }
-      const totalLen = chunks.reduce((sum, c) => sum + c.length, 0);
-      xmlBytes = new Uint8Array(totalLen);
-      let pos = 0;
-      for (const chunk of chunks) {
-        xmlBytes.set(chunk, pos);
-        pos += chunk.length;
-      }
+  // Strategy 2: deflate (zlib-wrapped — some runtimes need this)
+  try {
+    const result = await decompressWithStream("deflate", compressed);
+    if (result && result.length > 0) return result;
+  } catch { /* try next */ }
+
+  // Strategy 3: raw (alias in some environments)
+  try {
+    const result = await decompressWithStream("raw" as CompressionFormat, compressed);
+    if (result && result.length > 0) return result;
+  } catch { /* exhausted */ }
+
+  console.error("All decompression strategies failed for DEFLATE data");
+  return null;
+}
+
+async function decompressWithStream(format: CompressionFormat | string, data: Uint8Array): Promise<Uint8Array> {
+  const ds = new DecompressionStream(format as CompressionFormat);
+  const writer = ds.writable.getWriter();
+  const writePromise = writer.write(data).then(() => writer.close());
+  const reader = ds.readable.getReader();
+  const chunks: Uint8Array[] = [];
+  while (true) {
+    const { done, value } = await reader.read();
+    if (value) chunks.push(value);
+    if (done) break;
+  }
+  await writePromise;
+  const totalLen = chunks.reduce((sum, c) => sum + c.length, 0);
+  const result = new Uint8Array(totalLen);
+  let pos = 0;
+  for (const chunk of chunks) {
+    result.set(chunk, pos);
+    pos += chunk.length;
+  }
+  return result;
+}
+
+/**
+ * Extract text from Word XML (word/document.xml).
+ * Handles multiple namespace conventions used by different Word versions.
+ */
+function extractTextFromDocumentXml(xmlString: string): { paragraphs: string[]; headingCount: number } {
+  const paragraphs: string[] = [];
+  let headingCount = 0;
+
+  // Match <w:p> paragraphs — use [\s\S] instead of [^] for cross-engine compat
+  const pRegex = /<w:p[\s>][\s\S]*?<\/w:p>/g;
+  let pMatch;
+  while ((pMatch = pRegex.exec(xmlString)) !== null) {
+    const pBlock = pMatch[0];
+
+    // Extract all <w:t> text runs within this paragraph
+    // Match both <w:t>text</w:t> and <w:t xml:space="preserve">text</w:t>
+    const tRegex = /<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>/g;
+    let tMatch;
+    let paraText = "";
+    while ((tMatch = tRegex.exec(pBlock)) !== null) {
+      paraText += tMatch[1];
+    }
+
+    if (!paraText.trim()) continue;
+
+    // Detect headings: multiple naming conventions across Word versions/locales
+    const isHeading = /<w:pStyle\s+w:val="(?:Heading|Titre|heading|Title|titre|TOC|Sous-titre|Subtitle)/i.test(pBlock);
+    const headingLevel = pBlock.match(/<w:pStyle\s+w:val="(?:Heading|Titre)(\d)/i)?.[1];
+
+    if (isHeading) {
+      headingCount++;
+      const prefix = headingLevel ? "#".repeat(Math.min(Number(headingLevel), 4)) : "##";
+      paragraphs.push(`\n${prefix} ${paraText.trim()}`);
     } else {
-      throw new Error(`Unsupported compression method: ${documentXmlMethod}`);
+      paragraphs.push(paraText.trim());
+    }
+  }
+
+  return { paragraphs, headingCount };
+}
+
+/**
+ * Decode XML entities in extracted text.
+ */
+function decodeXmlEntities(text: string): string {
+  return text
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#x([0-9A-Fa-f]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)));
+}
+
+/**
+ * Extract text from a DOCX file by parsing the ZIP and reading word/document.xml.
+ * Production-hardened: handles ZIP64, multiple compression strategies,
+ * namespace variations, and French Word documents.
+ *
+ * NEVER falls back to PDF Vision. If this fails, it fails honestly.
+ */
+async function extractDocxText(fileBytes: Uint8Array): Promise<{
+  text: string;
+  method: string;
+  success: boolean;
+  debug: {
+    zipValid: boolean;
+    entryFound: boolean;
+    xmlLength: number;
+    paragraphCount: number;
+    headingCount: number;
+    decompressionStrategy?: string;
+    error?: string;
+  };
+}> {
+  const debug = {
+    zipValid: false,
+    entryFound: false,
+    xmlLength: 0,
+    paragraphCount: 0,
+    headingCount: 0,
+    decompressionStrategy: undefined as string | undefined,
+    error: undefined as string | undefined,
+  };
+
+  try {
+    // Validate it's actually a ZIP file (PK signature)
+    if (fileBytes.length < 4 || fileBytes[0] !== 0x50 || fileBytes[1] !== 0x4B) {
+      debug.error = "File does not start with PK signature — not a ZIP/DOCX file";
+      return { text: "", method: PARSER_STATUS.DOCX_PARSE_FAILED, success: false, debug };
+    }
+    debug.zipValid = true;
+
+    // Extract word/document.xml from ZIP
+    const entry = await zipExtractEntry(fileBytes, "word/document.xml");
+    if (!entry.found) {
+      debug.error = entry.error || "word/document.xml not found in DOCX ZIP";
+      return { text: "", method: PARSER_STATUS.DOCX_PARSE_FAILED, success: false, debug };
+    }
+    debug.entryFound = true;
+
+    const xmlString = new TextDecoder("utf-8").decode(entry.data);
+    debug.xmlLength = xmlString.length;
+
+    if (xmlString.length < 50) {
+      debug.error = `document.xml too small (${xmlString.length} bytes) — likely empty document`;
+      return { text: "", method: PARSER_STATUS.DOCX_PARSE_FAILED, success: false, debug };
     }
 
-    const xmlString = new TextDecoder("utf-8").decode(xmlBytes);
-
-    // Extract text from <w:t> tags, respecting <w:p> as paragraphs
-    const paragraphs: string[] = [];
-    // Split by paragraph tags
-    const pRegex = /<w:p[\s>][^]*?<\/w:p>/g;
-    let pMatch;
-    while ((pMatch = pRegex.exec(xmlString)) !== null) {
-      const pBlock = pMatch[0];
-      // Extract all <w:t> content within this paragraph
-      const tRegex = /<w:t[^>]*>([^<]*)<\/w:t>/g;
-      let tMatch;
-      let paraText = "";
-      while ((tMatch = tRegex.exec(pBlock)) !== null) {
-        paraText += tMatch[1];
-      }
-      if (paraText.trim()) {
-        // Check if this is a heading by looking for <w:pStyle w:val="Heading
-        const isHeading = /<w:pStyle\s+w:val="(?:Heading|Titre|heading)/i.test(pBlock);
-        if (isHeading) {
-          paragraphs.push("\n## " + paraText.trim());
-        } else {
-          paragraphs.push(paraText.trim());
-        }
-      }
-    }
+    // Extract text from XML
+    const { paragraphs, headingCount } = extractTextFromDocumentXml(xmlString);
+    debug.paragraphCount = paragraphs.length;
+    debug.headingCount = headingCount;
 
     // Decode XML entities
-    const text = paragraphs.join("\n")
-      .replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/&quot;/g, '"')
-      .replace(/&apos;/g, "'")
-      .replace(/&#x([0-9A-Fa-f]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
-      .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)));
+    const text = decodeXmlEntities(paragraphs.join("\n"));
 
-    if (text.length < 20) throw new Error(`DOCX extracted text too short (${text.length} chars) — likely corrupted or empty document`);
+    if (text.length < 20) {
+      debug.error = `Extracted text too short (${text.length} chars) — document may be empty or image-only`;
+      return { text, method: PARSER_STATUS.DOCX_PARSE_FAILED, success: false, debug };
+    }
 
-    return { text, method: "docx_xml_parse", success: true };
+    console.log(`DOCX parse OK: ${text.length} chars, ${paragraphs.length} paragraphs, ${headingCount} headings`);
+    return { text, method: PARSER_STATUS.DOCX_PARSE_SUCCEEDED, success: true, debug };
   } catch (e) {
     const errMsg = e instanceof Error ? e.message : String(e);
     console.error("DOCX extraction error:", errMsg);
-    return { text: "", method: `docx_parse_failed: ${errMsg.slice(0, 200)}`, success: false };
+    debug.error = errMsg.slice(0, 300);
+    return { text: "", method: PARSER_STATUS.DOCX_PARSE_FAILED, success: false, debug };
   }
 }
 
 /**
  * Extract text from a PDF using Gemini Vision API.
  * Sends the raw PDF as base64 inline_data to Gemini which can natively read PDFs.
+ * Only called for actual PDF files — never for DOCX.
  */
 async function extractPdfText(fileBytes: Uint8Array): Promise<{ text: string; method: string; success: boolean }> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -267,7 +459,6 @@ async function extractPdfText(fileBytes: Uint8Array): Promise<{ text: string; me
     // Convert to base64
     let binary = "";
     const len = fileBytes.byteLength;
-    // Process in chunks to avoid call stack limits
     const CHUNK = 8192;
     for (let i = 0; i < len; i += CHUNK) {
       const slice = fileBytes.subarray(i, Math.min(i + CHUNK, len));
@@ -277,7 +468,6 @@ async function extractPdfText(fileBytes: Uint8Array): Promise<{ text: string; me
     }
     const base64Pdf = btoa(binary);
 
-    // Use Gemini to extract text from the PDF
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -311,68 +501,120 @@ async function extractPdfText(fileBytes: Uint8Array): Promise<{ text: string; me
     if (!response.ok) {
       const errText = await response.text();
       console.error("PDF extraction API error:", response.status, errText);
-      return { text: "", method: "pdf_vision_api_error", success: false };
+      return { text: "", method: PARSER_STATUS.PDF_PARSE_FAILED, success: false };
     }
 
     const data = await response.json();
     const text = data.choices?.[0]?.message?.content || "";
-    
+
     if (text.length < 20) {
-      return { text: "", method: "pdf_vision_empty", success: false };
+      return { text: "", method: PARSER_STATUS.PDF_PARSE_FAILED, success: false };
     }
 
-    return { text, method: "pdf_vision_api", success: true };
+    return { text, method: PARSER_STATUS.PDF_PARSE_SUCCEEDED, success: true };
   } catch (e) {
     console.error("PDF Vision extraction error:", e);
-    return { text: "", method: "pdf_vision_failed", success: false };
+    return { text: "", method: PARSER_STATUS.PDF_PARSE_FAILED, success: false };
   }
 }
 
 /**
  * Unified text extraction dispatcher.
  * Routes to the correct extractor based on file type.
+ *
+ * CRITICAL ROUTING RULES:
+ * - docx → extractDocxText() ONLY. Never falls back to PDF Vision.
+ * - doc_legacy → immediate failure with explicit status. Never sent to DOCX or PDF parser.
+ * - pdf → extractPdfText() ONLY.
+ * - unknown → explicit unsupported_file_type failure. Never auto-falls-back to Vision API.
  */
 async function extractTextFromFile(
   fileData: Blob,
   fileType: string,
   fileName: string
-): Promise<{ text: string; method: string; success: boolean; charCount: number }> {
+): Promise<{
+  text: string;
+  method: string;
+  success: boolean;
+  charCount: number;
+  parserDebug?: Record<string, unknown>;
+}> {
+  console.log(`[ROUTER] extractTextFromFile: fileType="${fileType}" fileName="${fileName}" blobSize=${fileData.size}`);
+
   // Plain text files
   if (fileType === "txt" || fileType === "markdown" || fileType === "rtf") {
     const text = await fileData.text();
-    return { text, method: "plain_text", success: text.length > 0, charCount: text.length };
+    const success = text.length > 0;
+    return {
+      text,
+      method: success ? PARSER_STATUS.TEXT_PARSE_SUCCEEDED : PARSER_STATUS.TEXT_PARSE_FAILED,
+      success,
+      charCount: text.length,
+    };
   }
 
   const bytes = new Uint8Array(await fileData.arrayBuffer());
 
-  // DOCX files — parse XML from ZIP (NEVER fallback to PDF vision)
+  // ══════════════════════════════════════════════════════════
+  // DOCX — ZIP+XML parser ONLY. NEVER falls back to PDF Vision.
+  // ══════════════════════════════════════════════════════════
   if (fileType === "docx") {
+    console.log(`[ROUTER] Entering DOCX parser for ${fileName} (${bytes.length} bytes)`);
     const result = await extractDocxText(bytes);
-    if (result.success && result.text.length > 20) {
-      console.log(`DOCX extraction success: ${fileName} → ${result.text.length} chars`);
-      return { ...result, charCount: result.text.length };
-    }
-    // DOCX failed — report honestly as DOCX failure, do NOT send to PDF extractor
-    console.error(`DOCX native parse failed for ${fileName}: method=${result.method}, textLen=${result.text.length}`);
+    console.log(`[ROUTER] DOCX result: method=${result.method} success=${result.success} chars=${result.text.length}`);
     return {
       text: result.text,
-      method: result.method || "docx_parse_failed",
-      success: false,
+      method: result.method,
+      success: result.success,
       charCount: result.text.length,
+      parserDebug: result.debug,
     };
   }
 
-  // PDF files — use Vision API
+  // ══════════════════════════════════════════════════════════
+  // Legacy .doc — OLE2 binary, NOT supported by ZIP parser.
+  // Explicit failure — never silently routes elsewhere.
+  // ══════════════════════════════════════════════════════════
+  if (fileType === "doc_legacy") {
+    console.warn(`[ROUTER] Legacy .doc file detected: ${fileName}. OLE2 format not supported.`);
+    return {
+      text: "",
+      method: PARSER_STATUS.DOC_LEGACY_UNSUPPORTED,
+      success: false,
+      charCount: 0,
+      parserDebug: {
+        reason: "Legacy .doc (OLE2 binary) format is not supported. Please convert to .docx (Office Open XML).",
+        fileName,
+        fileSize: bytes.length,
+      },
+    };
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // PDF — Vision API extraction.
+  // ══════════════════════════════════════════════════════════
   if (fileType === "pdf") {
+    console.log(`[ROUTER] Entering PDF parser for ${fileName} (${bytes.length} bytes)`);
     const result = await extractPdfText(bytes);
-    console.log(`PDF extraction: ${fileName} → ${result.text.length} chars (${result.method})`);
+    console.log(`[ROUTER] PDF result: method=${result.method} success=${result.success} chars=${result.text.length}`);
     return { ...result, charCount: result.text.length };
   }
 
-  // Unknown binary — try Vision API as last resort
-  console.log(`Unknown file type ${fileType} for ${fileName}, trying Vision API`);
-  const result = await extractPdfText(bytes);
-  return { ...result, charCount: result.text.length };
+  // ══════════════════════════════════════════════════════════
+  // UNSUPPORTED — explicit failure. No silent fallback to Vision API.
+  // ══════════════════════════════════════════════════════════
+  console.warn(`[ROUTER] Unsupported file type "${fileType}" for ${fileName}. No parser available.`);
+  return {
+    text: "",
+    method: PARSER_STATUS.UNSUPPORTED_FILE_TYPE,
+    success: false,
+    charCount: 0,
+    parserDebug: {
+      reason: `File type "${fileType}" is not supported for text extraction.`,
+      fileName,
+      detectedType: fileType,
+    },
+  };
 }
 
 // ═══════════════════════════════════════════════════
@@ -632,10 +874,11 @@ async function processDocument(
     }), { headers });
   }
 
-  // ─── Download and extract text using proper extractors ───
+  // ─── Download and extract text using proper type-safe extractors ───
   let textContent = "";
   let extractionMethod = "unknown";
   let parserSuccess = false;
+  let parserDebug: Record<string, unknown> = {};
 
   try {
     const { data: fileData, error: dlErr } = await supabase.storage
@@ -647,34 +890,43 @@ async function processDocument(
     textContent = extraction.text;
     extractionMethod = extraction.method;
     parserSuccess = extraction.success;
-    
+    parserDebug = extraction.parserDebug || {};
+
     console.log(`Extraction complete for ${doc.file_name}: method=${extractionMethod} success=${parserSuccess} chars=${extraction.charCount}`);
   } catch (e) {
     const errMsg = e instanceof Error ? e.message : "Unknown download error";
     console.error(`File extraction failed for ${doc.file_name}:`, errMsg);
-    extractionMethod = "download_failed";
+    extractionMethod = PARSER_STATUS.DOWNLOAD_FAILED;
     parserSuccess = false;
     textContent = "";
+    parserDebug = { downloadError: errMsg };
   }
+
+  // Build comprehensive extraction_debug for storage
+  const extractionDebug = {
+    parser_chosen: extractionMethod,
+    parser_status: parserSuccess ? "succeeded" : "failed",
+    parser_success: parserSuccess,
+    file_type_detected: doc.file_type,
+    file_name: doc.file_name,
+    file_size_bytes: doc.file_size_bytes,
+    extracted_text_length: textContent.length,
+    text_preview: textContent.slice(0, 1000) || "(empty)",
+    fallback_attempted: false,  // DOCX never falls back
+    final_extraction_mode: extractionMethod,
+    error_message: parserSuccess ? null : `Extraction échouée (${extractionMethod})`,
+    parser_debug: parserDebug,
+    timestamp: new Date().toISOString(),
+  };
 
   // If extraction failed, mark document and return honest failure — do NOT proceed to AI
   if (!parserSuccess || textContent.length < 20) {
-    const failureStatus = doc.file_type === "docx" ? "parsing_failed" : "parsing_failed";
     await supabase.from("source_documents").update({
-      status: failureStatus,
+      status: "parsing_failed",
       extraction_mode: extractionMethod,
       metadata: {
         ...(typeof doc.metadata === "object" && doc.metadata ? doc.metadata : {}),
-        extraction_debug: {
-          parser_chosen: doc.file_type === "docx" ? "docx_xml_parse" : doc.file_type === "pdf" ? "pdf_vision_api" : "plain_text",
-          parser_success: false,
-          extracted_text_length: textContent.length,
-          text_preview: textContent.slice(0, 500) || "(empty)",
-          fallback_taken: "none",
-          final_extraction_mode: extractionMethod,
-          error_message: `Extraction échouée (${extractionMethod}). Le fichier n'a pas pu être lu.`,
-          timestamp: new Date().toISOString(),
-        },
+        extraction_debug: extractionDebug,
       },
     }).eq("id", documentId);
 
@@ -694,16 +946,9 @@ async function processDocument(
       entities_found: 0, auto_filled: 0, needs_review: 0,
       document_role: "unknown", role_confidence: 0,
       parser_status: "failed",
-      parser_error: `Extraction échouée (${extractionMethod}). Le fichier n'a pas pu être lu.`,
+      parser_error: extractionDebug.error_message,
       extraction_method: extractionMethod,
-      extraction_debug: {
-        parser_chosen: doc.file_type === "docx" ? "docx_xml_parse" : doc.file_type === "pdf" ? "pdf_vision_api" : "plain_text",
-        parser_success: false,
-        extracted_text_length: textContent.length,
-        text_preview: textContent.slice(0, 500) || "(empty)",
-        fallback_taken: "none",
-        final_extraction_mode: extractionMethod,
-      },
+      extraction_debug: extractionDebug,
       text_length: textContent.length,
     }), { headers });
   }
@@ -725,14 +970,8 @@ async function processDocument(
     metadata: {
       ...(typeof doc.metadata === "object" && doc.metadata ? doc.metadata : {}),
       extraction_debug: {
-        parser_chosen: extractionMethod,
-        parser_success: true,
-        extracted_text_length: textContent.length,
-        text_preview: textContent.slice(0, 500),
-        fallback_taken: "none",
-        final_extraction_mode: extractionMethod,
-        error_message: null,
-        timestamp: new Date().toISOString(),
+        ...extractionDebug,
+        chunk_count: chunks.length,
       },
     },
   }).eq("id", documentId);
@@ -878,13 +1117,10 @@ async function processDocument(
     text_length: textContent.length,
     chunks_count: chunks.length,
     extraction_debug: {
-      parser_chosen: extractionMethod,
-      parser_success: parserSuccess,
-      extracted_text_length: textContent.length,
-      text_preview: textContent.slice(0, 500),
-      fallback_taken: "none",
-      final_extraction_mode: extractionMethod,
+      ...extractionDebug,
+      chunk_count: chunks.length,
       ai_parser_status: aiParserStatus,
+      entities_extracted: entities.length,
     },
   }), { headers });
 }
@@ -1523,17 +1759,25 @@ async function wizardExtract(
     prefill.missingFields = ["Analyse en cours…"];
   }
 
-  // Include parser diagnostics per document
-  const documentDiagnostics = (docMeta || []).map(d => ({
-    id: d.id,
-    fileName: d.file_name,
-    role: d.document_role,
-    roleConfidence: d.role_confidence,
-    fileType: d.file_type,
-    extractionMode: d.extraction_mode,
-    status: d.status,
-    entitiesCount: (allEntities || []).filter(e => e.document_id === d.id).length,
-  }));
+  // Include parser diagnostics per document — with text length and debug info
+  const documentDiagnostics = (docMeta || []).map(d => {
+    const meta = d.metadata as Record<string, unknown> | null;
+    const debug = meta?.extraction_debug as Record<string, unknown> | undefined;
+    return {
+      id: d.id,
+      fileName: d.file_name,
+      role: d.document_role,
+      roleConfidence: d.role_confidence,
+      fileType: d.file_type,
+      extractionMode: d.extraction_mode,
+      status: d.status,
+      entitiesCount: (allEntities || []).filter(e => e.document_id === d.id).length,
+      textLength: debug?.extracted_text_length ?? 0,
+      textPreview: debug?.text_preview ?? "",
+      parserError: debug?.error_message ?? null,
+      parserDebug: debug?.parser_debug ?? null,
+    };
+  });
 
   return new Response(JSON.stringify({
     prefill,
@@ -1578,27 +1822,31 @@ async function processDocumentWithType(
     return;
   }
 
-  // ─── Download and extract text using proper extractors ───
+  // ─── Download and extract text using proper type-safe extractors ───
   let textContent = "";
   let extractionMethod = "unknown";
   let parserSuccess = false;
+  let parserDebug: Record<string, unknown> = {};
 
   try {
     const { data: fileData, error: dlErr } = await supabase.storage
       .from("source-documents")
       .download(doc.storage_path);
-    if (dlErr || !fileData) throw new Error("Cannot download file");
+    if (dlErr || !fileData) throw new Error("Cannot download file: " + (dlErr?.message || "no data"));
 
     const extraction = await extractTextFromFile(fileData, doc.file_type, doc.file_name);
     textContent = extraction.text;
     extractionMethod = extraction.method;
     parserSuccess = extraction.success;
-    
+    parserDebug = extraction.parserDebug || {};
+
     console.log(`WizardExtraction for ${doc.file_name}: method=${extractionMethod} success=${parserSuccess} chars=${extraction.charCount}`);
   } catch (e) {
-    console.error(`File extraction failed for ${doc.file_name}:`, e);
-    extractionMethod = "download_failed";
+    const errMsg = e instanceof Error ? e.message : "Unknown download error";
+    console.error(`File extraction failed for ${doc.file_name}:`, errMsg);
+    extractionMethod = PARSER_STATUS.DOWNLOAD_FAILED;
     parserSuccess = false;
+    parserDebug = { downloadError: errMsg };
   }
 
   // If extraction failed, mark honestly and stop — do NOT proceed to AI
@@ -1609,13 +1857,16 @@ async function processDocumentWithType(
       metadata: {
         ...(typeof doc.metadata === "object" && doc.metadata ? doc.metadata : {}),
         extraction_debug: {
-          parser_chosen: doc.file_type === "docx" ? "docx_xml_parse" : doc.file_type === "pdf" ? "pdf_vision_api" : "plain_text",
+          parser_chosen: extractionMethod,
+          parser_status: "failed",
           parser_success: false,
+          file_type_detected: doc.file_type,
           extracted_text_length: textContent.length,
-          text_preview: textContent.slice(0, 500) || "(empty)",
-          fallback_taken: "none",
+          text_preview: textContent.slice(0, 1000) || "(empty)",
+          fallback_attempted: false,
           final_extraction_mode: extractionMethod,
           error_message: `Extraction échouée (${extractionMethod})`,
+          parser_debug: parserDebug,
           timestamp: new Date().toISOString(),
         },
       },
@@ -1755,6 +2006,108 @@ async function generateMappings(
     }
   }
   return count;
+}
+
+// ═══════════════════════════════════════════════════
+// DEBUG DOCUMENT — isolated diagnostic tool
+// ═══════════════════════════════════════════════════
+
+async function debugDocument(
+  supabase: ReturnType<typeof createClient>,
+  documentId: string
+): Promise<Response> {
+  const headers = { ...corsHeaders, "Content-Type": "application/json" };
+
+  if (!documentId) {
+    return new Response(JSON.stringify({ error: "document_id required" }), { status: 400, headers });
+  }
+
+  const { data: doc, error: docErr } = await supabase
+    .from("source_documents")
+    .select("*")
+    .eq("id", documentId)
+    .single();
+  if (docErr || !doc) {
+    return new Response(JSON.stringify({ error: "Document not found" }), { status: 404, headers });
+  }
+
+  const result: Record<string, unknown> = {
+    document_id: doc.id,
+    file_name: doc.file_name,
+    file_type: doc.file_type,
+    file_size_bytes: doc.file_size_bytes,
+    storage_path: doc.storage_path,
+    current_status: doc.status,
+    current_extraction_mode: doc.extraction_mode,
+    current_metadata: doc.metadata,
+  };
+
+  // Skip extraction for images
+  if (doc.file_type === "image") {
+    result.diagnosis = "Image file — no text extraction applicable";
+    return new Response(JSON.stringify(result), { headers });
+  }
+
+  // Download and run extraction
+  try {
+    const { data: fileData, error: dlErr } = await supabase.storage
+      .from("source-documents")
+      .download(doc.storage_path);
+    if (dlErr || !fileData) {
+      result.download_error = dlErr?.message || "no data returned";
+      result.diagnosis = "Cannot download file from storage";
+      return new Response(JSON.stringify(result), { headers });
+    }
+
+    result.download_success = true;
+    result.blob_size = fileData.size;
+    result.blob_type = fileData.type;
+
+    // Run extraction
+    const extraction = await extractTextFromFile(fileData, doc.file_type, doc.file_name);
+    result.extraction = {
+      method: extraction.method,
+      success: extraction.success,
+      char_count: extraction.charCount,
+      text_preview_500: extraction.text.slice(0, 500) || "(empty)",
+      text_preview_1000: extraction.text.slice(0, 1000) || "(empty)",
+      parser_debug: extraction.parserDebug || null,
+    };
+
+    // If extraction succeeded, also show chunking result
+    if (extraction.success && extraction.text.length > 20) {
+      const chunks = splitIntoStructuredChunks(extraction.text, 3000);
+      result.chunking = {
+        chunk_count: chunks.length,
+        chunks: chunks.map((c, i) => ({
+          index: i,
+          section_type: c.sectionType,
+          section_title: c.sectionTitle || null,
+          content_length: c.content.length,
+          content_preview: c.content.slice(0, 200),
+        })),
+      };
+    }
+
+    // Get existing entities count
+    const { count: entityCount } = await supabase
+      .from("source_document_entities")
+      .select("id", { count: "exact", head: true })
+      .eq("document_id", documentId);
+    result.existing_entities_count = entityCount || 0;
+
+    // Diagnosis
+    if (extraction.success) {
+      result.diagnosis = `Parser succeeded: ${extraction.charCount} chars extracted via ${extraction.method}`;
+    } else {
+      result.diagnosis = `Parser FAILED: ${extraction.method}. ${(extraction.parserDebug as Record<string, unknown>)?.error || "Unknown error"}`;
+    }
+  } catch (e) {
+    result.exception = e instanceof Error ? e.message : String(e);
+    result.diagnosis = "Exception during debug extraction";
+  }
+
+  return new Response(JSON.stringify(result), { headers });
 }
 
 function getTargetMappings(

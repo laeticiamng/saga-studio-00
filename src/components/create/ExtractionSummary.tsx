@@ -13,7 +13,9 @@ export interface DocumentDiagnostic {
   status: string;
   entitiesCount: number;
   textLength?: number;
+  textPreview?: string;
   parserError?: string;
+  parserDebug?: Record<string, unknown> | null;
 }
 
 export interface ExtractionResult {
@@ -107,6 +109,34 @@ export default function ExtractionSummary({ result }: Props) {
             <p className="text-muted-foreground text-xs">
               Les fichiers n'ont pas pu être lus correctement. Vérifiez qu'il s'agit bien de documents textuels (PDF, DOCX, TXT) et non de fichiers corrompus ou protégés.
             </p>
+            {result.diagnostics?.filter(d => d.fileType !== "image" && isParserFailure(d)).map(d => (
+              <p key={d.id} className="text-xs text-destructive/80 mt-1">
+                {d.fileName}: {
+                  d.extractionMode === "doc_legacy_unsupported" ? "Format .doc ancien — convertissez en .docx" :
+                  d.extractionMode?.startsWith("docx_parse_failed") ? "DOCX illisible (structure ZIP/XML invalide)" :
+                  d.extractionMode?.startsWith("pdf_parse_failed") ? "PDF illisible par l'API Vision" :
+                  d.extractionMode === "download_failed" ? "Téléchargement échoué" :
+                  d.extractionMode === "unsupported_file_type" ? "Type de fichier non supporté" :
+                  d.extractionMode || "erreur inconnue"
+                }
+              </p>
+            ))}
+          </div>
+        )}
+
+        {/* Partial failure warning */}
+        {hasParserFailures && !allFailed && (
+          <div className="rounded-lg bg-yellow-500/10 p-3 text-sm">
+            <p className="font-medium text-yellow-600 mb-1">Certains documents n'ont pas pu être lus</p>
+            {result.diagnostics?.filter(d => d.fileType !== "image" && isParserFailure(d)).map(d => (
+              <p key={d.id} className="text-xs text-muted-foreground">
+                {d.fileName}: {
+                  d.extractionMode === "doc_legacy_unsupported" ? "Format .doc ancien — convertissez en .docx" :
+                  d.extractionMode?.startsWith("docx_parse_failed") ? "DOCX illisible" :
+                  d.extractionMode || "erreur"
+                }
+              </p>
+            ))}
           </div>
         )}
 
@@ -206,39 +236,51 @@ export default function ExtractionSummary({ result }: Props) {
             {showDiagnostics && (
               <div className="mt-2 space-y-1.5">
                 {result.diagnostics.map((d) => (
-                  <div key={d.id} className="flex items-center justify-between rounded-md bg-secondary/30 px-3 py-2 text-xs">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <FileText className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                      <span className="truncate font-medium">{d.fileName}</span>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <Badge variant="outline" className="text-[10px]">
-                        {ROLE_LABELS[d.role] || d.role}
-                      </Badge>
-                      {d.entitiesCount > 0 ? (
-                        <Badge variant="secondary" className="text-[10px]">
-                          {d.entitiesCount} entités
+                  <div key={d.id} className="rounded-md bg-secondary/30 px-3 py-2 text-xs space-y-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FileText className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                        <span className="truncate font-medium">{d.fileName}</span>
+                        <span className="text-muted-foreground uppercase text-[10px]">{d.fileType}</span>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <Badge variant="outline" className="text-[10px]">
+                          {ROLE_LABELS[d.role] || d.role}
                         </Badge>
-                      ) : d.fileType === "image" ? (
-                        <Badge variant="secondary" className="text-[10px]">Image</Badge>
-                      ) : (
-                        <Badge variant="destructive" className="text-[10px]">
-                          {d.extractionMode?.includes("failed") || d.extractionMode?.includes("error")
-                            ? "Lecture échouée"
-                            : "0 entités"}
-                        </Badge>
-                      )}
-                      {d.textLength !== undefined && d.textLength > 0 && (
-                        <span className="text-muted-foreground text-[10px]">
-                          {d.textLength} chars
-                        </span>
-                      )}
-                      {d.extractionMode && (
-                        <span className="text-muted-foreground text-[10px]">
-                          {d.extractionMode.length > 30 ? d.extractionMode.slice(0, 30) + "…" : d.extractionMode}
-                        </span>
-                      )}
+                        {d.entitiesCount > 0 ? (
+                          <Badge variant="secondary" className="text-[10px]">
+                            {d.entitiesCount} entités
+                          </Badge>
+                        ) : d.fileType === "image" ? (
+                          <Badge variant="secondary" className="text-[10px]">Image</Badge>
+                        ) : (
+                          <Badge variant="destructive" className="text-[10px]">
+                            {d.extractionMode?.includes("failed") || d.extractionMode?.includes("error") || d.extractionMode?.includes("unsupported")
+                              ? "Lecture échouée"
+                              : "0 entités"}
+                          </Badge>
+                        )}
+                        {d.textLength !== undefined && d.textLength > 0 && (
+                          <span className="text-muted-foreground text-[10px]">
+                            {d.textLength.toLocaleString()} chars
+                          </span>
+                        )}
+                      </div>
                     </div>
+                    {/* Show specific parser status */}
+                    {d.extractionMode && (
+                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground pl-5">
+                        <span className="font-mono">
+                          {d.extractionMode.length > 60 ? d.extractionMode.slice(0, 60) + "…" : d.extractionMode}
+                        </span>
+                      </div>
+                    )}
+                    {/* Show text preview for debugging */}
+                    {d.textPreview && d.textLength && d.textLength > 0 && (
+                      <div className="text-[10px] text-muted-foreground pl-5 italic truncate">
+                        {(d.textPreview as string).slice(0, 120)}…
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
