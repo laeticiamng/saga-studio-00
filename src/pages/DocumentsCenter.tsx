@@ -11,6 +11,7 @@ import {
   useAutofillRuns, useBatchUpload, useUpdateDocumentRole, useUpdateSourcePriority,
   useCanonicalConflicts, useCanonicalFields, useApproveCanonicalField,
   useInferredCompletions, useReviewInferredCompletion, useResolveConflict,
+  useReprocessDocument, useReprocessLegacyDocuments,
 } from "@/hooks/useDocuments";
 import { useProjectKnowledgeGraph } from "@/hooks/useProjectKnowledge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +24,7 @@ import { toast } from "sonner";
 import {
   FileText, Upload, CheckCircle, XCircle, AlertTriangle, Eye, Loader2, FileUp,
   BookOpen, Users, Tv, MapPin, Music, Image, Shield, Zap, GitMerge, HelpCircle,
-  Star, FileWarning, Layers, Film, Check, Brain, BarChart3,
+  Star, FileWarning, Layers, Film, Check, Brain, BarChart3, RefreshCw,
 } from "lucide-react";
 import { getSeriesProjectTitle } from "@/lib/series-helpers";
 
@@ -64,9 +65,9 @@ const PARSER_FAILURE_LABELS: Record<string, string> = {
   unsupported_file_type: "Type de fichier non supporté pour l'extraction de texte",
   download_failed: "Impossible de télécharger le fichier depuis le stockage",
   no_api_key: "Clé API manquante pour l'extraction PDF",
-  // Legacy status from old edge function version — should no longer appear after deploy
-  pdf_vision_api_error: "Ancienne version du parseur (erreur PDF Vision sur un DOCX) — re-importez le document",
-  pdf_vision_api: "Ancien mode d'extraction — re-importez pour utiliser le nouveau parseur DOCX",
+  // Legacy status from old edge function version — reprocessable with current parser
+  pdf_vision_api_error: "Ancien parseur — cliquez « Ré-analyser » pour utiliser le parseur actuel",
+  pdf_vision_api: "Ancien parseur — cliquez « Ré-analyser » pour utiliser le parseur actuel",
 };
 
 function getParserFailureMessage(extractionMode: string | null | undefined): string | null {
@@ -127,6 +128,18 @@ const ENTITY_LABELS: Record<string, string> = {
   cliffhanger: "Cliffhanger", aspect_ratio: "Ratio",
 };
 
+const LEGACY_EXTRACTION_MODES = ["pdf_vision_api_error", "pdf_vision_api", "vision_api", "pdf_vision"];
+
+function isLegacyDocument(doc: Record<string, unknown>): boolean {
+  const mode = doc.extraction_mode as string | null;
+  if (!mode) return false;
+  if (LEGACY_EXTRACTION_MODES.some(m => mode === m || mode.startsWith(m))) return true;
+  const meta = doc.metadata as Record<string, unknown> | null;
+  const debug = meta?.extraction_debug as Record<string, unknown> | undefined;
+  if (debug && !debug.parser_version) return true;
+  return false;
+}
+
 const VALID_EXTENSIONS = [
   ".pdf",".docx",".doc",".txt",".md",".markdown",".rtf",
   ".jpg",".jpeg",".png",".webp",".gif",".bmp",".tiff",
@@ -144,6 +157,8 @@ export default function DocumentsCenter() {
   const { data: documents, isLoading } = useSourceDocuments(seriesId, projectId);
   const uploadDocument = useUploadDocument();
   const batchUpload = useBatchUpload();
+  const reprocessDocument = useReprocessDocument();
+  const reprocessLegacy = useReprocessLegacyDocuments();
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
@@ -151,6 +166,30 @@ export default function DocumentsCenter() {
 
   const selectedDoc = documents?.find(d => d.id === selectedDocId) || documents?.[0];
   const effectiveProjectId = projectId || (series as Record<string, unknown>)?.project_id as string | undefined;
+
+  const legacyDocuments = documents?.filter(d => isLegacyDocument(d as Record<string, unknown>)) || [];
+  const legacyCount = legacyDocuments.length;
+
+  const handleReprocessDocument = useCallback(async (documentId: string) => {
+    try {
+      const result = await reprocessDocument.mutateAsync({ documentId });
+      toast.success(`Document ré-analysé — ${result.entities_found || 0} entités extraites`);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Erreur lors de la ré-analyse");
+    }
+  }, [reprocessDocument]);
+
+  const handleReprocessAllLegacy = useCallback(async () => {
+    try {
+      const result = await reprocessLegacy.mutateAsync({
+        projectId: effectiveProjectId,
+        seriesId,
+      });
+      toast.success(`${result.reprocessed} document(s) ré-analysé(s) avec le parseur actuel`);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Erreur lors de la migration");
+    }
+  }, [reprocessLegacy, effectiveProjectId, seriesId]);
 
   const handleFiles = useCallback(async (files: File[]) => {
     const validFiles = files.filter(f => {
@@ -220,6 +259,51 @@ export default function DocumentsCenter() {
         <h1 className="text-3xl font-bold flex items-center gap-2 mb-6">
           <FileText className="h-8 w-8 text-primary" /> Centre d'ingestion documentaire
         </h1>
+
+        {/* Legacy document migration banner */}
+        {legacyCount > 0 && (
+          <div className="mb-6 rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <RefreshCw className="h-5 w-5 text-yellow-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-medium text-yellow-700">
+                    {legacyCount} document{legacyCount > 1 ? "s" : ""} analysé{legacyCount > 1 ? "s" : ""} avec l'ancien parseur
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    Ces documents peuvent être ré-analysés automatiquement avec le parseur actuel, sans besoin de les ré-importer.
+                  </p>
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {legacyDocuments.slice(0, 5).map(d => (
+                      <Badge key={d.id} variant="outline" className="text-xs">
+                        {d.file_name as string}
+                      </Badge>
+                    ))}
+                    {legacyCount > 5 && (
+                      <Badge variant="outline" className="text-xs text-muted-foreground">
+                        +{legacyCount - 5}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <Button
+                variant="default"
+                size="sm"
+                className="shrink-0"
+                disabled={reprocessLegacy.isPending}
+                onClick={handleReprocessAllLegacy}
+              >
+                {reprocessLegacy.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-1.5" />
+                )}
+                Migrer {legacyCount > 1 ? "tous" : ""}
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Upload zone */}
         <div
@@ -301,6 +385,8 @@ export default function DocumentsCenter() {
                     doc={doc}
                     isSelected={selectedDoc?.id === doc.id}
                     onClick={() => setSelectedDocId(doc.id)}
+                    onReprocess={handleReprocessDocument}
+                    isReprocessing={reprocessDocument.isPending}
                   />
                 ))}
                 {documents?.length === 0 && !isLoading && (
@@ -312,7 +398,7 @@ export default function DocumentsCenter() {
 
               <div className="lg:col-span-2">
                 {selectedDoc ? (
-                  <DocumentDetail documentId={selectedDoc.id} seriesId={seriesId} doc={selectedDoc} />
+                  <DocumentDetail documentId={selectedDoc.id} seriesId={seriesId} doc={selectedDoc} onReprocess={handleReprocessDocument} isReprocessing={reprocessDocument.isPending} />
                 ) : (
                   <Card>
                     <CardContent className="py-12 text-center text-muted-foreground">
@@ -353,13 +439,18 @@ function DocumentCard({
   doc,
   isSelected,
   onClick,
+  onReprocess,
+  isReprocessing,
 }: {
   doc: Record<string, unknown>;
   isSelected: boolean;
   onClick: () => void;
+  onReprocess?: (documentId: string) => void;
+  isReprocessing?: boolean;
 }) {
   const updateRole = useUpdateDocumentRole();
   const updatePriority = useUpdateSourcePriority();
+  const isLegacy = isLegacyDocument(doc);
 
   return (
     <Card
@@ -389,6 +480,25 @@ function DocumentCard({
             <XCircle className="h-3 w-3 shrink-0" />
             {getParserFailureMessage(doc.extraction_mode as string)}
           </p>
+        )}
+        {/* Reprocess button for legacy documents */}
+        {isLegacy && onReprocess && (
+          <div onClick={e => e.stopPropagation()}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-6 text-xs w-full border-yellow-500/30 text-yellow-700 hover:bg-yellow-500/10"
+              disabled={isReprocessing}
+              onClick={() => onReprocess(doc.id as string)}
+            >
+              {isReprocessing ? (
+                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+              ) : (
+                <RefreshCw className="h-3 w-3 mr-1" />
+              )}
+              Ré-analyser avec le parseur actuel
+            </Button>
+          </div>
         )}
 
         <div className="flex flex-wrap gap-1.5">
@@ -441,14 +551,19 @@ function DocumentDetail({
   documentId,
   seriesId,
   doc,
+  onReprocess,
+  isReprocessing,
 }: {
   documentId: string;
   seriesId?: string;
   doc: Record<string, unknown>;
+  onReprocess?: (documentId: string) => void;
+  isReprocessing?: boolean;
 }) {
   const { data: entities, isLoading } = useDocumentEntities(documentId);
   const { data: autofillRuns } = useAutofillRuns(documentId);
   const updateMapping = useUpdateMapping();
+  const isLegacy = isLegacyDocument(doc);
 
   type DocumentEntity = NonNullable<typeof entities>[number];
   const entitiesByType: Record<string, DocumentEntity[]> = {};
@@ -524,6 +639,22 @@ function DocumentDetail({
                     Ouvrez le fichier dans Word ou LibreOffice et enregistrez-le au format .docx avant de le ré-importer.
                   </p>
                 )}
+                {isLegacy && onReprocess && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-2 h-7 text-xs border-yellow-500/30 text-yellow-700 hover:bg-yellow-500/10"
+                    disabled={isReprocessing}
+                    onClick={() => onReprocess(documentId)}
+                  >
+                    {isReprocessing ? (
+                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                    ) : (
+                      <RefreshCw className="h-3 w-3 mr-1" />
+                    )}
+                    Ré-analyser avec le parseur actuel
+                  </Button>
+                )}
               </div>
             </div>
           )}
@@ -574,6 +705,44 @@ function DocumentDetail({
           })()}
         </CardContent>
       </Card>
+
+      {/* Previous run history */}
+      {(() => {
+        const meta = doc.metadata as Record<string, unknown> | null;
+        const previousRuns = (meta?.previous_runs || []) as Array<Record<string, unknown>>;
+        if (previousRuns.length === 0) return null;
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm flex items-center gap-2 text-muted-foreground">
+                <Eye className="h-4 w-4" /> Historique des analyses ({previousRuns.length} exécution{previousRuns.length > 1 ? "s" : ""} précédente{previousRuns.length > 1 ? "s" : ""})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-1.5">
+                {previousRuns.map((run, i) => (
+                  <div key={i} className="rounded-md bg-secondary/30 px-3 py-2 text-xs flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Badge variant={run.parser_success ? "secondary" : "destructive"} className="text-[10px]">
+                        {run.parser_success ? "Succès" : "Échec"}
+                      </Badge>
+                      <span className="text-muted-foreground font-mono">
+                        {String(run.parser_chosen || run.old_extraction_mode || "—")}
+                      </span>
+                      {run.parser_version && (
+                        <span className="text-muted-foreground">v{String(run.parser_version)}</span>
+                      )}
+                    </div>
+                    <span className="text-muted-foreground">
+                      {run.archived_at ? new Date(String(run.archived_at)).toLocaleDateString("fr-FR") : "—"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Autofill summary */}
       {latestRun && (

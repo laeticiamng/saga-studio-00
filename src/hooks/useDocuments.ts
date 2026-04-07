@@ -157,6 +157,66 @@ export function useBatchUpload() {
   });
 }
 
+// ——— Reprocess single document ———
+
+export function useReprocessDocument() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ documentId }: { documentId: string }) => {
+      const { data, error } = await supabase.functions.invoke("import-document", {
+        body: { action: "reprocess", document_id: documentId },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["source_documents"] });
+      queryClient.invalidateQueries({ queryKey: ["document_entities"] });
+      queryClient.invalidateQueries({ queryKey: ["document_chunks"] });
+      queryClient.invalidateQueries({ queryKey: ["autofill_runs"] });
+      queryClient.invalidateQueries({ queryKey: ["canonical_fields"] });
+      queryClient.invalidateQueries({ queryKey: ["canonical_conflicts"] });
+    },
+  });
+}
+
+// ——— Reprocess all legacy documents ———
+
+export function useReprocessLegacyDocuments() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      projectId,
+      seriesId,
+      documentIds,
+    }: {
+      projectId?: string;
+      seriesId?: string;
+      documentIds?: string[];
+    }) => {
+      const { data, error } = await supabase.functions.invoke("import-document", {
+        body: {
+          action: "reprocess_legacy",
+          project_id: projectId || null,
+          series_id: seriesId || null,
+          document_ids: documentIds || null,
+        },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["source_documents"] });
+      queryClient.invalidateQueries({ queryKey: ["document_entities"] });
+      queryClient.invalidateQueries({ queryKey: ["document_chunks"] });
+      queryClient.invalidateQueries({ queryKey: ["autofill_runs"] });
+      queryClient.invalidateQueries({ queryKey: ["canonical_fields"] });
+      queryClient.invalidateQueries({ queryKey: ["canonical_conflicts"] });
+      queryClient.invalidateQueries({ queryKey: ["inferred_completions"] });
+    },
+  });
+}
+
 // ——— Mapping actions ———
 
 export function useUpdateMapping() {

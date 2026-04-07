@@ -8,6 +8,29 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Parser version — increment when extraction pipeline changes materially
+const PARSER_VERSION = "2.0.0";
+
+// Legacy extraction modes from older parser versions
+const LEGACY_EXTRACTION_MODES = [
+  "pdf_vision_api_error",
+  "pdf_vision_api",
+  "vision_api",
+  "pdf_vision",
+] as const;
+
+function isLegacyDocument(doc: Record<string, unknown>): boolean {
+  const mode = doc.extraction_mode as string | null;
+  if (!mode) return false;
+  // Explicit legacy modes from old parser
+  if (LEGACY_EXTRACTION_MODES.some(m => mode === m || mode.startsWith(m))) return true;
+  // Documents without parser_version in metadata were processed by old parser
+  const meta = doc.metadata as Record<string, unknown> | null;
+  const debug = meta?.extraction_debug as Record<string, unknown> | undefined;
+  if (debug && !debug.parser_version) return true;
+  return false;
+}
+
 const DOCUMENT_ROLES = [
   "script_master","episode_script","film_script","music_video_concept",
   "series_bible","short_pitch","producer_bible","one_pager",
@@ -46,6 +69,8 @@ serve(async (req) => {
     if (action === "detect_missing") return await detectMissingInfo(supabase, body.project_id, user.id);
     if (action === "retrieve_context") return await retrieveContext(supabase, body);
     if (action === "extract" && body.document_id) return await processDocument(supabase, body.document_id, user.id);
+    if (action === "reprocess" && body.document_id) return await reprocessDocument(supabase, body.document_id, user.id);
+    if (action === "reprocess_legacy") return await reprocessLegacyDocuments(supabase, body, user.id);
     if (action === "wizard_extract") return await wizardExtract(supabase, body, user.id);
     if (action === "debug_document") return await debugDocument(supabase, body.document_id);
 
@@ -972,6 +997,7 @@ async function processDocument(
 
   // Build comprehensive extraction_debug for storage
   const extractionDebug = {
+    parser_version: PARSER_VERSION,
     parser_chosen: extractionMethod,
     parser_status: parserSuccess ? "succeeded" : "failed",
     parser_success: parserSuccess,
@@ -1925,6 +1951,7 @@ async function processDocumentWithType(
       metadata: {
         ...(typeof doc.metadata === "object" && doc.metadata ? doc.metadata : {}),
         extraction_debug: {
+          parser_version: PARSER_VERSION,
           parser_chosen: extractionMethod,
           parser_status: "failed",
           parser_success: false,
@@ -2074,6 +2101,172 @@ async function generateMappings(
     }
   }
   return count;
+}
+
+// ═══════════════════════════════════════════════════
+// REPROCESS DOCUMENT — clear old results and re-run pipeline
+// ═══════════════════════════════════════════════════
+
+async function reprocessDocument(
+  supabase: ReturnType<typeof createClient>,
+  documentId: string,
+  userId: string
+): Promise<Response> {
+  const headers = { ...corsHeaders, "Content-Type": "application/json" };
+
+  const { data: doc, error: docErr } = await supabase
+    .from("source_documents")
+    .select("*")
+    .eq("id", documentId)
+    .single();
+  if (docErr || !doc) {
+    return new Response(JSON.stringify({ error: "Document not found" }), { status: 404, headers });
+  }
+
+  // Verify storage_path exists — cannot reprocess without stored file
+  if (!doc.storage_path) {
+    return new Response(JSON.stringify({
+      error: "No stored file found. Please re-upload this document.",
+      reprocess_possible: false,
+    }), { status: 400, headers });
+  }
+
+  // Archive old extraction results in metadata before clearing
+  const oldMeta = (typeof doc.metadata === "object" && doc.metadata ? doc.metadata : {}) as Record<string, unknown>;
+  const previousRuns = (oldMeta.previous_runs || []) as Array<Record<string, unknown>>;
+  if (oldMeta.extraction_debug) {
+    previousRuns.push({
+      ...(oldMeta.extraction_debug as Record<string, unknown>),
+      archived_at: new Date().toISOString(),
+      old_status: doc.status,
+      old_extraction_mode: doc.extraction_mode,
+      old_version: doc.version,
+    });
+  }
+
+  // Clear old extraction data: entities, chunks, mappings (cascade), autofill runs
+  await supabase.from("source_document_entities").delete().eq("document_id", documentId);
+  await supabase.from("source_document_chunks").delete().eq("document_id", documentId);
+  await supabase.from("source_document_autofill_runs").delete().eq("document_id", documentId);
+
+  // Clear canonical fields sourced from this document
+  if (doc.project_id) {
+    await supabase.from("canonical_fields").delete()
+      .eq("project_id", doc.project_id)
+      .eq("source_document_id", documentId);
+  }
+
+  // Increment version, reset status, store run history
+  const newVersion = (doc.version || 1) + 1;
+  await supabase.from("source_documents").update({
+    version: newVersion,
+    status: "uploaded",
+    extraction_mode: null,
+    metadata: { ...oldMeta, previous_runs: previousRuns, extraction_debug: null },
+  }).eq("id", documentId);
+
+  // Log the reprocess action
+  await supabase.from("audit_logs").insert({
+    user_id: userId,
+    action: "document_reprocessed",
+    entity_type: "source_document",
+    entity_id: documentId,
+    details: {
+      file_name: doc.file_name,
+      old_version: doc.version,
+      new_version: newVersion,
+      old_extraction_mode: doc.extraction_mode,
+      old_status: doc.status,
+      reason: "legacy_parser_migration",
+    },
+  });
+
+  // Re-run the full processing pipeline
+  const result = await processDocument(supabase, documentId, userId);
+  const resultData = await result.json();
+
+  return new Response(JSON.stringify({
+    reprocessed: true,
+    document_id: documentId,
+    new_version: newVersion,
+    previous_runs_count: previousRuns.length,
+    ...resultData,
+  }), { headers });
+}
+
+// ═══════════════════════════════════════════════════
+// REPROCESS LEGACY DOCUMENTS — bulk migration
+// ═══════════════════════════════════════════════════
+
+async function reprocessLegacyDocuments(
+  supabase: ReturnType<typeof createClient>,
+  body: { project_id?: string; series_id?: string; document_ids?: string[] },
+  userId: string
+): Promise<Response> {
+  const headers = { ...corsHeaders, "Content-Type": "application/json" };
+  const { project_id, series_id, document_ids } = body;
+
+  // Find legacy documents
+  let query = supabase.from("source_documents").select("*");
+  if (document_ids?.length) {
+    query = query.in("id", document_ids);
+  } else if (project_id) {
+    query = query.eq("project_id", project_id);
+  } else if (series_id) {
+    query = query.eq("series_id", series_id);
+  } else {
+    return new Response(JSON.stringify({ error: "project_id, series_id, or document_ids required" }), { status: 400, headers });
+  }
+
+  const { data: docs, error } = await query;
+  if (error) throw error;
+
+  // Filter to only legacy documents (skip already-current ones)
+  const legacyDocs = (docs || []).filter(d => isLegacyDocument(d as Record<string, unknown>));
+
+  if (legacyDocs.length === 0) {
+    return new Response(JSON.stringify({
+      reprocessed: 0,
+      skipped: (docs || []).length,
+      message: "No legacy documents found — all documents use the current parser.",
+    }), { headers });
+  }
+
+  let reprocessed = 0;
+  let failed = 0;
+  const results: Array<{ id: string; file_name: string; success: boolean; error?: string }> = [];
+
+  for (const doc of legacyDocs) {
+    try {
+      const result = await reprocessDocument(supabase, doc.id, userId);
+      const data = await result.json();
+      const success = data.reprocessed === true;
+      results.push({ id: doc.id, file_name: doc.file_name, success });
+      if (success) reprocessed++;
+      else failed++;
+    } catch (e) {
+      const errMsg = e instanceof Error ? e.message : "Unknown error";
+      results.push({ id: doc.id, file_name: doc.file_name, success: false, error: errMsg });
+      failed++;
+    }
+  }
+
+  // Re-run conflict detection after bulk reprocess
+  if (project_id && reprocessed > 0) {
+    try {
+      await detectConflicts(supabase, project_id, userId);
+    } catch (e) {
+      console.error("Post-reprocess conflict detection error:", e);
+    }
+  }
+
+  return new Response(JSON.stringify({
+    reprocessed,
+    failed,
+    skipped: (docs || []).length - legacyDocs.length,
+    total_legacy: legacyDocs.length,
+    results,
+  }), { headers });
 }
 
 // ═══════════════════════════════════════════════════
