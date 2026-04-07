@@ -248,6 +248,29 @@ export default function Settings() {
     toast({ title: "Copié", description: "Secret copié dans le presse-papier." });
   };
 
+  const handleDeleteAccount = async () => {
+    if (!user || deleteAccountEmail !== user.email) {
+      toast({ title: "Erreur", description: "L'email ne correspond pas.", variant: "destructive" });
+      return;
+    }
+    setDeletingAccount(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-account");
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      await supabase.auth.signOut();
+      navigate("/");
+      toast({ title: "Compte supprimé", description: "Votre compte et toutes vos données ont été définitivement supprimés." });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erreur inattendue";
+      toast({ title: "Erreur", description: msg, variant: "destructive" });
+    } finally {
+      setDeletingAccount(false);
+      setDeleteAccountOpen(false);
+      setDeleteAccountEmail("");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
