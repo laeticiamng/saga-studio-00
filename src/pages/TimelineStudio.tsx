@@ -24,7 +24,7 @@ import { DiagnosticsPanel } from "@/components/studio/DiagnosticsPanel";
 import { CostEstimationCard } from "@/components/studio/CostEstimationCard";
 import {
   Loader2, Film, Layers, Play, CheckCircle, Lock, Unlock,
-  Plus, Download, Palette, Shield, Eye, Activity, DollarSign,
+  Plus, Download, Palette, Shield, Eye, Activity, DollarSign, Wand2,
 } from "lucide-react";
 
 export default function TimelineStudio() {
@@ -99,6 +99,29 @@ export default function TimelineStudio() {
     }
   };
 
+  const [assembling, setAssembling] = useState(false);
+  const handleAssemble = async () => {
+    if (!id) return;
+    setAssembling(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("assemble-rough-cut", {
+        body: { project_id: id, timeline_id: selectedTimelineId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: "✅ Assemblage terminé", description: `${data.clips_placed} clips placés` });
+      qc.invalidateQueries({ queryKey: ["timelines", id] });
+      qc.invalidateQueries({ queryKey: ["timeline_clips"] });
+      qc.invalidateQueries({ queryKey: ["timeline_tracks"] });
+      qc.invalidateQueries({ queryKey: ["review_gates", id] });
+      if (data.timeline_id) setSelectedTimelineId(data.timeline_id);
+    } catch (err: unknown) {
+      toast({ title: "Erreur d'assemblage", description: err instanceof Error ? err.message : "Erreur", variant: "destructive" });
+    } finally {
+      setAssembling(false);
+    }
+  };
+
   if (projectLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -159,6 +182,15 @@ export default function TimelineStudio() {
             >
               <Plus className="h-4 w-4 mr-1" />
               {timelines?.length ? "Nouvelle version" : "Créer timeline"}
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleAssemble}
+              disabled={assembling}
+            >
+              {assembling ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Wand2 className="h-4 w-4 mr-1" />}
+              Assembler
             </Button>
           </div>
         </div>

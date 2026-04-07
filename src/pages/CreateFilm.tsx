@@ -134,7 +134,7 @@ export default function CreateFilm() {
         <div className="mb-10">
           <h1 className="text-3xl md:text-4xl font-bold mb-3">Générer un film</h1>
           <p className="text-muted-foreground text-base md:text-lg max-w-lg">
-            Décrivez votre histoire et l'IA lui donnera vie en quelques minutes. Court-métrage de 1 à 6 minutes.
+            Décrivez votre histoire et l'IA lui donnera vie. Court ou long-métrage.
           </p>
         </div>
 
@@ -236,9 +236,12 @@ export default function CreateFilm() {
                   <SelectItem value="60">1 minute</SelectItem>
                   <SelectItem value="120">2 minutes</SelectItem>
                   <SelectItem value="180">3 minutes</SelectItem>
-                  <SelectItem value="240">4 minutes</SelectItem>
                   <SelectItem value="300">5 minutes</SelectItem>
-                  <SelectItem value="360">6 minutes</SelectItem>
+                  <SelectItem value="600">10 minutes</SelectItem>
+                  <SelectItem value="1200">20 minutes</SelectItem>
+                  <SelectItem value="1800">30 minutes</SelectItem>
+                  <SelectItem value="3600">60 minutes</SelectItem>
+                  <SelectItem value="5400">90 minutes</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">Plus la durée est longue, plus le nombre de scènes et le coût en crédits augmentent.</p>

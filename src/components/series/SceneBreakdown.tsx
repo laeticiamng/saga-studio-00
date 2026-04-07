@@ -1,11 +1,23 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { useScenes } from "@/hooks/useScenes";
-import { Loader2, MapPin, Clock, Palette, AlertTriangle } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useScenes, useUpdateScene } from "@/hooks/useScenes";
+import { useContinuityGroups } from "@/hooks/useContinuityGroups";
+import { Loader2, MapPin, Clock, Palette, AlertTriangle, Link2 } from "lucide-react";
 
-export function SceneBreakdown({ episodeId, durationTargetMin }: { episodeId: string; durationTargetMin?: number }) {
+export function SceneBreakdown({
+  episodeId,
+  durationTargetMin,
+  projectId,
+}: {
+  episodeId: string;
+  durationTargetMin?: number;
+  projectId?: string;
+}) {
   const { data: scenes, isLoading } = useScenes(episodeId);
+  const { data: groups } = useContinuityGroups(projectId);
+  const updateScene = useUpdateScene();
 
   if (isLoading) {
     return <Loader2 className="h-5 w-5 animate-spin mx-auto my-4" />;
@@ -25,6 +37,10 @@ export function SceneBreakdown({ episodeId, durationTargetMin }: { episodeId: st
   const durationProgress = Math.min(100, (totalDurationMin / targetMin) * 100);
   const isDurationShort = totalDurationMin < targetMin * 0.9;
   const isDurationOver = totalDurationMin > targetMin * 1.1;
+
+  const handleGroupChange = (sceneId: string, groupId: string) => {
+    updateScene.mutate({ id: sceneId, continuity_group_id: groupId === "none" ? null : groupId });
+  };
 
   return (
     <div className="space-y-4">
@@ -57,50 +73,79 @@ export function SceneBreakdown({ episodeId, durationTargetMin }: { episodeId: st
       </Card>
 
       {/* Scene list */}
-      {scenes.map((scene) => (
-        <Card key={scene.id}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <span className="text-muted-foreground">#{scene.idx}</span>
-              {scene.title || "Scène sans titre"}
-              {scene.duration_target_sec && (
-                <Badge variant="outline" className="text-xs ml-auto">
-                  {scene.duration_target_sec >= 60
-                    ? `${(scene.duration_target_sec / 60).toFixed(1)} min`
-                    : `${scene.duration_target_sec}s`}
-                </Badge>
+      {scenes.map((scene) => {
+        const currentGroup = groups?.find((g) => g.id === scene.continuity_group_id);
+        return (
+          <Card key={scene.id}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <span className="text-muted-foreground">#{scene.idx}</span>
+                {scene.title || "Scène sans titre"}
+                {scene.duration_target_sec && (
+                  <Badge variant="outline" className="text-xs ml-auto">
+                    {scene.duration_target_sec >= 60
+                      ? `${(scene.duration_target_sec / 60).toFixed(1)} min`
+                      : `${scene.duration_target_sec}s`}
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 space-y-2">
+              {scene.description && (
+                <p className="text-sm text-muted-foreground">{scene.description}</p>
               )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0 space-y-2">
-            {scene.description && (
-              <p className="text-sm text-muted-foreground">{scene.description}</p>
-            )}
-            <div className="flex flex-wrap gap-2">
-              {scene.location && (
-                <Badge variant="outline" className="text-xs">
-                  <MapPin className="h-3 w-3 mr-1" />{scene.location}
-                </Badge>
+              <div className="flex flex-wrap gap-2">
+                {scene.location && (
+                  <Badge variant="outline" className="text-xs">
+                    <MapPin className="h-3 w-3 mr-1" />{scene.location}
+                  </Badge>
+                )}
+                {scene.time_of_day && (
+                  <Badge variant="outline" className="text-xs">
+                    <Clock className="h-3 w-3 mr-1" />{scene.time_of_day}
+                  </Badge>
+                )}
+                {scene.mood && (
+                  <Badge variant="outline" className="text-xs">
+                    <Palette className="h-3 w-3 mr-1" />{scene.mood}
+                  </Badge>
+                )}
+                {scene.shot_count > 0 && (
+                  <Badge variant="secondary" className="text-xs">
+                    {scene.shot_count} plans
+                  </Badge>
+                )}
+              </div>
+
+              {/* Continuity group assignment */}
+              {groups && groups.length > 0 && (
+                <div className="flex items-center gap-2 pt-1">
+                  <Link2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <Select
+                    value={scene.continuity_group_id || "none"}
+                    onValueChange={(v) => handleGroupChange(scene.id, v)}
+                  >
+                    <SelectTrigger className="h-7 text-xs w-[180px]">
+                      <SelectValue placeholder="Groupe de continuité" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Aucun groupe</SelectItem>
+                      {groups.map((g) => (
+                        <SelectItem key={g.id} value={g.id}>
+                          {g.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {currentGroup && (
+                    <span className="text-[10px] text-muted-foreground">{currentGroup.description}</span>
+                  )}
+                </div>
               )}
-              {scene.time_of_day && (
-                <Badge variant="outline" className="text-xs">
-                  <Clock className="h-3 w-3 mr-1" />{scene.time_of_day}
-                </Badge>
-              )}
-              {scene.mood && (
-                <Badge variant="outline" className="text-xs">
-                  <Palette className="h-3 w-3 mr-1" />{scene.mood}
-                </Badge>
-              )}
-              {scene.shot_count > 0 && (
-                <Badge variant="secondary" className="text-xs">
-                  {scene.shot_count} plans
-                </Badge>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 }

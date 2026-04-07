@@ -8,7 +8,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Film, Music, Plus, Clock, CheckCircle, AlertCircle, Loader2, Tv } from "lucide-react";
+import { Film, Music, Plus, Clock, CheckCircle, AlertCircle, Loader2, Tv, Clapperboard } from "lucide-react";
 import { OnboardingTour } from "@/components/OnboardingTour";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useFeatureFlag } from "@/hooks/useFeatureFlag";
@@ -72,15 +72,15 @@ export default function Dashboard() {
             <h1 className="text-3xl font-bold">Mes projets</h1>
             <p className="text-muted-foreground mt-1 text-sm">Retrouvez et gérez toutes vos créations vidéo</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
             <Button variant="hero" size="sm" asChild>
-              <Link to="/create/clip" className="gap-2">
-                <Music className="h-4 w-4" /> Nouveau clip
+              <Link to="/create" className="gap-2">
+                <Plus className="h-4 w-4" /> Nouveau projet
               </Link>
             </Button>
             <Button variant="glass" size="sm" asChild>
-              <Link to="/create/film" className="gap-2">
-                <Film className="h-4 w-4" /> Nouveau film
+              <Link to="/create/clip" className="gap-2">
+                <Music className="h-4 w-4" /> Clip rapide
               </Link>
             </Button>
             {seriesEnabled && (
@@ -149,8 +149,8 @@ export default function Dashboard() {
                 ? `/series/${project._seriesId}`
                 : `/project/${project.id}`;
               return (
-              <Link key={project.id} to={linkTo}>
-                <Card className="border-border/50 bg-card/60 hover:bg-card/80 transition-all cursor-pointer group h-full">
+              <Card key={project.id} className="border-border/50 bg-card/60 hover:bg-card/80 transition-all h-full">
+                <Link to={linkTo}>
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <Badge variant="outline" className="text-xs">
@@ -166,14 +166,21 @@ export default function Dashboard() {
                       {project.title}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="pb-2">
                     <div className="flex items-center justify-between text-sm text-muted-foreground">
                       <span>{styleLabels[project.style_preset || ""] || project.style_preset || "Pas de style"}</span>
                       <span>{project.duration_sec ? `${Math.round(project.duration_sec / 60)} min` : "—"}</span>
                     </div>
                   </CardContent>
-                </Card>
-              </Link>
+                </Link>
+                <div className="px-6 pb-4 pt-0">
+                  <Button variant="outline" size="sm" className="w-full gap-1.5" asChild>
+                    <Link to={`/project/${project.id}/studio`}>
+                      <Clapperboard className="h-3.5 w-3.5" /> Ouvrir le Studio
+                    </Link>
+                  </Button>
+                </div>
+              </Card>
               );
             })}
           </div>
