@@ -441,7 +441,24 @@ function DocumentDetail({
             {Number(doc.role_confidence) > 0 && (
               <Badge variant="secondary">Confiance: {(Number(doc.role_confidence) * 100).toFixed(0)}%</Badge>
             )}
+            {doc.extraction_mode && (
+              <Badge variant="outline" className="text-xs">
+                Extraction: {doc.extraction_mode as string}
+              </Badge>
+            )}
           </div>
+          {/* Parser status warning */}
+          {(doc.extraction_mode as string)?.includes("failed") && (
+            <div className="rounded-lg bg-destructive/10 p-3 text-sm mb-3 flex items-start gap-2">
+              <XCircle className="h-4 w-4 text-destructive flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-destructive">Extraction du texte échouée</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Le contenu de ce fichier n'a pas pu être lu. Les entités affichées comme "manquantes" ne reflètent pas le contenu réel du document.
+                </p>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -450,25 +467,40 @@ function DocumentDetail({
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <Eye className="h-5 w-5" /> Résumé de l'extraction
+              {latestRun.status === "failed" ? (
+                <XCircle className="h-5 w-5 text-destructive" />
+              ) : latestRun.total_fields === 0 ? (
+                <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              ) : (
+                <Eye className="h-5 w-5" />
+              )}
+              Résumé de l'extraction
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-4 mb-3">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-green-600">{latestRun.auto_filled}</p>
-                <p className="text-xs text-muted-foreground">Pré-remplis</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-yellow-600">{latestRun.needs_review}</p>
-                <p className="text-xs text-muted-foreground">À valider</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold">{latestRun.total_fields}</p>
-                <p className="text-xs text-muted-foreground">Total détecté</p>
-              </div>
-            </div>
-            <Progress value={(latestRun.auto_filled! / Math.max(1, latestRun.total_fields!)) * 100} className="h-2" />
+            {latestRun.status === "failed" ? (
+              <p className="text-sm text-destructive">L'analyse de ce document a échoué. Vérifiez que le fichier est lisible.</p>
+            ) : latestRun.total_fields === 0 ? (
+              <p className="text-sm text-muted-foreground">Aucune entité extraite. Le document est peut-être trop court, protégé ou dans un format non supporté.</p>
+            ) : (
+              <>
+                <div className="grid grid-cols-3 gap-4 mb-3">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-green-600">{latestRun.auto_filled}</p>
+                    <p className="text-xs text-muted-foreground">Pré-remplis</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-yellow-600">{latestRun.needs_review}</p>
+                    <p className="text-xs text-muted-foreground">À valider</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold">{latestRun.total_fields}</p>
+                    <p className="text-xs text-muted-foreground">Total détecté</p>
+                  </div>
+                </div>
+                <Progress value={(latestRun.auto_filled! / Math.max(1, latestRun.total_fields!)) * 100} className="h-2" />
+              </>
+            )}
           </CardContent>
         </Card>
       )}
