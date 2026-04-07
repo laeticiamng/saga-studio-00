@@ -293,6 +293,9 @@ export default function DocumentsCenter() {
 
           {effectiveProjectId && (
             <>
+              <TabsContent value="knowledge">
+                <KnowledgePanel projectId={effectiveProjectId} />
+              </TabsContent>
               <TabsContent value="conflicts">
                 <ConflictsPanel projectId={effectiveProjectId} />
               </TabsContent>
