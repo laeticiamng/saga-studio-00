@@ -45,6 +45,12 @@ export default function ProjectView() {
   const [pipelineRunning, setPipelineRunning] = useState(false);
   const [enriching, setEnriching] = useState(false);
   const [creditsError, setCreditsError] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editSynopsis, setEditSynopsis] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
 
   const { data: project, isLoading } = useQuery({
     queryKey: ["project", id],
