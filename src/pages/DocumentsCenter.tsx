@@ -12,6 +12,7 @@ import {
   useCanonicalConflicts, useCanonicalFields, useApproveCanonicalField,
   useInferredCompletions, useReviewInferredCompletion, useResolveConflict,
 } from "@/hooks/useDocuments";
+import { useProjectKnowledgeGraph } from "@/hooks/useProjectKnowledge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,7 @@ import { toast } from "sonner";
 import {
   FileText, Upload, CheckCircle, XCircle, AlertTriangle, Eye, Loader2, FileUp,
   BookOpen, Users, Tv, MapPin, Music, Image, Shield, Zap, GitMerge, HelpCircle,
-  Star, FileWarning, Layers, Film, Check,
+  Star, FileWarning, Layers, Film, Check, Brain, BarChart3,
 } from "lucide-react";
 import { getSeriesProjectTitle } from "@/lib/series-helpers";
 
