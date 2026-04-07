@@ -1,34 +1,24 @@
 
-# Production Studio — Master Plan
+# Frontend & UX Alignment Plan
 
-## Phase 1–6: Core Platform ✅
-## Phase 7: Production Robustness, QC & Cost Governance ✅
-## Phase 8: Platform Governance Layer ✅
+## Phase 1 — Foundation (this message)
+1. **Homepage Repositioning**: Rewrite Hero, Features, HowItWorks, and CTA to reflect the full AI studio (series, films, music videos, timeline, review gates, finishing, export)
+2. **Global Navigation Redesign**: Rebuild Navbar with grouped navigation (Create, Projects, Studio, Reviews, Exports, Diagnostics, Governance)
+3. **Design System Alignment**: Add missing state badge variants (generating, awaiting_review, approved, rejected, blocked, exporting, failed, delivered) and standardize labels
+4. **Legacy Cleanup**: Remove/redirect old create pages (CreateClip, CreateFilm, CreateMusicVideo) in favor of unified CreateProject wizard
+5. **Unified Create Flow**: Polish CreateProject into a step-by-step wizard with progress bar, project type selection, brief, format, tone, and review
 
-## Phase 9: Anti-Aberrations Validation Layer ✅
+## Phase 2 — Studio & Dashboard (next message)
+- Project dashboard rebuild with lifecycle rail, action cards, and status widgets
+- Timeline Studio UX upgrade with scene navigator and inspector panels
+- Review/Approval UX rebuild
+- Finishing panel polish
+- Export center UX
 
-### Database:
-- **aberration_categories** — 33 seeded categories across 9 groups (anatomy, object, temporal, physics, semantic, identity, framing, text_graphic, audio)
-- **asset_validations** — Per-asset validation with multi-dimensional scores, blocking flags, pass results
-- **anomaly_events** — Individual anomaly detections linked to validations with severity, confidence, explanation, suggested_fix
-- **repair_attempts** — Tracks repair actions with attempt numbering and result status
-- **repair_policies** — 9 seeded default repair actions per category with max retries and escalation
-- **project_validation_reports** — Project-level sweep results with premium readiness score
+## Phase 3 — Polish (follow-up)
+- Responsive/mobile validation
+- Empty/loading/error states for all modules
+- Onboarding tooltips for advanced features
+- Diagnostics & Governance UX humanization
 
-### Engine:
-- **`src/lib/aberration-taxonomy.ts`** — Type-safe taxonomy, severity weights, score computation, status derivation
-- **`src/lib/validation-engine.ts`** — Multi-pass validation orchestrator, requestValidation(), isAssetCleared(), getProjectAnomalySummary()
-- **`src/lib/repair-router.ts`** — Repair decision logic with retry tracking and escalation
-
-### Edge Function:
-- **`supabase/functions/validate-asset/index.ts`** — AI-powered validation using Gemini multimodal via Lovable AI. Analyzes images against prompts/scripts, produces structured scores and anomaly events via tool calling.
-
-### Hooks:
-- useAssetValidations, useAssetValidation, useAnomalyEvents, useProjectAnomalyEvents
-- useRepairAttempts, useProjectValidationReport, useAberrationCategories, useRequestValidation
-
-### UI:
-- **ValidationBadge** — Status badge (pending/running/passed/failed/blocked)
-- **AnomalyDetailsDrawer** — Slide-out panel with anomaly list, severity, repair buttons
-- **ProjectValidationPanel** — Project-level summary: pass/fail/blocked counts, premium readiness score bar
-- Wired as "Anti-Aberrations" tab in TimelineStudio
+Each phase delivers a usable, coherent increment. Phase 1 tackles the most visible user-facing gaps.
