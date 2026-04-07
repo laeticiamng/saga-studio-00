@@ -17,11 +17,6 @@ const CTA = () => {
         transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
         className="absolute top-1/2 left-1/4 w-64 sm:w-96 h-64 sm:h-96 bg-primary/15 rounded-full blur-[100px] motion-reduce:hidden"
       />
-      <motion.div
-        animate={{ scale: [1.1, 1, 1.1], opacity: [0.08, 0.16, 0.08] }}
-        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 3 }}
-        className="absolute top-1/4 right-1/4 w-64 sm:w-96 h-64 sm:h-96 bg-accent/15 rounded-full blur-[100px] motion-reduce:hidden"
-      />
 
       <div className="container mx-auto relative z-10">
         <AnimatedSection variant="blurIn">
@@ -34,17 +29,17 @@ const CTA = () => {
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.04] backdrop-blur-xl border border-white/[0.08] mb-8 shadow-[0_2px_16px_rgba(0,0,0,0.15)]"
             >
               <Sparkles className="w-4 h-4 text-primary" />
-              <span className="text-sm text-muted-foreground">Votre première vidéo offerte — sans engagement</span>
+              <span className="text-sm text-muted-foreground">Votre premier projet offert — sans engagement</span>
             </motion.div>
 
             <h2 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-4 sm:mb-6">
-              Prêt à donner vie
+              Prêt à produire
               <br />
-              <span className="text-primary">à votre projet ?</span>
+              <span className="text-primary">votre prochain projet ?</span>
             </h2>
 
             <p className="text-base sm:text-xl text-muted-foreground mb-8 sm:mb-12 px-2">
-              Clip, court-métrage ou série — décrivez votre vision et laissez l'IA produire votre vidéo en quelques minutes.
+              Film, série ou clip musical — décrivez votre vision et laissez le studio IA orchestrer chaque étape de la production.
             </p>
 
             <motion.div
@@ -58,10 +53,10 @@ const CTA = () => {
                 variant="hero"
                 size="lg"
                 className="group"
-                onClick={() => navigate(user ? "/create/clip" : "/auth?signup")}
+                onClick={() => navigate(user ? "/create" : "/auth?signup")}
               >
                 <Video className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                Essai gratuit — Créer mon projet
+                Créer un projet — Essai gratuit
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Button>
               <Button variant="glass" size="lg" onClick={() => navigate("/pricing")}>
@@ -76,7 +71,7 @@ const CTA = () => {
               transition={{ duration: 0.5, delay: 0.4 }}
               className="text-sm text-muted-foreground mt-8"
             >
-              1 projet complet offert • Sans engagement • Résultat en ~10 minutes
+              1 projet complet offert • Timeline + Montage + Export • Résultat en ~10 minutes
             </motion.p>
           </div>
         </AnimatedSection>

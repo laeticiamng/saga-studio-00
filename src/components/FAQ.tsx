@@ -8,28 +8,28 @@ import AnimatedSection from "./AnimatedSection";
 
 const faqs = [
   {
-    q: "Qu'est-ce que CineClip AI exactement ?",
-    a: "CineClip AI est une plateforme en ligne qui génère des clips vidéo et courts-métrages complets grâce à l'intelligence artificielle. Vous décrivez votre projet, uploadez votre musique ou scénario, et l'IA produit une vidéo avec un style visuel cohérent.",
+    q: "Qu'est-ce que Saga Studio ?",
+    a: "Saga Studio est un studio de production audiovisuelle propulsé par l'IA. Vous pouvez créer des films, séries multi-épisodes, clips musicaux et vidéos hybrides — du brief initial au rendu final exporté, en passant par la planification de scènes, le montage timeline et le contrôle qualité automatique.",
   },
   {
     q: "Ai-je besoin de compétences en montage vidéo ?",
-    a: "Non, aucune compétence technique n'est requise. Vous remplissez un formulaire simple (titre, description, musique, style) et l'IA s'occupe de tout le reste : création des scènes, montage et export.",
+    a: "Non. Le studio gère automatiquement le découpage en scènes, la génération des plans, l'assemblage en rough cut et les corrections de qualité. Vous pouvez intervenir à chaque étape via les review gates pour valider, ajuster ou régénérer — mais ce n'est jamais obligatoire.",
   },
   {
-    q: "Combien coûte la génération d'une vidéo ?",
-    a: "Chaque vidéo consomme des crédits (le nombre dépend de la durée et du modèle choisi). Vous recevez 10 crédits gratuits à l'inscription. Ensuite, vous pouvez souscrire un abonnement (à partir de 19 €/mois) ou acheter des packs de crédits ponctuels.",
+    q: "Comment fonctionne le contrôle qualité IA ?",
+    a: "Chaque image et vidéo générée passe par un système anti-aberrations qui détecte les problèmes d'anatomie, de continuité, de cohérence narrative et de cadrage. Les plans défaillants sont automatiquement corrigés ou reroutés vers un autre fournisseur avant d'entrer dans la timeline.",
+  },
+  {
+    q: "Quels types de projets puis-je créer ?",
+    a: "Quatre types : Film (court ou long-métrage), Série (multi-épisodes avec continuité), Clip Musical (synchronisé au BPM) et Vidéo Hybride (vidéo existante + améliorations IA). Chaque type a un pipeline adapté.",
   },
   {
     q: "Dans quels formats puis-je exporter ?",
-    a: "Vous pouvez exporter en format paysage (16:9) ou portrait (9:16), en qualité allant de 720p à 4K selon votre plan. Les vidéos sont au format MP4, compatible avec toutes les plateformes (YouTube, TikTok, Instagram…).",
+    a: "Vous pouvez exporter en 1080p master, 720p preview, 9:16 social ou 4K selon votre plan. Chaque export passe par un QC obligatoire et un versionning intégré. Les fichiers sont au format MP4.",
   },
   {
-    q: "Combien de temps dure la génération ?",
-    a: "Cela dépend de la durée de la vidéo et du modèle IA sélectionné. En général, un clip de quelques minutes est prêt en 5 à 15 minutes. Vous pouvez suivre la progression en temps réel.",
-  },
-  {
-    q: "Mes données et fichiers sont-ils protégés ?",
-    a: "Oui. Vos fichiers (musiques, images, vidéos générées) sont stockés de manière sécurisée et ne sont jamais partagés avec des tiers. Vous pouvez supprimer vos données à tout moment. Consultez notre politique de confidentialité pour plus de détails.",
+    q: "Qu'est-ce qu'un rough cut et un fine cut ?",
+    a: "Le rough cut est le premier assemblage automatique de vos scènes sur la timeline. Le fine cut est la version affinée après vos ajustements manuels (trim, remplacement de plans, réorganisation). Chaque étape a une review gate dédiée.",
   },
 ];
 

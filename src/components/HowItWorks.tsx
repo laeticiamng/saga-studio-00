@@ -1,4 +1,4 @@
-import { Upload, Wand2, Video, Download } from "lucide-react";
+import { Upload, Wand2, Video, Download, Layers, CheckCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import AnimatedSection from "./AnimatedSection";
 import stepDescribe from "@/assets/step-describe.jpg";
@@ -7,10 +7,10 @@ import stepPreview from "@/assets/step-preview.jpg";
 import stepExport from "@/assets/step-export.jpg";
 
 const steps = [
-  { icon: Upload, number: "01", title: "Décrivez votre vision", description: "Expliquez votre histoire, uploadez votre visage et votre musique, définissez le style artistique.", image: stepDescribe },
-  { icon: Wand2, number: "02", title: "L'IA crée votre vidéo", description: "L'intelligence artificielle génère chaque scène de votre clip avec un style visuel uniforme du début à la fin.", image: stepGenerate },
-  { icon: Video, number: "03", title: "Prévisualisez et ajustez", description: "Visionnez votre création et affinez les détails si nécessaire avant l'export final.", image: stepPreview },
-  { icon: Download, number: "04", title: "Exportez et partagez", description: "Téléchargez votre vidéo finale en haute définition, prête à être publiée partout.", image: stepExport },
+  { icon: Upload, number: "01", title: "Décrivez votre projet", description: "Choisissez le type (film, série, clip), rédigez votre brief, définissez vos personnages et l'univers visuel.", image: stepDescribe },
+  { icon: Wand2, number: "02", title: "L'IA planifie et génère", description: "L'IA découpe en scènes, génère les plans, vérifie la qualité et corrige les aberrations automatiquement.", image: stepGenerate },
+  { icon: Layers, number: "03", title: "Montez sur la timeline", description: "Assemblez le rough cut, validez chaque étape via les review gates, puis affinez en fine cut.", image: stepPreview },
+  { icon: Download, number: "04", title: "Finishing & Export", description: "Appliquez un look cinématique, normalisez l'audio, puis exportez en multi-format avec QC intégré.", image: stepExport },
 ];
 
 const HowItWorks = () => {
@@ -19,8 +19,8 @@ const HowItWorks = () => {
       <div className="container mx-auto">
         <AnimatedSection variant="blurIn">
           <div className="page-header">
-            <h2>Comment ça marche ?</h2>
-            <p>De l'idée à la réalité en 4 étapes simples</p>
+            <h2>Du brief au rendu final</h2>
+            <p>Un workflow de production complet en 4 étapes</p>
           </div>
         </AnimatedSection>
 
@@ -36,7 +36,6 @@ const HowItWorks = () => {
                   index % 2 === 0 ? "md:flex-row" : "md:flex-row-reverse"
                 } items-center`}
               >
-                {/* Image */}
                 <motion.div
                   className="flex-1 w-full"
                   whileHover={{ scale: 1.02 }}
@@ -58,7 +57,6 @@ const HowItWorks = () => {
                   </div>
                 </motion.div>
 
-                {/* Text */}
                 <div className={`flex-1 ${index % 2 === 0 ? "md:pl-4" : "md:pr-4"} text-center md:text-left`}>
                   <motion.div
                     initial={{ scale: 0.8, opacity: 0 }}

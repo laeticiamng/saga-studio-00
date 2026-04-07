@@ -1,4 +1,5 @@
 export const statusLabels: Record<string, string> = {
+  // Core lifecycle
   draft: "Brouillon",
   analyzing: "Analyse…",
   planning: "Planification…",
@@ -13,7 +14,8 @@ export const statusLabels: Record<string, string> = {
   resolved: "Résolu",
   dismissed: "Rejeté",
   reviewed: "Examiné",
-  // Pipeline state machine states
+
+  // Pipeline state machine
   validating_inputs: "Validation…",
   analyzing_audio: "Analyse audio…",
   planning_storyboard: "Storyboard…",
@@ -24,6 +26,30 @@ export const statusLabels: Record<string, string> = {
   export_ready: "Prêt à exporter",
   failed_retryable: "Échec (relançable)",
   failed_terminal: "Échec définitif",
+
+  // Governance states
+  identity_review: "Revue identité",
+  world_review: "Revue univers",
+  scene_review: "Revue scènes",
+  rough_cut: "Rough Cut",
+  rough_cut_review: "Revue Rough Cut",
+  fine_cut: "Fine Cut",
+  fine_cut_review: "Revue Fine Cut",
+  finishing: "Finishing",
+  exporting: "Export…",
+  delivered: "Livré",
+  archived: "Archivé",
+
+  // Approvals
+  approved: "Approuvé",
+  rejected: "Rejeté",
+  blocked: "Bloqué",
+  awaiting_review: "En attente de revue",
+
+  // Validation
+  passed: "Validé",
+  warning: "Attention",
+  validation_pending: "Validation…",
 };
 
 export const statusVariants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -51,6 +77,30 @@ export const statusVariants: Record<string, "default" | "secondary" | "destructi
   export_ready: "default",
   failed_retryable: "destructive",
   failed_terminal: "destructive",
+
+  // Governance
+  identity_review: "secondary",
+  world_review: "secondary",
+  scene_review: "secondary",
+  rough_cut: "secondary",
+  rough_cut_review: "secondary",
+  fine_cut: "secondary",
+  fine_cut_review: "secondary",
+  finishing: "secondary",
+  exporting: "secondary",
+  delivered: "default",
+  archived: "outline",
+
+  // Approvals
+  approved: "default",
+  rejected: "destructive",
+  blocked: "destructive",
+  awaiting_review: "outline",
+
+  // Validation
+  passed: "default",
+  warning: "secondary",
+  validation_pending: "outline",
 };
 
 export const typeLabels: Record<string, string> = {
@@ -58,6 +108,7 @@ export const typeLabels: Record<string, string> = {
   film: "Film",
   series: "Série",
   music_video: "Clip Musical",
+  hybrid_video: "Vidéo Hybride",
 };
 
 export const qualityTierLabels: Record<string, string> = {
@@ -100,3 +151,17 @@ export const styleLabels: Record<string, string> = {
   documentary: "Documentaire",
   fantasy: "Fantaisie",
 };
+
+/** Lifecycle step labels for project progress rail */
+export const lifecycleSteps = [
+  { key: "draft", label: "Brief" },
+  { key: "identity_review", label: "Identité" },
+  { key: "world_review", label: "Univers" },
+  { key: "scene_review", label: "Scènes" },
+  { key: "generating", label: "Génération" },
+  { key: "rough_cut", label: "Rough Cut" },
+  { key: "fine_cut", label: "Fine Cut" },
+  { key: "finishing", label: "Finishing" },
+  { key: "export_ready", label: "Export" },
+  { key: "delivered", label: "Livré" },
+];

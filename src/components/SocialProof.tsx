@@ -9,39 +9,39 @@ const avatarColors = ["bg-primary/80", "bg-accent/80", "bg-destructive/60"];
 const testimonials = [
   {
     name: "Léa M.",
-    role: "Artiste indépendante",
-    text: "J'ai créé mon premier clip en 10 minutes. Le résultat m'a bluffée, surtout la cohérence visuelle entre les scènes.",
+    role: "Réalisatrice indépendante",
+    text: "J'ai produit un court-métrage complet en une journée. Le pipeline de validation IA m'a évité des heures de correction manuelle.",
     stars: 5,
   },
   {
     name: "Thomas R.",
-    role: "Créateur de contenu",
-    text: "Enfin un outil simple pour faire des vidéos sans savoir monter. J'utilise CineClip pour tous mes projets YouTube maintenant.",
+    role: "Producteur de contenu",
+    text: "La timeline multi-pistes et les review gates m'ont donné le contrôle d'un studio professionnel — sans l'équipe technique.",
     stars: 5,
   },
   {
     name: "Camille D.",
     role: "Musicienne",
-    text: "Le style anime est incroyable. Mon clip a eu 3x plus de vues que d'habitude. Et tout ça sans budget vidéo.",
+    text: "Le mode clip musical avec sync BPM est magique. Mon clip a été validé, monté et exporté en moins de 20 minutes.",
     stars: 4,
   },
 ];
 
 const highlights = [
   {
-    title: "Tout-en-un, sans compétence technique",
-    text: "Décrivez votre idée, uploadez votre musique, et l'IA s'occupe de tout : plans, transitions et montage final.",
+    title: "Studio complet, pas un jouet",
+    text: "Personnages, scènes, timeline, montage, finishing, export — le pipeline complet d'un studio de production dans un seul outil.",
     icon: "🎬",
   },
   {
-    title: "Résultat en quelques minutes",
-    text: "Pas besoin d'attendre des heures. Votre vidéo complète est prête en 5 à 15 minutes, avec un suivi en temps réel.",
-    icon: "⚡",
+    title: "Qualité contrôlée à chaque étape",
+    text: "Détection automatique des aberrations IA (anatomie, continuité, script) avec corrections et reroutage avant que les erreurs ne se propagent.",
+    icon: "🛡️",
   },
   {
-    title: "Votre style, votre univers",
-    text: "Cinématique, anime, aquarelle, néon… 13 styles visuels pour créer exactement ce que vous imaginez.",
-    icon: "🎨",
+    title: "Du rough cut au master final",
+    text: "Assemblez, validez, affinez et exportez en multi-format — le workflow classique du cinéma, piloté par l'IA.",
+    icon: "🎞️",
   },
 ];
 
@@ -57,20 +57,18 @@ export default function SocialProof() {
 
   return (
     <section ref={sectionRef} id="proof" className="page-section relative overflow-hidden">
-      {/* Parallax glow */}
       <motion.div
         style={{ y: glowY, scale: glowScale }}
         className="absolute top-0 left-1/2 -translate-x-1/2 w-[300px] sm:w-[600px] h-[150px] sm:h-[300px] bg-primary/10 rounded-full blur-3xl"
       />
 
       <div className="container mx-auto relative z-10">
-        {/* Testimonials */}
         <AnimatedSection variant="blurIn" delay={0.1}>
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
             Ce qu'en disent nos premiers utilisateurs
           </h2>
           <p className="text-center text-muted-foreground mb-10 max-w-xl mx-auto">
-            Des créateurs comme vous ont déjà testé CineClip AI pendant notre bêta.
+            Des créateurs professionnels utilisent Saga Studio pour produire des projets complets.
           </p>
         </AnimatedSection>
 
@@ -99,7 +97,7 @@ export default function SocialProof() {
                   </Avatar>
                   <div>
                     <p className="font-semibold text-sm">{t.name}</p>
-                    <p className="text-xs text-muted-foreground">{t.role} · Utilisateur bêta</p>
+                    <p className="text-xs text-muted-foreground">{t.role}</p>
                   </div>
                 </div>
               </motion.div>
@@ -107,10 +105,9 @@ export default function SocialProof() {
           ))}
         </StaggerContainer>
 
-        {/* Why CineClip */}
         <AnimatedSection variant="blurIn" delay={0.15}>
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">
-            Pourquoi choisir CineClip AI ?
+            Pourquoi choisir Saga Studio ?
           </h2>
         </AnimatedSection>
 

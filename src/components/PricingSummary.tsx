@@ -11,7 +11,7 @@ const PLANS = [
     price: "0 €",
     period: "/mois",
     credits: 10,
-    features: ["10 crédits offerts", "Exports en 720p", "Support communautaire"],
+    features: ["1 projet complet offert", "Timeline + Montage", "Exports 720p", "Review gates incluses"],
     highlight: false,
   },
   {
@@ -19,7 +19,7 @@ const PLANS = [
     price: "19 €",
     period: "/mois",
     credits: 100,
-    features: ["100 crédits/mois", "Full HD (1080p)", "Tous les styles", "Support email"],
+    features: ["100 crédits/mois", "Full HD (1080p)", "Tous les styles", "Finishing + Look presets", "Support email"],
     highlight: true,
   },
   {
@@ -27,7 +27,7 @@ const PLANS = [
     price: "49 €",
     period: "/mois",
     credits: 500,
-    features: ["500 crédits/mois", "Exports 4K", "Priorité de génération", "Support dédié"],
+    features: ["500 crédits/mois", "Exports 4K", "Priorité de génération", "Diagnostics avancés", "Support dédié"],
     highlight: false,
   },
 ];
