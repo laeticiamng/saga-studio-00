@@ -24,7 +24,7 @@ import { DiagnosticsPanel } from "@/components/studio/DiagnosticsPanel";
 import { CostEstimationCard } from "@/components/studio/CostEstimationCard";
 import {
   Loader2, Film, Layers, Play, CheckCircle, Lock, Unlock,
-  Plus, Download, Palette, Shield, Eye, Activity, DollarSign,
+  Plus, Download, Palette, Shield, Eye, Activity, DollarSign, Wand2,
 } from "lucide-react";
 
 export default function TimelineStudio() {
@@ -96,6 +96,29 @@ export default function TimelineStudio() {
       toast({ title: `Timeline "${name}" créée` });
     } catch (err: unknown) {
       toast({ title: "Erreur", description: err instanceof Error ? err.message : "Erreur", variant: "destructive" });
+    }
+  };
+
+  const [assembling, setAssembling] = useState(false);
+  const handleAssemble = async () => {
+    if (!id) return;
+    setAssembling(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("assemble-rough-cut", {
+        body: { project_id: id, timeline_id: selectedTimelineId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: "✅ Assemblage terminé", description: `${data.clips_placed} clips placés` });
+      qc.invalidateQueries({ queryKey: ["timelines", id] });
+      qc.invalidateQueries({ queryKey: ["timeline_clips"] });
+      qc.invalidateQueries({ queryKey: ["timeline_tracks"] });
+      qc.invalidateQueries({ queryKey: ["review_gates", id] });
+      if (data.timeline_id) setSelectedTimelineId(data.timeline_id);
+    } catch (err: unknown) {
+      toast({ title: "Erreur d'assemblage", description: err instanceof Error ? err.message : "Erreur", variant: "destructive" });
+    } finally {
+      setAssembling(false);
     }
   };
 
