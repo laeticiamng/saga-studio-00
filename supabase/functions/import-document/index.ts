@@ -107,40 +107,438 @@ function detectFileType(fileName: string): string {
   return typeMap[ext] || "unknown";
 }
 
-// ─── Workflow-specific extraction prompts ───
+// ═══════════════════════════════════════════════════
+// TEXT EXTRACTION — the critical fix
+// ═══════════════════════════════════════════════════
+
+/**
+ * Extract text from a DOCX file by parsing the ZIP and reading word/document.xml
+ * DOCX is a ZIP containing XML; we parse <w:t> tags to get text.
+ */
+async function extractDocxText(fileBytes: Uint8Array): Promise<{ text: string; method: string; success: boolean }> {
+  try {
+    // DOCX is a ZIP file. We need to find word/document.xml inside it.
+    // Use a minimal ZIP reader approach.
+    const zipData = fileBytes;
+    
+    // Find the End of Central Directory record
+    let eocdOffset = -1;
+    for (let i = zipData.length - 22; i >= Math.max(0, zipData.length - 65557); i--) {
+      if (zipData[i] === 0x50 && zipData[i+1] === 0x4B && zipData[i+2] === 0x05 && zipData[i+3] === 0x06) {
+        eocdOffset = i;
+        break;
+      }
+    }
+    if (eocdOffset === -1) throw new Error("Not a valid ZIP/DOCX");
+
+    const cdOffset = zipData[eocdOffset + 16] | (zipData[eocdOffset + 17] << 8) |
+                     (zipData[eocdOffset + 18] << 16) | (zipData[eocdOffset + 19] << 24);
+    const cdEntries = zipData[eocdOffset + 10] | (zipData[eocdOffset + 11] << 8);
+
+    // Parse central directory to find word/document.xml
+    let offset = cdOffset;
+    let documentXmlOffset = -1;
+    let documentXmlCompressedSize = 0;
+    let documentXmlUncompressedSize = 0;
+    let documentXmlMethod = 0;
+
+    for (let entry = 0; entry < cdEntries; entry++) {
+      if (offset + 46 > zipData.length) break;
+      const sig = zipData[offset] | (zipData[offset+1] << 8) | (zipData[offset+2] << 16) | (zipData[offset+3] << 24);
+      if (sig !== 0x02014B50) break;
+
+      const method = zipData[offset + 10] | (zipData[offset + 11] << 8);
+      const compSize = zipData[offset + 20] | (zipData[offset + 21] << 8) | (zipData[offset + 22] << 16) | (zipData[offset + 23] << 24);
+      const uncompSize = zipData[offset + 24] | (zipData[offset + 25] << 8) | (zipData[offset + 26] << 16) | (zipData[offset + 27] << 24);
+      const nameLen = zipData[offset + 28] | (zipData[offset + 29] << 8);
+      const extraLen = zipData[offset + 30] | (zipData[offset + 31] << 8);
+      const commentLen = zipData[offset + 32] | (zipData[offset + 33] << 8);
+      const localHeaderOffset = zipData[offset + 42] | (zipData[offset + 43] << 8) | (zipData[offset + 44] << 16) | (zipData[offset + 45] << 24);
+
+      const nameBytes = zipData.slice(offset + 46, offset + 46 + nameLen);
+      const fileName = new TextDecoder().decode(nameBytes);
+
+      if (fileName === "word/document.xml") {
+        documentXmlOffset = localHeaderOffset;
+        documentXmlCompressedSize = compSize;
+        documentXmlUncompressedSize = uncompSize;
+        documentXmlMethod = method;
+      }
+
+      offset += 46 + nameLen + extraLen + commentLen;
+    }
+
+    if (documentXmlOffset === -1) throw new Error("word/document.xml not found in DOCX");
+
+    // Read local file header to get to data
+    const localNameLen = zipData[documentXmlOffset + 26] | (zipData[documentXmlOffset + 27] << 8);
+    const localExtraLen = zipData[documentXmlOffset + 28] | (zipData[documentXmlOffset + 29] << 8);
+    const dataStart = documentXmlOffset + 30 + localNameLen + localExtraLen;
+
+    let xmlBytes: Uint8Array;
+    if (documentXmlMethod === 0) {
+      // Stored (no compression)
+      xmlBytes = zipData.slice(dataStart, dataStart + documentXmlUncompressedSize);
+    } else if (documentXmlMethod === 8) {
+      // Deflated — use DecompressionStream
+      const compressedData = zipData.slice(dataStart, dataStart + documentXmlCompressedSize);
+      // Create a raw deflate stream (no zlib header)
+      const ds = new DecompressionStream("raw");
+      const writer = ds.writable.getWriter();
+      writer.write(compressedData);
+      writer.close();
+      const reader = ds.readable.getReader();
+      const chunks: Uint8Array[] = [];
+      let done = false;
+      while (!done) {
+        const result = await reader.read();
+        if (result.value) chunks.push(result.value);
+        done = result.done;
+      }
+      const totalLen = chunks.reduce((sum, c) => sum + c.length, 0);
+      xmlBytes = new Uint8Array(totalLen);
+      let pos = 0;
+      for (const chunk of chunks) {
+        xmlBytes.set(chunk, pos);
+        pos += chunk.length;
+      }
+    } else {
+      throw new Error(`Unsupported compression method: ${documentXmlMethod}`);
+    }
+
+    const xmlString = new TextDecoder("utf-8").decode(xmlBytes);
+
+    // Extract text from <w:t> tags, respecting <w:p> as paragraphs
+    const paragraphs: string[] = [];
+    // Split by paragraph tags
+    const pRegex = /<w:p[\s>][^]*?<\/w:p>/g;
+    let pMatch;
+    while ((pMatch = pRegex.exec(xmlString)) !== null) {
+      const pBlock = pMatch[0];
+      // Extract all <w:t> content within this paragraph
+      const tRegex = /<w:t[^>]*>([^<]*)<\/w:t>/g;
+      let tMatch;
+      let paraText = "";
+      while ((tMatch = tRegex.exec(pBlock)) !== null) {
+        paraText += tMatch[1];
+      }
+      if (paraText.trim()) {
+        // Check if this is a heading by looking for <w:pStyle w:val="Heading
+        const isHeading = /<w:pStyle\s+w:val="(?:Heading|Titre|heading)/i.test(pBlock);
+        if (isHeading) {
+          paragraphs.push("\n## " + paraText.trim());
+        } else {
+          paragraphs.push(paraText.trim());
+        }
+      }
+    }
+
+    // Decode XML entities
+    const text = paragraphs.join("\n")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/&#x([0-9A-Fa-f]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+      .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)));
+
+    if (text.length < 20) throw new Error("DOCX extracted text too short — likely corrupted");
+
+    return { text, method: "docx_xml_parse", success: true };
+  } catch (e) {
+    console.error("DOCX extraction error:", e);
+    return { text: "", method: "docx_xml_parse_failed", success: false };
+  }
+}
+
+/**
+ * Extract text from a PDF using Gemini Vision API.
+ * Sends the raw PDF as base64 inline_data to Gemini which can natively read PDFs.
+ */
+async function extractPdfText(fileBytes: Uint8Array): Promise<{ text: string; method: string; success: boolean }> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) {
+    return { text: "", method: "no_api_key", success: false };
+  }
+
+  try {
+    // Convert to base64
+    let binary = "";
+    const len = fileBytes.byteLength;
+    // Process in chunks to avoid call stack limits
+    const CHUNK = 8192;
+    for (let i = 0; i < len; i += CHUNK) {
+      const slice = fileBytes.subarray(i, Math.min(i + CHUNK, len));
+      for (let j = 0; j < slice.length; j++) {
+        binary += String.fromCharCode(slice[j]);
+      }
+    }
+    const base64Pdf = btoa(binary);
+
+    // Use Gemini to extract text from the PDF
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `Extrais TOUT le texte de ce document PDF. Préserve la structure : titres, sections, paragraphes, listes, tableaux. Retourne UNIQUEMENT le texte extrait, sans commentaire ni formatage markdown excessif. Préserve les noms propres, les accents et la ponctuation exactement comme dans le document.`
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:application/pdf;base64,${base64Pdf}`
+                }
+              }
+            ]
+          }
+        ],
+        temperature: 0.05,
+        max_tokens: 16000,
+      }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("PDF extraction API error:", response.status, errText);
+      return { text: "", method: "pdf_vision_api_error", success: false };
+    }
+
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content || "";
+    
+    if (text.length < 20) {
+      return { text: "", method: "pdf_vision_empty", success: false };
+    }
+
+    return { text, method: "pdf_vision_api", success: true };
+  } catch (e) {
+    console.error("PDF Vision extraction error:", e);
+    return { text: "", method: "pdf_vision_failed", success: false };
+  }
+}
+
+/**
+ * Unified text extraction dispatcher.
+ * Routes to the correct extractor based on file type.
+ */
+async function extractTextFromFile(
+  fileData: Blob,
+  fileType: string,
+  fileName: string
+): Promise<{ text: string; method: string; success: boolean; charCount: number }> {
+  // Plain text files
+  if (fileType === "txt" || fileType === "markdown" || fileType === "rtf") {
+    const text = await fileData.text();
+    return { text, method: "plain_text", success: text.length > 0, charCount: text.length };
+  }
+
+  const bytes = new Uint8Array(await fileData.arrayBuffer());
+
+  // DOCX files — parse XML from ZIP
+  if (fileType === "docx") {
+    const result = await extractDocxText(bytes);
+    if (result.success && result.text.length > 20) {
+      console.log(`DOCX extraction success: ${fileName} → ${result.text.length} chars`);
+      return { ...result, charCount: result.text.length };
+    }
+    // Fallback to Vision API for failed DOCX
+    console.log(`DOCX native parse failed for ${fileName}, falling back to Vision API`);
+    const fallback = await extractPdfText(bytes);
+    return { ...fallback, charCount: fallback.text.length };
+  }
+
+  // PDF files — use Vision API
+  if (fileType === "pdf") {
+    const result = await extractPdfText(bytes);
+    console.log(`PDF extraction: ${fileName} → ${result.text.length} chars (${result.method})`);
+    return { ...result, charCount: result.text.length };
+  }
+
+  // Unknown binary — try Vision API as last resort
+  console.log(`Unknown file type ${fileType} for ${fileName}, trying Vision API`);
+  const result = await extractPdfText(bytes);
+  return { ...result, charCount: result.text.length };
+}
+
+// ═══════════════════════════════════════════════════
+// STRUCTURE-AWARE CHUNKING
+// ═══════════════════════════════════════════════════
+
+interface TextChunk {
+  content: string;
+  sectionType: string;
+  sectionTitle?: string;
+}
+
+/**
+ * Split text into structural chunks based on headings, scene markers, etc.
+ * Falls back to fixed-size if no structure is detected.
+ */
+function splitIntoStructuredChunks(text: string, maxLen = 3000): TextChunk[] {
+  const chunks: TextChunk[] = [];
+  
+  // Patterns for structural splitting (French creative docs)
+  const structurePatterns = [
+    /^#{1,3}\s+.+/m,                              // Markdown headings
+    /^(?:SCÈNE|SCENE|SÉQUENCE)\s*\d/im,            // Scene markers
+    /^(?:ÉPISODE|EPISODE|MINI-ÉPISODE)\s*\d/im,    // Episode markers
+    /^(?:ACTE|ACT)\s*(?:I|II|III|IV|V|\d)/im,      // Act markers
+    /^(?:CHAPITRE|CHAPTER)\s*\d/im,                // Chapter markers
+    /^(?:PERSONNAGES?|CHARACTERS?)\s*$/im,          // Character section
+    /^(?:LIEUX|LOCATIONS?|DÉCORS?)\s*$/im,          // Location section
+    /^(?:INT\.|EXT\.)\s+/m,                        // Screenplay INT/EXT
+    /^(?:LOGLINE|PITCH|SYNOPSIS|RÉSUMÉ)\s*[:\-—]?\s*$/im, // Key sections
+    /^(?:SAISON|SEASON)\s*\d/im,                   // Season markers
+  ];
+
+  // Check if the text has structural markers
+  const hasStructure = structurePatterns.some(p => p.test(text));
+
+  if (hasStructure) {
+    // Split by structural markers
+    const splitRegex = /^(#{1,3}\s+.+|(?:SCÈNE|SCENE|SÉQUENCE|ÉPISODE|EPISODE|MINI-ÉPISODE|ACTE|ACT|CHAPITRE|CHAPTER|PERSONNAGES?|CHARACTERS?|LIEUX|LOCATIONS?|DÉCORS?|LOGLINE|PITCH|SYNOPSIS|RÉSUMÉ|SAISON|SEASON)\s*.+|(?:INT\.|EXT\.)\s+.+)/im;
+    
+    const lines = text.split("\n");
+    let currentChunk = "";
+    let currentSection = "header";
+    let currentTitle = "";
+
+    for (const line of lines) {
+      if (splitRegex.test(line.trim()) && currentChunk.trim().length > 50) {
+        // Save current chunk
+        chunks.push({
+          content: currentChunk.trim(),
+          sectionType: currentSection,
+          sectionTitle: currentTitle || undefined,
+        });
+        currentChunk = line + "\n";
+        currentTitle = line.trim();
+        // Determine section type
+        if (/scène|scene|séquence|int\.|ext\./i.test(line)) currentSection = "scene";
+        else if (/épisode|episode|mini-épisode/i.test(line)) currentSection = "episode";
+        else if (/personnage|character/i.test(line)) currentSection = "characters";
+        else if (/lieu|location|décor/i.test(line)) currentSection = "locations";
+        else if (/logline|pitch|synopsis|résumé/i.test(line)) currentSection = "synopsis";
+        else if (/acte|act|chapitre|chapter/i.test(line)) currentSection = "act";
+        else if (/saison|season/i.test(line)) currentSection = "season";
+        else currentSection = "body";
+      } else {
+        currentChunk += line + "\n";
+        // Split if chunk is too long
+        if (currentChunk.length > maxLen) {
+          chunks.push({
+            content: currentChunk.trim(),
+            sectionType: currentSection,
+            sectionTitle: currentTitle || undefined,
+          });
+          currentChunk = "";
+        }
+      }
+    }
+    if (currentChunk.trim().length > 0) {
+      chunks.push({
+        content: currentChunk.trim(),
+        sectionType: currentSection,
+        sectionTitle: currentTitle || undefined,
+      });
+    }
+  }
+
+  // Fallback or supplement with fixed-size chunks
+  if (chunks.length === 0) {
+    let i = 0;
+    while (i < text.length) {
+      // Try to break at paragraph boundaries
+      let end = Math.min(i + maxLen, text.length);
+      if (end < text.length) {
+        const lastPara = text.lastIndexOf("\n\n", end);
+        if (lastPara > i + maxLen * 0.5) end = lastPara;
+        else {
+          const lastNewline = text.lastIndexOf("\n", end);
+          if (lastNewline > i + maxLen * 0.5) end = lastNewline;
+        }
+      }
+      chunks.push({
+        content: text.slice(i, end).trim(),
+        sectionType: i === 0 ? "header" : "body",
+      });
+      i = end;
+    }
+  }
+
+  return chunks.length > 0 ? chunks : [{ content: text || "", sectionType: "body" }];
+}
+
+// ═══════════════════════════════════════════════════
+// WORKFLOW PROMPTS
+// ═══════════════════════════════════════════════════
 
 function getWorkflowPrompt(projectType: string): string {
   const base = `Tu es un expert en ingestion de documents pour un studio de production audiovisuelle IA.
+Tu analyses des documents de production français et internationaux.
 
 ÉTAPE 1 — CLASSIFICATION DU DOCUMENT
 Classe le document dans l'un de ces rôles :
 ${DOCUMENT_ROLES.join(", ")}
 
+Signaux de classification :
+- Présence de "SCÈNE", "INT.", "EXT." → script_master ou episode_script
+- Présence de descriptions de personnages détaillées → character_sheet ou series_bible
+- Présence de "LOGLINE", "PITCH", "SYNOPSIS" → short_pitch ou one_pager
+- Présence de "GOUVERNANCE", "SOURCE DE VÉRITÉ", "RÈGLES" → governance_doc
+- Présence de "SAISON", "ÉPISODE", structures narratives → series_bible
+- Présence de notes de production, budgets → production_notes
+- Tableaux de personnages avec âges, rôles → character_sheet
+- Contenu visuel, moodboard → moodboard_doc
+
 ÉTAPE 2 — EXTRACTION D'ENTITÉS
-Extrais TOUTES les informations structurées possibles.
+Extrais TOUTES les informations structurées possibles. Sois EXHAUSTIF.
+N'invente rien mais ne manque rien non plus.
+
+Patterns français courants à détecter :
+- "Patricia Ndongo, 29 ans, médecin" → character avec name, age, role
+- "Clinique Ophélia" → location
+- "SCÈNE 1 — INT. PARKING — NUIT" → scene avec location, time_of_day
+- "MINI-ÉPISODE 1 : Titre" → episode
+- "LOGLINE :" suivi de texte → logline
+- "PITCH ÉTENDU" → synopsis
+- Tableaux avec colonnes "Nom", "Âge", "Rôle" → multiple characters
 
 Retourne un JSON avec :
 {
   "document_role": "le_rôle_détecté",
   "role_confidence": 0.0-1.0,
+  "parser_status": "success",
   "entities": [
     {
       "entity_type": "...",
-      "entity_key": "identifiant court",
+      "entity_key": "identifiant court unique",
       "entity_value": { ... détails structurés ... },
-      "source_passage": "passage exact du document",
+      "source_passage": "passage exact du document (max 200 chars)",
       "extraction_confidence": 0.0-1.0
     }
   ]
 }
 
-Types d'entités universels : title, logline, synopsis, genre, tone, target_audience, format, duration, character, location, prop, costume, wardrobe, music, lyric, visual_reference, scene, dialogue_sample, theme, continuity_rule, legal_note, vfx_overlay, aspect_ratio, chronology, relationship, mood, cinematic_reference, cliffhanger, ambiance.
+Types d'entités : title, logline, synopsis, genre, tone, target_audience, format, duration, character, location, prop, costume, wardrobe, music, lyric, visual_reference, scene, dialogue_sample, theme, continuity_rule, legal_note, vfx_overlay, aspect_ratio, chronology, relationship, mood, cinematic_reference, cliffhanger, ambiance.
 
-Pour les personnages: name, age, role, personality, visual_description, relationships, backstory, arc, wardrobe.
-Pour les scènes: title, description, location, characters, mood, props, time_of_day.
+Pour les personnages: name, age, role, personality, visual_description, relationships, backstory, arc, wardrobe, gender.
+Pour les scènes: title, description, location, characters, mood, props, time_of_day, int_ext.
 Pour les lieux: name, description, mood, time_period.
 Pour la continuité: rule, scope, severity.
-Pour les relations: character_a, character_b, type, evolution.`;
+Pour les relations: character_a, character_b, type, evolution.
+
+IMPORTANT: Si le document contient clairement des personnages, lieux, scènes — extrais-les TOUS. Ne retourne JAMAIS un tableau vide si le contenu est riche.`;
 
   if (projectType === "series") {
     return base + `
@@ -148,14 +546,12 @@ Pour les relations: character_a, character_b, type, evolution.`;
 EXTRACTION SPÉCIFIQUE SÉRIES :
 - Extrais la STRUCTURE COMPLÈTE : nombre de saisons, épisodes par saison, titres d'épisodes.
 - Pour chaque épisode détecté, extrais : title, number, synopsis, scenes[], act_structure, cliffhanger_end.
-- Extrais les arcs de saison (season_arc) : arc narratif global, thèmes récurrents, progression.
 - Identifie les personnages RÉCURRENTS vs INVITÉS.
-- Extrais les RÈGLES DE CONTINUITÉ entre épisodes : quels éléments doivent rester cohérents.
-- Extrais le rythme narratif : cliffhangers, payoffs, callbacks entre épisodes.
-- Si un document contient plusieurs épisodes, sépare-les en entités distinctes avec entity_type="episode".
-- Identifie les dépendances de continuité : quel épisode dépend de quel autre pour la cohérence.
+- Extrais les RÈGLES DE CONTINUITÉ entre épisodes.
+- Si "MINI-ÉPISODE" est utilisé, traite-le comme entity_type="episode".
+- Identifie les dépendances de continuité entre épisodes.
 
-Types additionnels pour séries : episode, season_arc, continuity_dependency, recurring_element, episode_callback.`;
+Types additionnels : episode, season_arc, continuity_dependency, recurring_element, episode_callback.`;
   }
 
   if (projectType === "film") {
@@ -163,34 +559,32 @@ Types additionnels pour séries : episode, season_arc, continuity_dependency, re
 
 EXTRACTION SPÉCIFIQUE FILM :
 - Extrais la STRUCTURE EN ACTES : Acte 1 (setup), Acte 2 (confrontation), Acte 3 (résolution).
-- Extrais la CHRONOLOGIE NARRATIVE : séquence temporelle des scènes, flashbacks, ellipses.
-- Identifie les MOTIFS VISUELS RÉCURRENTS : objets symboliques, couleurs dominantes, leitmotifs.
-- Extrais les ARCS DE PERSONNAGES : transformation du début à la fin.
-- Identifie les SCÈNES CLÉ (prestige shots) : moments visuellement forts nécessitant une attention particulière.
-- Extrais la logique de MONTAGE : transitions entre scènes, rythme dramatique.
-- Identifie les contraintes de CONTINUITÉ DÉCOR/COSTUME pour les séquences longues.
+- Extrais la CHRONOLOGIE NARRATIVE.
+- Identifie les MOTIFS VISUELS RÉCURRENTS.
+- Extrais les ARCS DE PERSONNAGES.
+- Identifie les SCÈNES CLÉ.
 
-Types additionnels pour film : act_structure, narrative_sequence, visual_motif, character_arc, prestige_shot, montage_note.`;
+Types additionnels : act_structure, narrative_sequence, visual_motif, character_arc, prestige_shot, montage_note.`;
   }
 
   if (projectType === "music_video") {
     return base + `
 
 EXTRACTION SPÉCIFIQUE CLIP MUSICAL :
-- Extrais les PAROLES complètes si présentes, avec découpage par section (couplet, refrain, pont, outro).
-- Extrais le CONCEPT VISUEL : storyline, symbolisme, univers esthétique.
-- Identifie les SECTIONS MUSICALES : intro, verse, chorus, bridge, outro avec timestamps si disponibles.
+- Extrais les PAROLES complètes si présentes.
+- Extrais le CONCEPT VISUEL.
+- Identifie les SECTIONS MUSICALES.
 - Extrais le BPM et la TONALITÉ si mentionnés.
-- Identifie les CUES DE PERFORMANCE : moments où l'artiste lip-synce, danse, joue.
-- Extrais les TRANSITIONS VISUELLES liées aux changements musicaux.
-- Identifie les SHOTS ICONIQUES requis : plans signature du clip.
-- Extrais le MOOD PAR SECTION : comment l'ambiance évolue avec la musique.
 
-Types additionnels pour clip : lyric_section, music_section, performance_cue, beat_map, iconic_shot, section_mood, artist_lookdev.`;
+Types additionnels : lyric_section, music_section, performance_cue, beat_map, iconic_shot, section_mood, artist_lookdev.`;
   }
 
   return base + "\nSois exhaustif mais précis. N'invente rien.";
 }
+
+// ═══════════════════════════════════════════════════
+// PROCESS DOCUMENT (core pipeline)
+// ═══════════════════════════════════════════════════
 
 async function processDocument(
   supabase: ReturnType<typeof createClient>,
@@ -228,42 +622,80 @@ async function processDocument(
     return new Response(JSON.stringify({
       entities_found: 1, auto_filled: 1, needs_review: 0,
       document_role: "reference_images", role_confidence: 0.85,
+      parser_status: "success", extraction_method: "image_classify",
+      text_length: 0,
     }), { headers });
   }
 
-  // Download and extract text
+  // ─── Download and extract text using proper extractors ───
   let textContent = "";
+  let extractionMethod = "unknown";
+  let parserSuccess = false;
+
   try {
     const { data: fileData, error: dlErr } = await supabase.storage
       .from("source-documents")
       .download(doc.storage_path);
-    if (dlErr || !fileData) throw new Error("Cannot download file");
+    if (dlErr || !fileData) throw new Error("Cannot download file: " + (dlErr?.message || "no data"));
 
-    if (doc.file_type === "txt" || doc.file_type === "markdown") {
-      textContent = await fileData.text();
-    } else {
-      const rawText = await fileData.text();
-      textContent = rawText.replace(/[^\x20-\x7E\xA0-\xFF\n\r\t]/g, " ").replace(/\s{3,}/g, "\n\n").trim();
-      if (textContent.length < 50) {
-        textContent = `[Document binaire: ${doc.file_name}. Extraction texte limitée.]`;
-      }
-    }
-  } catch {
-    textContent = "[Extraction texte échouée]";
+    const extraction = await extractTextFromFile(fileData, doc.file_type, doc.file_name);
+    textContent = extraction.text;
+    extractionMethod = extraction.method;
+    parserSuccess = extraction.success;
+    
+    console.log(`Extraction complete for ${doc.file_name}: method=${extractionMethod} success=${parserSuccess} chars=${extraction.charCount}`);
+  } catch (e) {
+    const errMsg = e instanceof Error ? e.message : "Unknown download error";
+    console.error(`File extraction failed for ${doc.file_name}:`, errMsg);
+    extractionMethod = "download_failed";
+    parserSuccess = false;
+    textContent = "";
   }
 
-  // Store chunks
-  const chunks = splitIntoChunks(textContent, 2000);
+  // If extraction failed, mark document and return honest failure
+  if (!parserSuccess || textContent.length < 20) {
+    await supabase.from("source_documents").update({
+      status: "ready_for_review",
+      extraction_mode: extractionMethod,
+    }).eq("id", documentId);
+
+    // Create autofill run with failure
+    await supabase.from("source_document_autofill_runs").insert({
+      document_id: documentId,
+      status: "failed",
+      total_fields: 0,
+      auto_filled: 0,
+      needs_review: 0,
+      rejected: 0,
+      started_at: new Date().toISOString(),
+      completed_at: new Date().toISOString(),
+    });
+
+    return new Response(JSON.stringify({
+      entities_found: 0, auto_filled: 0, needs_review: 0,
+      document_role: "unknown", role_confidence: 0,
+      parser_status: "failed",
+      parser_error: `Extraction échouée (${extractionMethod}). Le fichier n'a pas pu être lu.`,
+      extraction_method: extractionMethod,
+      text_length: textContent.length,
+    }), { headers });
+  }
+
+  // Store structured chunks
+  const chunks = splitIntoStructuredChunks(textContent, 3000);
   for (let i = 0; i < chunks.length; i++) {
     await supabase.from("source_document_chunks").insert({
       document_id: documentId,
       chunk_index: i,
-      content: chunks[i],
-      section_type: i === 0 ? "header" : "body",
+      content: chunks[i].content,
+      section_type: chunks[i].sectionType,
     });
   }
 
-  await supabase.from("source_documents").update({ status: "analyzing", extraction_mode: "native" }).eq("id", documentId);
+  await supabase.from("source_documents").update({
+    status: "analyzing",
+    extraction_mode: extractionMethod,
+  }).eq("id", documentId);
 
   // Determine project type for workflow-specific prompts
   let projectType = "generic";
@@ -280,10 +712,14 @@ async function processDocument(
   let entities: Array<Record<string, unknown>> = [];
   let detectedRole = "unknown";
   let roleConfidence = 0;
+  let aiParserStatus = "skipped";
 
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (LOVABLE_API_KEY && textContent.length > 20) {
     try {
+      // Send up to 60k chars for better extraction on large docs
+      const textForAI = textContent.slice(0, 60000);
+      
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -294,7 +730,7 @@ async function processDocument(
           model: "google/gemini-2.5-flash",
           messages: [
             { role: "system", content: getWorkflowPrompt(projectType) },
-            { role: "user", content: textContent.slice(0, 40000) },
+            { role: "user", content: textForAI },
           ],
           temperature: 0.15,
           response_format: { type: "json_object" },
@@ -303,15 +739,21 @@ async function processDocument(
 
       if (response.ok) {
         const data = await response.json();
-        const parsed = JSON.parse(data.choices?.[0]?.message?.content || "{}");
+        const rawContent = data.choices?.[0]?.message?.content || "{}";
+        const parsed = JSON.parse(rawContent);
         entities = parsed.entities || [];
         detectedRole = parsed.document_role || "unknown";
         roleConfidence = Number(parsed.role_confidence) || 0;
-      } else if (response.status === 429 || response.status === 402) {
-        console.error("AI rate/credit limit:", response.status);
+        aiParserStatus = "success";
+        console.log(`AI extraction for ${doc.file_name}: role=${detectedRole} entities=${entities.length}`);
+      } else {
+        const errBody = await response.text();
+        console.error("AI extraction API error:", response.status, errBody);
+        aiParserStatus = `api_error_${response.status}`;
       }
     } catch (e) {
       console.error("AI extraction error:", e);
+      aiParserStatus = "exception";
     }
   }
 
@@ -351,7 +793,7 @@ async function processDocument(
 
   await supabase.from("source_document_autofill_runs").insert({
     document_id: documentId,
-    status: "completed",
+    status: entities.length > 0 ? "completed" : "no_entities",
     total_fields: entities.length,
     auto_filled: autoFilled,
     needs_review: needsReview,
@@ -376,6 +818,10 @@ async function processDocument(
       needs_review: needsReview,
       mappings_created: mappingCount,
       project_type: projectType,
+      extraction_method: extractionMethod,
+      text_length: textContent.length,
+      chunks_count: chunks.length,
+      ai_parser_status: aiParserStatus,
     },
   });
 
@@ -387,10 +833,16 @@ async function processDocument(
     document_role: detectedRole,
     role_confidence: roleConfidence,
     status: "ready_for_review",
+    parser_status: aiParserStatus === "success" ? "success" : (parserSuccess ? "partial" : "failed"),
+    extraction_method: extractionMethod,
+    text_length: textContent.length,
+    chunks_count: chunks.length,
   }), { headers });
 }
 
-// ─── Contextual Retrieval for Generation ───
+// ═══════════════════════════════════════════════════
+// CONTEXTUAL RETRIEVAL FOR GENERATION
+// ═══════════════════════════════════════════════════
 
 async function retrieveContext(
   supabase: ReturnType<typeof createClient>,
@@ -405,7 +857,6 @@ async function retrieveContext(
   const headers = { ...corsHeaders, "Content-Type": "application/json" };
   const { project_id, scope, scope_id, entity_types, max_tokens = 8000 } = body;
 
-  // 1. Get approved canonical fields
   let cfQuery = supabase
     .from("canonical_fields")
     .select("*")
@@ -414,7 +865,6 @@ async function retrieveContext(
   if (entity_types?.length) cfQuery = cfQuery.in("entity_type", entity_types);
   const { data: canonicalFields } = await cfQuery;
 
-  // 2. Get relevant entities based on scope
   const { data: docs } = await supabase
     .from("source_documents")
     .select("id, document_role, source_priority")
@@ -431,7 +881,6 @@ async function retrieveContext(
   if (entity_types?.length) entQuery = entQuery.in("entity_type", entity_types);
   const { data: entities } = await entQuery;
 
-  // 3. Build scoped context
   const context: Record<string, unknown> = {
     project_canon: {},
     entities: [],
@@ -439,7 +888,6 @@ async function retrieveContext(
     style_references: [],
   };
 
-  // Add canonical fields as top-level truth
   const canon: Record<string, Record<string, unknown>> = {};
   for (const f of canonicalFields || []) {
     if (!canon[f.entity_type]) canon[f.entity_type] = {};
@@ -447,7 +895,6 @@ async function retrieveContext(
   }
   context.project_canon = canon;
 
-  // Filter entities by scope relevance
   const relevantEntities = (entities || []).filter(e => {
     if (scope === "project") return true;
     if (scope === "character" && ["character", "relationship", "wardrobe", "costume"].includes(e.entity_type)) return true;
@@ -458,7 +905,6 @@ async function retrieveContext(
     return false;
   });
 
-  // Sort by doc priority + confidence
   const docPriorityMap: Record<string, number> = {};
   for (const d of docs || []) {
     docPriorityMap[d.id] = PRIORITY_ORDER[d.source_priority || "supporting_reference"] || 3;
@@ -470,7 +916,6 @@ async function retrieveContext(
     return b.extraction_confidence - a.extraction_confidence;
   });
 
-  // Trim to fit context window
   let tokenEstimate = JSON.stringify(context.project_canon).length / 4;
   const trimmedEntities: Array<Record<string, unknown>> = [];
   for (const e of relevantEntities) {
@@ -487,13 +932,11 @@ async function retrieveContext(
   }
   context.entities = trimmedEntities;
 
-  // Add continuity rules explicitly
   const continuityRules = (entities || [])
     .filter(e => e.entity_type === "continuity_rule")
     .map(e => ({ rule: e.entity_value, key: e.entity_key, confidence: e.extraction_confidence }));
   context.continuity_rules = continuityRules;
 
-  // Style references from moodboard/wardrobe docs
   const styleEntities = (entities || [])
     .filter(e => ["visual_reference", "mood", "ambiance", "cinematic_reference"].includes(e.entity_type))
     .slice(0, 10)
@@ -509,7 +952,9 @@ async function retrieveContext(
   }), { headers });
 }
 
-// ─── Batch processing ───
+// ═══════════════════════════════════════════════════
+// BATCH PROCESSING
+// ═══════════════════════════════════════════════════
 
 async function batchProcess(
   supabase: ReturnType<typeof createClient>,
@@ -578,7 +1023,9 @@ async function batchProcess(
   }), { headers });
 }
 
-// ─── Conflict detection ───
+// ═══════════════════════════════════════════════════
+// CONFLICT DETECTION
+// ═══════════════════════════════════════════════════
 
 async function detectConflicts(
   supabase: ReturnType<typeof createClient>,
@@ -614,10 +1061,8 @@ async function detectConflicts(
   let conflictsFound = 0;
   for (const [groupKey, groupEntities] of Object.entries(groups)) {
     if (groupEntities.length < 2) continue;
-
     const uniqueDocs = [...new Set(groupEntities.map(e => e.document_id))];
     if (uniqueDocs.length < 2) continue;
-
     const valueStrings = groupEntities.map(e => JSON.stringify(e.entity_value));
     const uniqueValues = [...new Set(valueStrings)];
     if (uniqueValues.length < 2) continue;
@@ -655,7 +1100,9 @@ async function detectConflicts(
   return new Response(JSON.stringify({ conflicts_found: conflictsFound }), { headers });
 }
 
-// ─── Missing info detection ───
+// ═══════════════════════════════════════════════════
+// MISSING INFO DETECTION
+// ═══════════════════════════════════════════════════
 
 async function detectMissingInfo(
   supabase: ReturnType<typeof createClient>,
@@ -704,11 +1151,9 @@ async function detectMissingInfo(
     }
   }
 
-  // AI-powered inference for missing items
   let inferredCount = 0;
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
-  // Gather existing context for inference
   const existingContext: Record<string, unknown>[] = [];
   if (LOVABLE_API_KEY && missing.length > 0 && docIds.length > 0) {
     const { data: allEntities } = await supabase
@@ -734,7 +1179,6 @@ async function detectMissingInfo(
       .limit(1);
     if (existing && existing.length > 0) continue;
 
-    // Try AI inference if we have context
     let inferredValue: Record<string, unknown> = { note: `Information manquante: ${field}` };
     let confidence = 0;
     let sourceContext = `Détecté comme manquant pour un projet de type "${project.type}"`;
@@ -769,7 +1213,7 @@ async function detectMissingInfo(
           const parsed = JSON.parse(data.choices?.[0]?.message?.content || "{}");
           if (parsed.inferred_value) {
             inferredValue = parsed.inferred_value;
-            confidence = Math.min(Number(parsed.confidence) || 0.3, 0.7); // Cap at 0.7 for inferred
+            confidence = Math.min(Number(parsed.confidence) || 0.3, 0.7);
             sourceContext = parsed.reasoning || sourceContext;
           }
         }
@@ -798,7 +1242,9 @@ async function detectMissingInfo(
   }), { headers });
 }
 
-// ─── Build canonical fields ───
+// ═══════════════════════════════════════════════════
+// BUILD CANONICAL FIELDS
+// ═══════════════════════════════════════════════════
 
 async function buildCanonicalFields(
   supabase: ReturnType<typeof createClient>,
@@ -863,7 +1309,9 @@ async function buildCanonicalFields(
   }
 }
 
-// ─── Wizard pre-project extraction ───
+// ═══════════════════════════════════════════════════
+// WIZARD EXTRACT (pre-project)
+// ═══════════════════════════════════════════════════
 
 async function wizardExtract(
   supabase: ReturnType<typeof createClient>,
@@ -877,27 +1325,30 @@ async function wizardExtract(
     return new Response(JSON.stringify({ error: "document_ids required" }), { status: 400, headers });
   }
 
-  // Process each document with the project-type-specific prompt
+  // Process each document that hasn't been processed yet
   for (const docId of document_ids) {
-    // Temporarily set a fake project type context for extraction
     const { data: doc } = await supabase
       .from("source_documents")
       .select("status")
       .eq("id", docId)
       .single();
-    if (doc?.status === "ready_for_review") continue; // already processed
-    // processDocument will use generic prompt since no project_id exists yet
-    // We need to override that by temporarily storing project_type info
+    if (doc?.status === "ready_for_review") continue;
     await processDocumentWithType(supabase, docId, userId, project_type);
   }
 
   // Gather all extracted entities across all documents
   const { data: allEntities } = await supabase
     .from("source_document_entities")
-    .select("*, document:source_documents!inner(file_name)")
+    .select("*, document:source_documents!inner(file_name, document_role, role_confidence)")
     .in("document_id", document_ids)
     .gte("extraction_confidence", 0.4)
     .order("extraction_confidence", { ascending: false });
+
+  // Get document metadata for parser status
+  const { data: docMeta } = await supabase
+    .from("source_documents")
+    .select("id, file_name, document_role, role_confidence, file_type, status, extraction_mode")
+    .in("id", document_ids);
 
   // Build structured wizard prefill
   const prefill: Record<string, unknown> = {
@@ -932,12 +1383,9 @@ async function wizardExtract(
         if (!prefill.title || e.extraction_confidence > 0.7) {
           prefill.title = val.value || e.entity_key;
           extractedFields.push({
-            key: "title",
-            label: "Titre",
+            key: "title", label: "Titre",
             value: String(val.value || e.entity_key),
-            confidence: e.extraction_confidence,
-            sourceDoc: docName,
-            multiline: false,
+            confidence: e.extraction_confidence, sourceDoc: docName, multiline: false,
           });
         }
         break;
@@ -949,9 +1397,7 @@ async function wizardExtract(
             key: "synopsis",
             label: e.entity_type === "logline" ? "Logline" : "Synopsis",
             value: String(val.value || e.entity_key),
-            confidence: e.extraction_confidence,
-            sourceDoc: docName,
-            multiline: true,
+            confidence: e.extraction_confidence, sourceDoc: docName, multiline: true,
           });
         }
         break;
@@ -975,6 +1421,7 @@ async function wizardExtract(
         (prefill.characters as Array<Record<string, unknown>>).push({
           name: val.name || e.entity_key,
           role: val.role || null,
+          age: val.age || null,
           confidence: e.extraction_confidence,
           sourceDoc: docName,
         });
@@ -996,7 +1443,7 @@ async function wizardExtract(
     }
   }
 
-  // Detect missing fields based on project type
+  // Detect missing fields based on project type — but only truly missing ones
   const baseRequired = ["title", "synopsis"];
   const typeSpecific: Record<string, string[]> = {
     series: ["character", "episode"],
@@ -1014,21 +1461,35 @@ async function wizardExtract(
     scene: "Scènes",
     tone: "Ton / Ambiance",
   };
-  prefill.missingFields = required
-    .filter(f => !extractedTypes.has(f))
-    .map(f => missingLabels[f] || f);
 
-  // Get document roles
-  const { data: docMeta } = await supabase
-    .from("source_documents")
-    .select("id, file_name, document_role, role_confidence, file_type")
-    .in("id", document_ids);
+  // Only declare missing if extraction actually ran successfully on at least one doc
+  const anyDocProcessed = (docMeta || []).some(d => d.status === "ready_for_review");
+  if (anyDocProcessed) {
+    prefill.missingFields = required
+      .filter(f => !extractedTypes.has(f))
+      .map(f => missingLabels[f] || f);
+  } else {
+    prefill.missingFields = ["Analyse en cours…"];
+  }
+
+  // Include parser diagnostics per document
+  const documentDiagnostics = (docMeta || []).map(d => ({
+    id: d.id,
+    fileName: d.file_name,
+    role: d.document_role,
+    roleConfidence: d.role_confidence,
+    fileType: d.file_type,
+    extractionMode: d.extraction_mode,
+    status: d.status,
+    entitiesCount: (allEntities || []).filter(e => e.document_id === d.id).length,
+  }));
 
   return new Response(JSON.stringify({
     prefill,
     extractedFields,
     documents: docMeta || [],
     documentsProcessed: document_ids.length,
+    diagnostics: documentDiagnostics,
   }), { headers });
 }
 
@@ -1066,39 +1527,53 @@ async function processDocumentWithType(
     return;
   }
 
-  // Download and extract text
+  // ─── Download and extract text using proper extractors ───
   let textContent = "";
+  let extractionMethod = "unknown";
+  let parserSuccess = false;
+
   try {
     const { data: fileData, error: dlErr } = await supabase.storage
       .from("source-documents")
       .download(doc.storage_path);
     if (dlErr || !fileData) throw new Error("Cannot download file");
 
-    if (doc.file_type === "txt" || doc.file_type === "markdown") {
-      textContent = await fileData.text();
-    } else {
-      const rawText = await fileData.text();
-      textContent = rawText.replace(/[^\x20-\x7E\xA0-\xFF\n\r\t]/g, " ").replace(/\s{3,}/g, "\n\n").trim();
-      if (textContent.length < 50) {
-        textContent = `[Document binaire: ${doc.file_name}. Extraction texte limitée.]`;
-      }
-    }
-  } catch {
-    textContent = "[Extraction texte échouée]";
+    const extraction = await extractTextFromFile(fileData, doc.file_type, doc.file_name);
+    textContent = extraction.text;
+    extractionMethod = extraction.method;
+    parserSuccess = extraction.success;
+    
+    console.log(`WizardExtraction for ${doc.file_name}: method=${extractionMethod} success=${parserSuccess} chars=${extraction.charCount}`);
+  } catch (e) {
+    console.error(`File extraction failed for ${doc.file_name}:`, e);
+    extractionMethod = "download_failed";
+    parserSuccess = false;
+  }
+
+  // If extraction failed, mark and return
+  if (!parserSuccess || textContent.length < 20) {
+    await supabase.from("source_documents").update({
+      status: "ready_for_review",
+      extraction_mode: extractionMethod,
+    }).eq("id", documentId);
+    return;
   }
 
   // Store chunks
-  const chunks = splitIntoChunks(textContent, 2000);
+  const chunks = splitIntoStructuredChunks(textContent, 3000);
   for (let i = 0; i < chunks.length; i++) {
     await supabase.from("source_document_chunks").insert({
       document_id: documentId,
       chunk_index: i,
-      content: chunks[i],
-      section_type: i === 0 ? "header" : "body",
+      content: chunks[i].content,
+      section_type: chunks[i].sectionType,
     });
   }
 
-  await supabase.from("source_documents").update({ status: "analyzing", extraction_mode: "native" }).eq("id", documentId);
+  await supabase.from("source_documents").update({
+    status: "analyzing",
+    extraction_mode: extractionMethod,
+  }).eq("id", documentId);
 
   // AI extraction with project-type-specific prompt
   let entities: Array<Record<string, unknown>> = [];
@@ -1118,7 +1593,7 @@ async function processDocumentWithType(
           model: "google/gemini-2.5-flash",
           messages: [
             { role: "system", content: getWorkflowPrompt(projectType) },
-            { role: "user", content: textContent.slice(0, 40000) },
+            { role: "user", content: textContent.slice(0, 60000) },
           ],
           temperature: 0.15,
           response_format: { type: "json_object" },
@@ -1170,21 +1645,15 @@ async function processDocumentWithType(
       document_role: detectedRole,
       entities_found: entities.length,
       project_type: projectType,
+      extraction_method: extractionMethod,
+      text_length: textContent.length,
     },
   });
 }
 
-// ─── Helpers ───
-
-function splitIntoChunks(text: string, maxLen: number): string[] {
-  const chunks: string[] = [];
-  let i = 0;
-  while (i < text.length) {
-    chunks.push(text.slice(i, i + maxLen));
-    i += maxLen;
-  }
-  return chunks.length > 0 ? chunks : [""];
-}
+// ═══════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════
 
 function estimateMappingConfidence(entity: Record<string, unknown>): number {
   const directTypes = ["title", "logline", "synopsis", "genre", "tone", "target_audience"];
@@ -1255,15 +1724,11 @@ function getTargetMappings(
     case "wardrobe": case "costume": return [{ table: "character_profiles", field: "wardrobe", value: entityValue }];
     case "prop": return [{ table: "bibles", field: "content.props", value: entityValue }];
     case "mood": case "ambiance": return [{ table: "projects", field: "style_preset", value: entityValue }];
-    // Workflow-specific mappings
     case "act_structure": return [{ table: "bibles", field: "content.act_structure", value: entityValue }];
     case "season_arc": return [{ table: "bibles", field: "content.season_arc", value: entityValue }];
     case "beat_map": return [{ table: "audio_analysis", field: "beats_json", value: entityValue }];
     case "lyric_section": return [{ table: "bibles", field: "content.lyrics", value: entityValue }];
     case "performance_cue": return [{ table: "bibles", field: "content.performance_cues", value: entityValue }];
-    case "prestige_shot": return [{ table: "bibles", field: "content.prestige_shots", value: entityValue }];
-    case "visual_motif": return [{ table: "bibles", field: "content.visual_motifs", value: entityValue }];
-    case "character_arc": return [{ table: "character_profiles", field: "arc", value: entityValue }];
     default: return [];
   }
 }
