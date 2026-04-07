@@ -1,9 +1,9 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useDecideReviewGate } from "@/hooks/useReviewGates";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, RefreshCw, Shield, Clock } from "lucide-react";
+import { CheckCircle, XCircle, RefreshCw, Shield, Clock, AlertTriangle, Lock } from "lucide-react";
 
 const GATE_LABELS: Record<string, string> = {
   character_pack: "Pack personnage",
@@ -20,13 +20,22 @@ const GATE_LABELS: Record<string, string> = {
   poster: "Affiche",
 };
 
-const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  pending: { label: "En attente", variant: "outline" },
-  approved: { label: "Approuvé", variant: "default" },
-  rejected: { label: "Rejeté", variant: "destructive" },
-  regenerating: { label: "Regénération…", variant: "secondary" },
-  skipped: { label: "Ignoré", variant: "secondary" },
+const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: typeof CheckCircle }> = {
+  pending: { label: "En attente", variant: "outline", icon: Clock },
+  approved: { label: "Approuvé", variant: "default", icon: CheckCircle },
+  rejected: { label: "Rejeté", variant: "destructive", icon: XCircle },
+  regenerating: { label: "Regénération…", variant: "secondary", icon: RefreshCw },
+  skipped: { label: "Ignoré", variant: "secondary", icon: Clock },
+  stale: { label: "Invalidé", variant: "destructive", icon: AlertTriangle },
 };
+
+// Gate ordering for visual display
+const GATE_ORDER = [
+  "character_pack", "world_pack", "scene_plan", "clips",
+  "hero_shots", "performance", "repair",
+  "rough_cut", "fine_cut", "final_export",
+  "social_exports", "poster",
+];
 
 interface ReviewGatesPanelProps {
   projectId: string;
@@ -40,7 +49,12 @@ export function ReviewGatesPanel({ projectId, gates }: ReviewGatesPanelProps) {
   const handleDecision = async (gateId: string, status: string, action?: string) => {
     try {
       await decide.mutateAsync({ id: gateId, status, action });
-      toast({ title: status === "approved" ? "✅ Approuvé" : "Action enregistrée" });
+      const messages: Record<string, string> = {
+        approved: "✅ Approuvé",
+        rejected: "❌ Rejeté — les gates en aval ont été invalidées",
+        regenerating: "🔄 Regénération lancée — les gates en aval ont été invalidées",
+      };
+      toast({ title: messages[status] || "Action enregistrée" });
     } catch (err: unknown) {
       toast({ title: "Erreur", description: err instanceof Error ? err.message : "Erreur", variant: "destructive" });
     }
@@ -59,35 +73,53 @@ export function ReviewGatesPanel({ projectId, gates }: ReviewGatesPanelProps) {
     );
   }
 
+  // Sort gates by canonical order
+  const sortedGates = [...gates].sort((a, b) => {
+    const aIdx = GATE_ORDER.indexOf(String(a.gate_type));
+    const bIdx = GATE_ORDER.indexOf(String(b.gate_type));
+    return (aIdx === -1 ? 999 : aIdx) - (bIdx === -1 ? 999 : bIdx);
+  });
+
   return (
     <div className="space-y-3">
-      {gates.map((gate) => {
+      {sortedGates.map((gate) => {
         const gateType = String(gate.gate_type);
         const status = String(gate.status);
         const config = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
         const isPending = status === "pending";
+        const isStale = status === "stale";
+        const isLocking = gateType === "rough_cut" || gateType === "fine_cut";
+        const IconComponent = config.icon;
 
         return (
-          <Card key={String(gate.id)}>
+          <Card key={String(gate.id)} className={isStale ? "border-destructive/30 bg-destructive/5" : ""}>
             <CardContent className="flex items-center justify-between py-4">
               <div className="flex items-center gap-3">
-                {status === "approved" ? (
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                ) : status === "rejected" ? (
-                  <XCircle className="h-5 w-5 text-destructive" />
-                ) : (
-                  <Clock className="h-5 w-5 text-muted-foreground" />
-                )}
+                <IconComponent className={`h-5 w-5 ${
+                  status === "approved" ? "text-green-500" :
+                  status === "rejected" || isStale ? "text-destructive" :
+                  "text-muted-foreground"
+                }`} />
                 <div>
-                  <span className="font-medium text-sm">{GATE_LABELS[gateType] || gateType}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-sm">{GATE_LABELS[gateType] || gateType}</span>
+                    {isLocking && status === "approved" && (
+                      <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                    )}
+                  </div>
                   {gate.notes && (
                     <p className="text-xs text-muted-foreground mt-0.5">{String(gate.notes)}</p>
+                  )}
+                  {isLocking && isPending && (
+                    <p className="text-xs text-amber-600 mt-0.5">
+                      ⚠️ L'approbation verrouillera {gateType === "rough_cut" ? "les clips" : "la timeline"}
+                    </p>
                   )}
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <Badge variant={config.variant}>{config.label}</Badge>
-                {isPending && (
+                {(isPending || isStale) && (
                   <>
                     <Button size="sm" variant="default" onClick={() => handleDecision(String(gate.id), "approved", "approve")}
                       disabled={decide.isPending} className="gap-1">
