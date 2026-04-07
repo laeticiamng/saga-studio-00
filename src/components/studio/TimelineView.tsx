@@ -53,9 +53,9 @@ export function TimelineView({ timeline, tracks, clips, projectId }: TimelineVie
               <Card key={String(track.id)} className="overflow-hidden">
                 <div className="flex">
                   {/* Track label */}
-                  <div className="w-32 shrink-0 border-r bg-secondary/30 p-3 flex flex-col justify-center">
-                    <span className="text-xs font-medium truncate">{String(track.label)}</span>
-                    <span className="text-[10px] text-muted-foreground capitalize">{String(track.track_type)}</span>
+                  <div className="w-20 sm:w-32 shrink-0 border-r bg-secondary/30 p-2 sm:p-3 flex flex-col justify-center">
+                    <span className="text-[10px] sm:text-xs font-medium truncate">{String(track.label)}</span>
+                    <span className="text-[8px] sm:text-[10px] text-muted-foreground capitalize">{String(track.track_type)}</span>
                   </div>
                   {/* Track lane */}
                   <div className="flex-1 relative h-16 bg-secondary/10">
