@@ -1,37 +1,34 @@
 
-# Anti-Aberrations Validation Layer
+# Production Studio — Master Plan
 
-## Group A: Database Migration
-1. **`aberration_categories`** — Taxonomy reference table (category, subcategory, severity_default, repair_action_default)
-2. **`asset_validations`** — Per-asset validation record (asset_id, asset_type, validation_status, scores JSON, blocking, validator_type, explanation, pass_results JSON)
-3. **`anomaly_events`** — Individual anomaly detections (validation_id, category, subcategory, severity, confidence, explanation, suggested_fix, auto_fix_attempted, auto_fix_result, blocking)
-4. **`repair_attempts`** — Repair tracking (anomaly_event_id, repair_mode, provider_used, result_asset_id, status, attempt_number)
-5. **`repair_policies`** — Default repair actions per anomaly category (category, default_action, max_retries, escalation_action)
-6. **`project_validation_reports`** — Final project-level sweep results (project_id, timeline_version, total_anomalies, blocking_count, premium_readiness_score, report JSON)
-7. **Seed** ~30 aberration categories across the 9 top-level groups (A-I)
-8. **Seed** repair policies for each category
+## Phase 1–6: Core Platform ✅
+## Phase 7: Production Robustness, QC & Cost Governance ✅
+## Phase 8: Platform Governance Layer ✅
 
-## Group B: Validation Engine
-1. **`src/lib/aberration-taxonomy.ts`** — TypeScript types for all categories/subcategories
-2. **`src/lib/validation-engine.ts`** — Multi-pass validation orchestrator: technical, visual, semantic, continuity, story, delivery passes. Scoring logic. Blocking rules.
-3. **`src/lib/repair-router.ts`** — Repair decision logic: maps anomaly → repair action, tracks retry loops, escalation
+## Phase 9: Anti-Aberrations Validation Layer ✅
 
-## Group C: Edge Function
-1. **`supabase/functions/validate-asset/index.ts`** — Server-side validation using multimodal AI (Gemini) to analyze images/videos against prompt, script, refs. Writes to asset_validations + anomaly_events.
+### Database:
+- **aberration_categories** — 33 seeded categories across 9 groups (anatomy, object, temporal, physics, semantic, identity, framing, text_graphic, audio)
+- **asset_validations** — Per-asset validation with multi-dimensional scores, blocking flags, pass results
+- **anomaly_events** — Individual anomaly detections linked to validations with severity, confidence, explanation, suggested_fix
+- **repair_attempts** — Tracks repair actions with attempt numbering and result status
+- **repair_policies** — 9 seeded default repair actions per category with max retries and escalation
+- **project_validation_reports** — Project-level sweep results with premium readiness score
 
-## Group D: Hooks
-1. **`useAssetValidations`** — Read validations for a project/asset
-2. **`useAnomalyEvents`** — Read anomaly events
-3. **`useRepairAttempts`** — Read/create repair attempts
-4. **`useProjectValidationReport`** — Read final sweep report
+### Engine:
+- **`src/lib/aberration-taxonomy.ts`** — Type-safe taxonomy, severity weights, score computation, status derivation
+- **`src/lib/validation-engine.ts`** — Multi-pass validation orchestrator, requestValidation(), isAssetCleared(), getProjectAnomalySummary()
+- **`src/lib/repair-router.ts`** — Repair decision logic with retry tracking and escalation
 
-## Group E: UI
-1. **`ValidationBadge`** — Small badge showing validation status (pass/fail/pending)
-2. **`AnomalyDetailsDrawer`** — Slide-out panel showing anomaly list with severity, explanation, repair options
-3. **`ProjectValidationPanel`** — Project-level anomaly summary + premium-readiness score
-4. Wire into TimelineStudio as a new tab
+### Edge Function:
+- **`supabase/functions/validate-asset/index.ts`** — AI-powered validation using Gemini multimodal via Lovable AI. Analyzes images against prompts/scripts, produces structured scores and anomaly events via tool calling.
 
-## Not in scope (future):
-- Real-time frame-by-frame video analysis (requires external infra)
-- Lip-sync detection (requires specialized model)
-- Pre-generation prevention (prompt complexity analysis — planned but deferred to separate iteration)
+### Hooks:
+- useAssetValidations, useAssetValidation, useAnomalyEvents, useProjectAnomalyEvents
+- useRepairAttempts, useProjectValidationReport, useAberrationCategories, useRequestValidation
+
+### UI:
+- **ValidationBadge** — Status badge (pending/running/passed/failed/blocked)
+- **AnomalyDetailsDrawer** — Slide-out panel with anomaly list, severity, repair buttons
+- **ProjectValidationPanel** — Project-level summary: pass/fail/blocked counts, premium readiness score bar
+- Wired as "Anti-Aberrations" tab in TimelineStudio
