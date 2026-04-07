@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { Database } from "@/integrations/supabase/types";
 import { Link } from "react-router-dom";
@@ -8,7 +9,9 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Film, Music, Plus, Clock, CheckCircle, AlertCircle, Loader2, Tv, Clapperboard } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Film, Music, Plus, Clock, CheckCircle, AlertCircle, Loader2, Tv, Clapperboard, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { OnboardingTour } from "@/components/OnboardingTour";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useFeatureFlag } from "@/hooks/useFeatureFlag";
@@ -25,10 +28,17 @@ const statusIcons: Record<string, React.ReactNode> = {
   in_production: <Loader2 className="h-4 w-4 animate-spin text-primary" />,
 };
 
+const PAGE_SIZE = 12;
+
 export default function Dashboard() {
   const { user } = useAuth();
   usePageTitle("Mes projets");
   const seriesEnabled = useFeatureFlag("series_enabled");
+
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [page, setPage] = useState(0);
 
   type ProjectWithSeries = Database["public"]["Tables"]["projects"]["Row"] & { _seriesId: string | null };
 
@@ -41,7 +51,6 @@ export default function Dashboard() {
         .order("created_at", { ascending: false });
       if (error) throw error;
 
-      // For series projects, fetch associated series IDs
       const seriesProjects = data?.filter(p => p.type === "series") || [];
       let seriesMap: Record<string, string> = {};
       if (seriesProjects.length > 0) {
@@ -61,6 +70,27 @@ export default function Dashboard() {
     },
     enabled: !!user,
   });
+
+  const filtered = useMemo(() => {
+    if (!projects) return [];
+    return projects.filter(p => {
+      if (typeFilter !== "all" && p.type !== typeFilter) return false;
+      if (statusFilter !== "all" && p.status !== statusFilter) return false;
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        if (!p.title.toLowerCase().includes(q) && !(p.synopsis || "").toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+  }, [projects, search, typeFilter, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  // Reset page when filters change
+  const handleSearch = (v: string) => { setSearch(v); setPage(0); };
+  const handleType = (v: string) => { setTypeFilter(v); setPage(0); };
+  const handleStatus = (v: string) => { setStatusFilter(v); setPage(0); };
 
   return (
     <div className="min-h-screen bg-background">
@@ -92,6 +122,44 @@ export default function Dashboard() {
             )}
           </div>
         </div>
+
+        {/* Search & Filters */}
+        {projects && projects.length > 0 && (
+          <div className="flex flex-col sm:flex-row gap-3 mb-6">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => handleSearch(e.target.value)}
+                placeholder="Rechercher un projet…"
+                className="pl-9"
+              />
+            </div>
+            <Select value={typeFilter} onValueChange={handleType}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les types</SelectItem>
+                <SelectItem value="film">Film</SelectItem>
+                <SelectItem value="music_video">Clip Musical</SelectItem>
+                <SelectItem value="series">Série</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={handleStatus}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Statut" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les statuts</SelectItem>
+                <SelectItem value="draft">Brouillon</SelectItem>
+                <SelectItem value="completed">Terminé</SelectItem>
+                <SelectItem value="failed">Échoué</SelectItem>
+                <SelectItem value="generating">En cours</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {isLoading ? (
           <div className="flex justify-center py-20">
@@ -142,48 +210,76 @@ export default function Dashboard() {
               </div>
             </CardContent>
           </Card>
+        ) : filtered.length === 0 ? (
+          <Card className="border-dashed border-border/50 bg-card/40">
+            <CardContent className="flex flex-col items-center justify-center py-16 gap-3">
+              <Search className="h-10 w-10 text-muted-foreground/40" />
+              <p className="text-muted-foreground font-medium">Aucun projet trouvé</p>
+              <p className="text-xs text-muted-foreground">Essayez de modifier vos filtres</p>
+              <Button variant="outline" size="sm" onClick={() => { setSearch(""); setTypeFilter("all"); setStatusFilter("all"); }}>
+                Réinitialiser les filtres
+              </Button>
+            </CardContent>
+          </Card>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {projects.map((project) => {
-              const linkTo = project.type === "series" && project._seriesId
-                ? `/series/${project._seriesId}`
-                : `/project/${project.id}`;
-              return (
-              <Card key={project.id} className="border-border/50 bg-card/60 hover:bg-card/80 transition-all h-full">
-                <Link to={linkTo}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <Badge variant="outline" className="text-xs">
-                        {project.type === "series" ? <Tv className="h-3 w-3 mr-1" /> : project.type === "clip" ? <Music className="h-3 w-3 mr-1" /> : <Film className="h-3 w-3 mr-1" />}
-                        {typeLabels[project.type] || project.type}
-                      </Badge>
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        {statusIcons[project.status] || <Clock className="h-4 w-4" />}
-                        {statusLabels[project.status] || project.status}
+          <>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {paginated.map((project) => {
+                const linkTo = project.type === "series" && project._seriesId
+                  ? `/series/${project._seriesId}`
+                  : `/project/${project.id}`;
+                return (
+                <Card key={project.id} className="border-border/50 bg-card/60 hover:bg-card/80 transition-all h-full">
+                  <Link to={linkTo}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline" className="text-xs">
+                          {project.type === "series" ? <Tv className="h-3 w-3 mr-1" /> : project.type === "clip" ? <Music className="h-3 w-3 mr-1" /> : <Film className="h-3 w-3 mr-1" />}
+                          {typeLabels[project.type] || project.type}
+                        </Badge>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          {statusIcons[project.status] || <Clock className="h-4 w-4" />}
+                          {statusLabels[project.status] || project.status}
+                        </div>
                       </div>
-                    </div>
-                    <CardTitle className="text-lg group-hover:text-primary transition-colors mt-2">
-                      {project.title}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pb-2">
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <span>{styleLabels[project.style_preset || ""] || project.style_preset || "Pas de style"}</span>
-                      <span>{project.duration_sec ? `${Math.round(project.duration_sec / 60)} min` : "—"}</span>
-                    </div>
-                  </CardContent>
-                </Link>
-                <div className="px-6 pb-4 pt-0">
-                  <Button variant="outline" size="sm" className="w-full gap-1.5" asChild>
-                    <Link to={`/project/${project.id}/studio`}>
-                      <Clapperboard className="h-3.5 w-3.5" /> Ouvrir le Studio
-                    </Link>
-                  </Button>
-                </div>
-              </Card>
-              );
-            })}
-          </div>
+                      <CardTitle className="text-lg group-hover:text-primary transition-colors mt-2">
+                        {project.title}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pb-2">
+                      <div className="flex items-center justify-between text-sm text-muted-foreground">
+                        <span>{styleLabels[project.style_preset || ""] || project.style_preset || "Pas de style"}</span>
+                        <span>{project.duration_sec ? `${Math.round(project.duration_sec / 60)} min` : "—"}</span>
+                      </div>
+                    </CardContent>
+                  </Link>
+                  <div className="px-6 pb-4 pt-0">
+                    <Button variant="outline" size="sm" className="w-full gap-1.5" asChild>
+                      <Link to={`/project/${project.id}/studio`}>
+                        <Clapperboard className="h-3.5 w-3.5" /> Ouvrir le Studio
+                      </Link>
+                    </Button>
+                  </div>
+                </Card>
+                );
+              })}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-8">
+                <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Page {page + 1} / {totalPages}
+                </span>
+                <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </main>
       <Footer />

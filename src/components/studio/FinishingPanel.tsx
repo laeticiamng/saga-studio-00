@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useUpdateTimeline } from "@/hooks/useTimelines";
 import { useToast } from "@/hooks/use-toast";
-import { Palette, Sun, Contrast, Sparkles, Film } from "lucide-react";
+import { Palette, Sun, Contrast, Sparkles, Film, Save, Loader2 } from "lucide-react";
 
 const LOOK_PRESETS = [
   { value: "cinematic_soft", label: "Cinematic Soft", desc: "Tons chauds, contraste doux, ombres riches" },
@@ -16,6 +16,14 @@ const LOOK_PRESETS = [
   { value: "glossy_music_video", label: "Glossy Music Video", desc: "Saturé, brillant, reflets luxueux" },
   { value: "clean_neutral", label: "Clean Neutral", desc: "Minimal, pas de stylisation, fidèle aux sources" },
 ];
+
+interface FinishingAdjustments {
+  brightness: number;
+  contrast: number;
+  saturation: number;
+  grain: boolean;
+  sharpen: boolean;
+}
 
 interface FinishingPanelProps {
   timeline: Record<string, unknown>;
@@ -27,11 +35,23 @@ export function FinishingPanel({ timeline, projectId }: FinishingPanelProps) {
   const { toast } = useToast();
   const currentPreset = String(timeline.look_preset || "");
 
-  const [brightness, setBrightness] = useState(100);
-  const [contrast, setContrast] = useState(100);
-  const [saturation, setSaturation] = useState(100);
-  const [grain, setGrain] = useState(false);
-  const [sharpen, setSharpen] = useState(false);
+  // Parse saved adjustments from timeline metadata
+  const savedMeta = timeline.metadata as Record<string, unknown> | null;
+  const savedAdj = (savedMeta?.finishing_adjustments || {}) as Partial<FinishingAdjustments>;
+
+  const [brightness, setBrightness] = useState(savedAdj.brightness ?? 100);
+  const [contrast, setContrast] = useState(savedAdj.contrast ?? 100);
+  const [saturation, setSaturation] = useState(savedAdj.saturation ?? 100);
+  const [grain, setGrain] = useState(savedAdj.grain ?? false);
+  const [sharpen, setSharpen] = useState(savedAdj.sharpen ?? false);
+  const [saving, setSaving] = useState(false);
+
+  const isDirty =
+    brightness !== (savedAdj.brightness ?? 100) ||
+    contrast !== (savedAdj.contrast ?? 100) ||
+    saturation !== (savedAdj.saturation ?? 100) ||
+    grain !== (savedAdj.grain ?? false) ||
+    sharpen !== (savedAdj.sharpen ?? false);
 
   const handleApplyPreset = async (preset: string) => {
     try {
@@ -40,8 +60,25 @@ export function FinishingPanel({ timeline, projectId }: FinishingPanelProps) {
         look_preset: preset,
       });
       toast({ title: "Look appliqué", description: `Preset "${preset}" enregistré pour l'export` });
-    } catch (err: unknown) {
+    } catch {
       toast({ title: "Erreur", variant: "destructive" });
+    }
+  };
+
+  const handleSaveAdjustments = async () => {
+    setSaving(true);
+    try {
+      const adjustments: FinishingAdjustments = { brightness, contrast, saturation, grain, sharpen };
+      const existingMeta = (timeline.metadata as Record<string, unknown>) || {};
+      await updateTimeline.mutateAsync({
+        id: String(timeline.id),
+        metadata: { ...existingMeta, finishing_adjustments: adjustments },
+      });
+      toast({ title: "Ajustements sauvegardés", description: "Les réglages seront appliqués lors de l'export." });
+    } catch {
+      toast({ title: "Erreur de sauvegarde", variant: "destructive" });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -120,6 +157,17 @@ export function FinishingPanel({ timeline, projectId }: FinishingPanelProps) {
             <Label className="text-xs">Sharpening</Label>
             <Switch checked={sharpen} onCheckedChange={setSharpen} />
           </div>
+
+          <Button
+            variant="hero"
+            size="sm"
+            className="w-full gap-2"
+            onClick={handleSaveAdjustments}
+            disabled={!isDirty || saving}
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {saving ? "Sauvegarde…" : isDirty ? "Sauvegarder les ajustements" : "Ajustements sauvegardés"}
+          </Button>
         </CardContent>
       </Card>
     </div>
