@@ -53,6 +53,10 @@ const ContinuityCenter = lazy(() => import("./pages/ContinuityCenter"));
 const DeliveryCenter = lazy(() => import("./pages/DeliveryCenter"));
 const DocumentsCenter = lazy(() => import("./pages/DocumentsCenter"));
 
+// Production Studio pages
+const CreateProject = lazy(() => import("./pages/CreateProject"));
+const TimelineStudio = lazy(() => import("./pages/TimelineStudio"));
+
 const PageLoader = () => (
   <div className="min-h-screen bg-background flex items-center justify-center">
     <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -105,6 +109,8 @@ const App = () => (
                 <Route path="/series/:id/continuity" element={<ProtectedRoute><ContinuityCenter /></ProtectedRoute>} />
                 <Route path="/series/:id/delivery" element={<ProtectedRoute><DeliveryCenter /></ProtectedRoute>} />
                 <Route path="/series/:id/documents" element={<ProtectedRoute><DocumentsCenter /></ProtectedRoute>} />
+                <Route path="/create" element={<ProtectedRoute><CreateProject /></ProtectedRoute>} />
+                <Route path="/project/:id/studio" element={<ProtectedRoute><TimelineStudio /></ProtectedRoute>} />
                 <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
                 <Route path="/admin/agents" element={<AdminRoute><AdminAgentManager /></AdminRoute>} />
                 <Route path="/admin/providers" element={<AdminRoute><AdminProviderDashboard /></AdminRoute>} />
