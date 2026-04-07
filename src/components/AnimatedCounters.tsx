@@ -1,12 +1,12 @@
 import { motion, useInView } from "framer-motion";
 import { useRef, useEffect, useState } from "react";
-import { Film, Users, Palette, Zap } from "lucide-react";
+import { Film, Users, Palette, Layers } from "lucide-react";
 
 const stats = [
-  { icon: Film, value: 12500, suffix: "+", label: "Clips créés", duration: 2 },
+  { icon: Film, value: 12500, suffix: "+", label: "Projets produits", duration: 2 },
   { icon: Users, value: 3200, suffix: "+", label: "Créateurs actifs", duration: 2.2 },
   { icon: Palette, value: 13, suffix: "", label: "Styles visuels", duration: 1.5 },
-  { icon: Zap, value: 10, suffix: " min", label: "Temps moyen", duration: 1.2 },
+  { icon: Layers, value: 6, suffix: " étapes", label: "Pipeline complet", duration: 1.2 },
 ];
 
 function Counter({ value, suffix, duration }: { value: number; suffix: string; duration: number }) {

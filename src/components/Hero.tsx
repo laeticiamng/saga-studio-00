@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Video, Zap } from "lucide-react";
+import { Sparkles, Video, Zap, Film, Tv, Music, Layers } from "lucide-react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
 import heroImage from "@/assets/hero-cinema.jpg";
@@ -22,7 +22,7 @@ const Hero = () => {
   const contentOpacity = useTransform(scrollYProgress, [0, 0.6], [1, 0]);
 
   const handleGetStarted = () => {
-    navigate(user ? "/create/clip" : "/auth?signup");
+    navigate(user ? "/create" : "/auth?signup");
   };
 
   return (
@@ -42,7 +42,6 @@ const Hero = () => {
           decoding="async"
           className="absolute inset-0 w-full h-full object-cover"
         />
-        {/* Noise overlay on hero image */}
         <div className="absolute inset-0 noise-overlay" />
       </motion.div>
 
@@ -59,12 +58,6 @@ const Hero = () => {
         className="absolute top-1/3 left-1/3 -translate-x-1/2 w-48 sm:w-80 h-48 sm:h-80 rounded-full blur-[80px] motion-reduce:hidden"
         style={{ background: "hsl(15 100% 50% / 0.15)" }}
       />
-      <motion.div
-        animate={{ scale: [1, 1.1, 1], opacity: [0.06, 0.12, 0.06] }}
-        transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 4 }}
-        className="absolute top-1/2 right-1/4 w-40 sm:w-72 h-40 sm:h-72 rounded-full blur-[100px] motion-reduce:hidden"
-        style={{ background: "hsl(25 95% 53% / 0.12)" }}
-      />
 
       {/* Content */}
       <motion.div
@@ -79,7 +72,7 @@ const Hero = () => {
         >
           <Sparkles className="w-4 h-4 text-primary" />
           <span className="text-sm text-muted-foreground">
-            Votre première vidéo offerte — Aucune carte bancaire requise
+            Votre premier projet offert — Aucune carte bancaire requise
           </span>
         </motion.div>
 
@@ -89,9 +82,9 @@ const Hero = () => {
           transition={{ duration: 0.7, delay: 0.15 }}
           className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold mb-4 sm:mb-6 bg-gradient-to-r from-foreground via-foreground/90 to-foreground/60 bg-clip-text text-transparent"
         >
-          Transformez vos idées
+          Le studio audiovisuel IA
           <br />
-          <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">en films, séries ou vidéo avec l'IA</span>
+          <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">pour films, séries et clips</span>
         </motion.h1>
 
         <motion.p
@@ -100,9 +93,9 @@ const Hero = () => {
           transition={{ duration: 0.7, delay: 0.3 }}
           className="text-base sm:text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-8 sm:mb-12 px-2"
         >
-          Du clip musical au long-métrage, décrivez votre vision et recevez une vidéo complète.
+          Scénarisez, générez, montez et exportez des productions complètes.
           <br className="hidden md:block" />
-          <span className="text-foreground/80">Aucune compétence en montage requise.</span>
+          <span className="text-foreground/80">Du storyboard au rendu final — tout en un seul outil.</span>
         </motion.p>
 
         <motion.div
@@ -113,31 +106,37 @@ const Hero = () => {
         >
           <Button variant="hero" size="lg" className="group" onClick={handleGetStarted}>
             <Video className="w-5 h-5 group-hover:scale-110 transition-transform" />
-            Essai gratuit — Créer mon projet
+            Créer un projet — Essai gratuit
           </Button>
-          <Button variant="glass" size="lg" onClick={() => navigate("/pricing")}>
+          <Button variant="glass" size="lg" onClick={() => navigate(user ? "/dashboard" : "/pricing")}>
             <Zap className="w-5 h-5" />
-            Voir les tarifs
+            {user ? "Mes projets" : "Voir les tarifs"}
           </Button>
         </motion.div>
 
+        {/* Capability pills */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.7 }}
-          className="mt-10 sm:mt-16 flex flex-wrap justify-center gap-4 sm:gap-8 text-xs sm:text-sm text-muted-foreground"
+          className="mt-10 sm:mt-16 flex flex-wrap justify-center gap-3 sm:gap-4"
         >
-          {["Qualité HD et 4K", "Clips, films & séries", "Vidéo prête en ~10 min"].map((t) => (
-            <div key={t} className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-primary/80" />
-              <span>{t}</span>
+          {[
+            { icon: Film, label: "Films & Courts-métrages" },
+            { icon: Tv, label: "Séries multi-épisodes" },
+            { icon: Music, label: "Clips musicaux" },
+            { icon: Layers, label: "Timeline & Montage" },
+          ].map((item) => (
+            <div key={item.label} className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground bg-white/[0.03] backdrop-blur-sm border border-white/[0.06] rounded-full px-3 py-1.5">
+              <item.icon className="w-3.5 h-3.5 text-primary" />
+              <span>{item.label}</span>
             </div>
           ))}
         </motion.div>
         <HeroDemo />
       </motion.div>
 
-      {/* Bottom fade for section transition */}
+      {/* Bottom fade */}
       <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent pointer-events-none" />
     </section>
   );

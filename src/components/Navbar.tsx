@@ -1,7 +1,10 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Film, LogOut, User, LayoutDashboard, CreditCard, Search, Menu, X, Tv } from "lucide-react";
+import {
+  Film, LogOut, User, LayoutDashboard, CreditCard, Search, Menu, X,
+  Tv, Plus, Layers, CheckCircle, Download, Activity, Shield, Inbox,
+} from "lucide-react";
 import { CreditDisplay } from "@/components/CreditDisplay";
 import CommandPalette from "@/components/CommandPalette";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -16,15 +19,24 @@ const landingLinks = [
   { label: "À propos", href: "/about" },
 ];
 
+const appLinks = [
+  { label: "Projets", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Créer", href: "/create", icon: Plus },
+  { label: "Tarifs", href: "/pricing", icon: CreditCard },
+  { label: "Compte", href: "/settings", icon: User },
+];
+
 export default function Navbar() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const isLandingPage = location.pathname === "/" || location.pathname === "/pricing" || location.pathname === "/privacy" || location.pathname === "/terms" || location.pathname === "/legal";
-  const sectionLinks = isLandingPage
-    ? landingLinks.filter((l) => !(user && l.href === "/pricing"))
+  const isLandingPage = location.pathname === "/" || location.pathname === "/pricing" || location.pathname === "/privacy" || location.pathname === "/terms" || location.pathname === "/legal" || location.pathname === "/about";
+  const sectionLinks = isLandingPage && !user
+    ? landingLinks
+    : isLandingPage && user
+    ? landingLinks.filter((l) => l.href !== "/pricing")
     : [];
 
   const scrollTo = (href: string) => {
@@ -50,6 +62,8 @@ export default function Navbar() {
     navigate(path);
   };
 
+  const isActive = (href: string) => location.pathname === href;
+
   return (
     <>
       <CommandPalette />
@@ -59,10 +73,11 @@ export default function Navbar() {
             <Link to="/" className="flex items-center gap-2 shrink-0">
               <Film className="h-6 w-6 text-primary" />
               <span className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent" style={{ fontFamily: "var(--font-display)" }}>
-                CineClip AI
+                Saga Studio
               </span>
             </Link>
 
+            {/* Landing links */}
             {sectionLinks.length > 0 && (
               <div className="hidden lg:flex items-center gap-1">
                 {sectionLinks.map((l) => (
@@ -76,10 +91,29 @@ export default function Navbar() {
                 ))}
               </div>
             )}
+
+            {/* App navigation for logged-in users on non-landing pages */}
+            {user && !isLandingPage && (
+              <div className="hidden lg:flex items-center gap-1">
+                {appLinks.map((l) => (
+                  <button
+                    key={l.href}
+                    onClick={() => navigate(l.href)}
+                    className={`px-3 py-1.5 text-sm transition-colors rounded-md whitespace-nowrap flex items-center gap-1.5 ${
+                      isActive(l.href)
+                        ? "text-primary bg-primary/10 font-medium"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    }`}
+                  >
+                    <l.icon className="h-3.5 w-3.5" />
+                    {l.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Search shortcut — only show for logged-in users */}
             {user && (
               <Button
                 variant="ghost"
@@ -102,22 +136,18 @@ export default function Navbar() {
               {user ? (
                 <>
                   <CreditDisplay />
-                   <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="gap-2">
-                     <LayoutDashboard className="h-4 w-4" />
-                     <span className="hidden xl:inline">Mes projets</span>
-                   </Button>
-                   <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard?tab=series")} className="gap-2">
-                     <Tv className="h-4 w-4" />
-                     <span className="hidden xl:inline">Séries</span>
-                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => navigate("/pricing")} className="gap-2">
-                    <CreditCard className="h-4 w-4" />
-                    <span className="hidden xl:inline">Tarifs</span>
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => navigate("/settings")} className="gap-2">
-                    <User className="h-4 w-4" />
-                    <span className="hidden xl:inline">Mon compte</span>
-                  </Button>
+                  {isLandingPage && (
+                    <>
+                      <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="gap-2">
+                        <LayoutDashboard className="h-4 w-4" />
+                        <span className="hidden xl:inline">Projets</span>
+                      </Button>
+                      <Button variant="hero" size="sm" onClick={() => navigate("/create")} className="gap-2">
+                        <Plus className="h-4 w-4" />
+                        <span className="hidden xl:inline">Créer</span>
+                      </Button>
+                    </>
+                  )}
                   <Button variant="ghost" size="sm" onClick={() => signOut()} className="gap-2 text-muted-foreground">
                     <LogOut className="h-4 w-4" />
                   </Button>
@@ -130,7 +160,7 @@ export default function Navbar() {
                   <Button variant="ghost" size="sm" onClick={() => navigate("/auth")}>
                     Se connecter
                   </Button>
-                  <Button variant="hero" size="sm" onClick={() => navigate("/auth")}>
+                  <Button variant="hero" size="sm" onClick={() => navigate("/auth?signup")}>
                     Essai gratuit
                   </Button>
                 </div>
@@ -189,12 +219,12 @@ export default function Navbar() {
                     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }}>
                       <CreditDisplay />
                     </motion.div>
-                     <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} onClick={() => mobileNav("/dashboard")} className="flex items-center gap-3 px-4 py-3.5 rounded-lg hover:bg-muted/50 active:bg-muted/70 transition-colors min-h-[44px]">
-                       <LayoutDashboard className="h-4 w-4 text-primary" /> Mes projets
-                     </motion.button>
-                     <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.22 }} onClick={() => mobileNav("/dashboard?tab=series")} className="flex items-center gap-3 px-4 py-3.5 rounded-lg hover:bg-muted/50 active:bg-muted/70 transition-colors min-h-[44px]">
-                       <Tv className="h-4 w-4 text-primary" /> Séries
-                     </motion.button>
+                    <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} onClick={() => mobileNav("/dashboard")} className="flex items-center gap-3 px-4 py-3.5 rounded-lg hover:bg-muted/50 active:bg-muted/70 transition-colors min-h-[44px]">
+                      <LayoutDashboard className="h-4 w-4 text-primary" /> Projets
+                    </motion.button>
+                    <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.22 }} onClick={() => mobileNav("/create")} className="flex items-center gap-3 px-4 py-3.5 rounded-lg hover:bg-muted/50 active:bg-muted/70 transition-colors min-h-[44px]">
+                      <Plus className="h-4 w-4 text-primary" /> Créer un projet
+                    </motion.button>
                     <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.25 }} onClick={() => mobileNav("/pricing")} className="flex items-center gap-3 px-4 py-3.5 rounded-lg hover:bg-muted/50 active:bg-muted/70 transition-colors min-h-[44px]">
                       <CreditCard className="h-4 w-4 text-primary" /> Tarifs
                     </motion.button>
@@ -214,7 +244,7 @@ export default function Navbar() {
                       Se connecter
                     </motion.button>
                     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.22 }}>
-                      <Button variant="hero" className="w-full" onClick={() => mobileNav("/auth")}>
+                      <Button variant="hero" className="w-full" onClick={() => mobileNav("/auth?signup")}>
                         Essai gratuit
                       </Button>
                     </motion.div>

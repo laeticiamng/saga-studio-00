@@ -10,20 +10,20 @@ import exampleAbstract from "@/assets/example-abstract.jpg";
 import exampleRetro from "@/assets/example-retro.jpg";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play } from "lucide-react";
-import AnimatedSection, { StaggerContainer, StaggerItem } from "./AnimatedSection";
+import AnimatedSection from "./AnimatedSection";
 
 type StyleTag = "Tous" | "Cinématique" | "Anime" | "Artistique" | "Urbain" | "Rétro";
 
 const examples = [
-  { image: example1, title: "Clip musical futuriste", style: "Sci-Fi / Cyberpunk", tag: "Cinématique" as StyleTag, alt: "Clip cyberpunk généré par IA" },
-  { image: exampleAnime, title: "Performance anime", style: "Anime", tag: "Anime" as StyleTag, alt: "Clip anime généré par IA" },
-  { image: example2, title: "Animation cohérente", style: "Animation 3D", tag: "Anime" as StyleTag, alt: "Animation 3D par IA" },
-  { image: exampleNeon, title: "Ambiance urbaine", style: "Néon Noir", tag: "Urbain" as StyleTag, alt: "Clip néon noir par IA" },
-  { image: exampleWatercolor, title: "Ballade poétique", style: "Aquarelle", tag: "Artistique" as StyleTag, alt: "Clip aquarelle par IA" },
-  { image: example3, title: "Court-métrage dramatique", style: "Cinématique réaliste", tag: "Cinématique" as StyleTag, alt: "Court-métrage cinématique par IA" },
-  { image: exampleNoir, title: "Jazz intemporel", style: "Noir & Blanc", tag: "Rétro" as StyleTag, alt: "Clip noir et blanc par IA" },
-  { image: exampleAbstract, title: "Trip visuel", style: "Abstrait", tag: "Artistique" as StyleTag, alt: "Clip abstrait par IA" },
-  { image: exampleRetro, title: "Session vintage", style: "Rétro 70s", tag: "Rétro" as StyleTag, alt: "Clip rétro par IA" },
+  { image: example1, title: "Court-métrage sci-fi", style: "Sci-Fi / Cyberpunk", tag: "Cinématique" as StyleTag, alt: "Court-métrage cyberpunk généré par IA" },
+  { image: exampleAnime, title: "Série anime — épisode pilote", style: "Anime", tag: "Anime" as StyleTag, alt: "Épisode anime généré par IA" },
+  { image: example2, title: "Film d'animation 3D", style: "Animation 3D", tag: "Anime" as StyleTag, alt: "Film animation 3D par IA" },
+  { image: exampleNeon, title: "Clip musical néon", style: "Néon Noir", tag: "Urbain" as StyleTag, alt: "Clip néon noir par IA" },
+  { image: exampleWatercolor, title: "Court-métrage poétique", style: "Aquarelle", tag: "Artistique" as StyleTag, alt: "Film aquarelle par IA" },
+  { image: example3, title: "Long-métrage dramatique", style: "Cinématique réaliste", tag: "Cinématique" as StyleTag, alt: "Film cinématique par IA" },
+  { image: exampleNoir, title: "Film noir — série limitée", style: "Noir & Blanc", tag: "Rétro" as StyleTag, alt: "Film noir par IA" },
+  { image: exampleAbstract, title: "Clip expérimental", style: "Abstrait", tag: "Artistique" as StyleTag, alt: "Clip abstrait par IA" },
+  { image: exampleRetro, title: "Clip vintage 70s", style: "Rétro 70s", tag: "Rétro" as StyleTag, alt: "Clip rétro par IA" },
 ];
 
 const filters: StyleTag[] = ["Tous", "Cinématique", "Anime", "Artistique", "Urbain", "Rétro"];
@@ -37,12 +37,11 @@ const Gallery = () => {
       <div className="container mx-auto">
         <AnimatedSection variant="blurIn">
           <div className="page-header">
-            <h2>Voyez ce que l'IA peut créer</h2>
-            <p>Explorez nos styles visuels — chaque image est un aperçu de clip généré par CineClip AI.</p>
+            <h2>Productions réalisées avec le studio</h2>
+            <p>Films, séries et clips — chaque image est extraite d'un projet complet.</p>
           </div>
         </AnimatedSection>
 
-        {/* Filter pills */}
         <div className="flex flex-wrap justify-center gap-2 mb-8 sm:mb-12">
           {filters.map((f) => (
             <button
@@ -59,7 +58,6 @@ const Gallery = () => {
           ))}
         </div>
 
-        {/* Grid with AnimatePresence */}
         <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 sm:gap-6">
           <AnimatePresence mode="popLayout">
             {filtered.map((example) => (
