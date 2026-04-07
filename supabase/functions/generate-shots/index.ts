@@ -588,6 +588,43 @@ function buildStyleConsistentPrompt(
   return parts.join(". ") + ".\n\n" + basePrompt;
 }
 
+// ─── Base64 to Storage Upload ───────────────────────────────────────────────
+
+async function uploadBase64ToStorage(
+  supabase: ReturnType<typeof createClient>,
+  projectId: string,
+  shotId: string,
+  dataUri: string
+): Promise<string> {
+  // Parse data URI: data:image/png;base64,iVBOR...
+  const match = dataUri.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) throw new Error("Invalid data URI format");
+
+  const mimeType = match[1];
+  const base64Data = match[2];
+  const ext = mimeType.split("/")[1]?.replace("jpeg", "jpg") || "png";
+  const fileName = `${projectId}/${shotId}.${ext}`;
+
+  // Decode base64 to Uint8Array
+  const binaryString = atob(base64Data);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+
+  const { error } = await supabase.storage
+    .from("shot-outputs")
+    .upload(fileName, bytes, {
+      contentType: mimeType,
+      upsert: true,
+    });
+
+  if (error) throw error;
+
+  const { data: urlData } = supabase.storage.from("shot-outputs").getPublicUrl(fileName);
+  return urlData.publicUrl;
+}
+
 // ─── Main Handler ───────────────────────────────────────────────────────────
 
 serve(async (req) => {
