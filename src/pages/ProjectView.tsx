@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Play, Film, RefreshCw, Music, Palette, List, Share2, Eye, ArrowLeft, Clock, Clapperboard, Info, Wand2, Activity, Trash2, Pencil } from "lucide-react";
+import { Loader2, Play, Film, RefreshCw, Music, Palette, List, Share2, Eye, ArrowLeft, Clock, Clapperboard, Info, Wand2, Activity, Trash2, Pencil, Copy, Download } from "lucide-react";
 import { logger } from "@/lib/logger";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useCallback, useEffect } from "react";
@@ -162,6 +162,34 @@ export default function ProjectView() {
     const shareUrl = `${window.location.origin}/share/${id}`;
     navigator.clipboard.writeText(shareUrl);
     toast({ title: "Lien copié !", description: "Le lien de partage a été copié dans le presse-papier" });
+  };
+
+  const [duplicating, setDuplicating] = useState(false);
+  const handleDuplicate = async () => {
+    if (!project || !session || duplicating) return;
+    setDuplicating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-project", {
+        body: {
+          type: project.type,
+          title: `${project.title} (copie)`,
+          synopsis: project.synopsis || undefined,
+          style_preset: project.style_preset,
+          duration_sec: project.duration_sec,
+          aspect_ratio: project.aspect_ratio,
+          quality_tier: (project as any).quality_tier || "standard",
+          mode: project.mode || "story",
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: "Projet dupliqué !", description: "Vous pouvez maintenant le modifier." });
+      navigate(`/project/${data.project.id}`);
+    } catch (err: unknown) {
+      toast({ title: "Erreur", description: err instanceof Error ? err.message : "Duplication échouée", variant: "destructive" });
+    } finally {
+      setDuplicating(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -332,6 +360,9 @@ export default function ProjectView() {
               <Button variant="ghost" size="sm" onClick={openEdit} className="gap-1.5 text-muted-foreground">
                 <Pencil className="h-3.5 w-3.5" /> Modifier
               </Button>
+              <Button variant="ghost" size="sm" onClick={handleDuplicate} disabled={duplicating} className="gap-1.5 text-muted-foreground">
+                {duplicating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />} Dupliquer
+              </Button>
               {project.status === "completed" && (
                 <Button variant="glass" size="sm" onClick={handleShare} className="gap-2">
                   <Share2 className="h-4 w-4" /> Partager
@@ -380,6 +411,45 @@ export default function ProjectView() {
         <div className="mb-8">
           <PipelineProgress projectId={project.id} status={project.status} completedShots={completedShots} totalShots={totalShots} />
         </div>
+
+        {/* Final Master Video Player */}
+        {render?.master_url_16_9 && render.status === "completed" && !render.master_url_16_9.includes("manifest.json") && (
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+            <Card className="border-primary/20 bg-card/80 overflow-hidden">
+              <div className="rounded-t-lg overflow-hidden bg-black">
+                <video
+                  src={render.master_url_16_9}
+                  controls
+                  className="w-full aspect-video"
+                  poster={render.teaser_url || undefined}
+                />
+              </div>
+              <CardContent className="flex items-center justify-between py-3 px-4">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Film className="h-4 w-4 text-primary" />
+                  <span className="font-medium text-foreground">Master final</span>
+                  {render.master_url_9_16 && render.master_url_9_16 !== render.master_url_16_9 && (
+                    <Badge variant="outline" className="text-[10px]">+ Vertical 9:16</Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <a href={render.master_url_16_9} target="_blank" rel="noopener noreferrer">
+                    <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
+                      <Download className="h-3.5 w-3.5" /> Télécharger 16:9
+                    </Button>
+                  </a>
+                  {render.master_url_9_16 && render.master_url_9_16 !== render.master_url_16_9 && (
+                    <a href={render.master_url_9_16} target="_blank" rel="noopener noreferrer">
+                      <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
+                        <Download className="h-3.5 w-3.5" /> 9:16
+                      </Button>
+                    </a>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
         {/* Content Tabs */}
         <Tabs defaultValue={hasCompletedShots ? "preview" : "shots"} className="space-y-6">
