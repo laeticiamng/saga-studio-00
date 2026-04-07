@@ -11,14 +11,14 @@ const Footer = () => {
     Produit: [
       { label: "Fonctionnalités", href: "#features" },
       { label: "Galerie", href: "#gallery" },
-      { label: "Comment ça marche", href: "#how-it-works" },
       { label: "Tarifs", href: "/pricing" },
+      { label: "Changelog", href: "/changelog" },
     ],
     Ressources: [
-      { label: "FAQ", href: "#faq" },
+      { label: "Aide & Support", href: "/help" },
       { label: "À propos", href: "/about" },
+      { label: "Nous contacter", href: "/contact" },
       ...(user ? [{ label: "Mes projets", href: "/dashboard" }] : []),
-      { label: "Nous contacter", href: "/about" },
     ],
     Légal: [
       { label: "Confidentialité", href: "/privacy" },
