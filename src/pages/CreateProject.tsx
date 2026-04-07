@@ -314,6 +314,27 @@ export default function CreateProject() {
                   </label>
                 </div>
               )}
+
+              {projectType === "hybrid_video" && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2"><Video className="h-4 w-4 text-primary" /> Vidéo source *</Label>
+                  <label className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 cursor-pointer hover:border-primary/50 transition-colors">
+                    {videoFile ? (
+                      <div className="flex items-center gap-2 text-primary">
+                        <Video className="h-5 w-5" />
+                        <span className="font-medium">{videoFile.name}</span>
+                        <span className="text-xs text-muted-foreground">({(videoFile.size / 1024 / 1024).toFixed(1)} Mo)</span>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                        <span className="text-sm text-muted-foreground">MP4, MOV ou WebM</span>
+                      </>
+                    )}
+                    <input type="file" accept="video/*" className="hidden" onChange={(e) => setVideoFile(e.target.files?.[0] || null)} />
+                  </label>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
