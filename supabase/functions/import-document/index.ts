@@ -863,6 +863,317 @@ async function buildCanonicalFields(
   }
 }
 
+// ─── Wizard pre-project extraction ───
+
+async function wizardExtract(
+  supabase: ReturnType<typeof createClient>,
+  body: { document_ids: string[]; project_type: string },
+  userId: string
+): Promise<Response> {
+  const headers = { ...corsHeaders, "Content-Type": "application/json" };
+  const { document_ids, project_type } = body;
+
+  if (!document_ids?.length) {
+    return new Response(JSON.stringify({ error: "document_ids required" }), { status: 400, headers });
+  }
+
+  // Process each document with the project-type-specific prompt
+  for (const docId of document_ids) {
+    // Temporarily set a fake project type context for extraction
+    const { data: doc } = await supabase
+      .from("source_documents")
+      .select("status")
+      .eq("id", docId)
+      .single();
+    if (doc?.status === "ready_for_review") continue; // already processed
+    // processDocument will use generic prompt since no project_id exists yet
+    // We need to override that by temporarily storing project_type info
+    await processDocumentWithType(supabase, docId, userId, project_type);
+  }
+
+  // Gather all extracted entities across all documents
+  const { data: allEntities } = await supabase
+    .from("source_document_entities")
+    .select("*, document:source_documents!inner(file_name)")
+    .in("document_id", document_ids)
+    .gte("extraction_confidence", 0.4)
+    .order("extraction_confidence", { ascending: false });
+
+  // Build structured wizard prefill
+  const prefill: Record<string, unknown> = {
+    title: null,
+    synopsis: null,
+    genre: null,
+    tone: null,
+    characters: [],
+    episodes: [],
+    locations: [],
+    scenes: 0,
+    totalEntities: allEntities?.length || 0,
+    conflicts: 0,
+    missingFields: [],
+  };
+
+  const extractedFields: Array<{
+    key: string;
+    label: string;
+    value: string;
+    confidence: number;
+    sourceDoc: string;
+    multiline: boolean;
+  }> = [];
+
+  for (const e of allEntities || []) {
+    const docName = (e as Record<string, unknown> & { document: { file_name: string } }).document?.file_name || "Document";
+    const val = e.entity_value as Record<string, unknown>;
+
+    switch (e.entity_type) {
+      case "title":
+        if (!prefill.title || e.extraction_confidence > 0.7) {
+          prefill.title = val.value || e.entity_key;
+          extractedFields.push({
+            key: "title",
+            label: "Titre",
+            value: String(val.value || e.entity_key),
+            confidence: e.extraction_confidence,
+            sourceDoc: docName,
+            multiline: false,
+          });
+        }
+        break;
+      case "logline":
+      case "synopsis":
+        if (!prefill.synopsis || e.extraction_confidence > 0.7) {
+          prefill.synopsis = val.value || e.entity_key;
+          extractedFields.push({
+            key: "synopsis",
+            label: e.entity_type === "logline" ? "Logline" : "Synopsis",
+            value: String(val.value || e.entity_key),
+            confidence: e.extraction_confidence,
+            sourceDoc: docName,
+            multiline: true,
+          });
+        }
+        break;
+      case "genre":
+        prefill.genre = val.value || e.entity_key;
+        extractedFields.push({
+          key: "genre", label: "Genre",
+          value: String(val.value || e.entity_key),
+          confidence: e.extraction_confidence, sourceDoc: docName, multiline: false,
+        });
+        break;
+      case "tone":
+        prefill.tone = val.value || e.entity_key;
+        extractedFields.push({
+          key: "tone", label: "Ton / Ambiance",
+          value: String(val.value || e.entity_key),
+          confidence: e.extraction_confidence, sourceDoc: docName, multiline: false,
+        });
+        break;
+      case "character":
+        (prefill.characters as Array<Record<string, unknown>>).push({
+          name: val.name || e.entity_key,
+          role: val.role || null,
+          confidence: e.extraction_confidence,
+          sourceDoc: docName,
+        });
+        break;
+      case "episode":
+        (prefill.episodes as Array<Record<string, unknown>>).push({
+          title: val.title || e.entity_key,
+          number: val.number || null,
+          synopsis: val.synopsis || null,
+          confidence: e.extraction_confidence,
+        });
+        break;
+      case "location":
+        (prefill.locations as string[]).push(String(val.name || val.value || e.entity_key));
+        break;
+      case "scene":
+        prefill.scenes = (prefill.scenes as number) + 1;
+        break;
+    }
+  }
+
+  // Detect missing fields based on project type
+  const baseRequired = ["title", "synopsis"];
+  const typeSpecific: Record<string, string[]> = {
+    series: ["character", "episode"],
+    film: ["character", "scene"],
+    music_video: ["tone"],
+    hybrid_video: [],
+  };
+  const required = [...baseRequired, ...(typeSpecific[project_type] || [])];
+  const extractedTypes = new Set((allEntities || []).map(e => e.entity_type));
+  const missingLabels: Record<string, string> = {
+    title: "Titre du projet",
+    synopsis: "Synopsis / Brief",
+    character: "Personnages principaux",
+    episode: "Structure des épisodes",
+    scene: "Scènes",
+    tone: "Ton / Ambiance",
+  };
+  prefill.missingFields = required
+    .filter(f => !extractedTypes.has(f))
+    .map(f => missingLabels[f] || f);
+
+  // Get document roles
+  const { data: docMeta } = await supabase
+    .from("source_documents")
+    .select("id, file_name, document_role, role_confidence, file_type")
+    .in("id", document_ids);
+
+  return new Response(JSON.stringify({
+    prefill,
+    extractedFields,
+    documents: docMeta || [],
+    documentsProcessed: document_ids.length,
+  }), { headers });
+}
+
+// Process a document with an explicit project type (no project_id needed)
+async function processDocumentWithType(
+  supabase: ReturnType<typeof createClient>,
+  documentId: string,
+  userId: string,
+  projectType: string
+): Promise<void> {
+  const { data: doc, error: docErr } = await supabase
+    .from("source_documents")
+    .select("*")
+    .eq("id", documentId)
+    .single();
+  if (docErr || !doc) throw new Error("Document not found");
+
+  await supabase.from("source_documents").update({ status: "extracting" }).eq("id", documentId);
+
+  // Images: quick classify
+  if (doc.file_type === "image") {
+    await supabase.from("source_documents").update({
+      status: "ready_for_review",
+      document_role: "reference_images",
+      role_confidence: 0.85,
+    }).eq("id", documentId);
+    await supabase.from("source_document_entities").insert({
+      document_id: documentId,
+      entity_type: "visual_reference",
+      entity_key: doc.file_name,
+      entity_value: { type: "image", storage_path: doc.storage_path, file_name: doc.file_name },
+      extraction_confidence: 0.9,
+      status: "confirmed",
+    });
+    return;
+  }
+
+  // Download and extract text
+  let textContent = "";
+  try {
+    const { data: fileData, error: dlErr } = await supabase.storage
+      .from("source-documents")
+      .download(doc.storage_path);
+    if (dlErr || !fileData) throw new Error("Cannot download file");
+
+    if (doc.file_type === "txt" || doc.file_type === "markdown") {
+      textContent = await fileData.text();
+    } else {
+      const rawText = await fileData.text();
+      textContent = rawText.replace(/[^\x20-\x7E\xA0-\xFF\n\r\t]/g, " ").replace(/\s{3,}/g, "\n\n").trim();
+      if (textContent.length < 50) {
+        textContent = `[Document binaire: ${doc.file_name}. Extraction texte limitée.]`;
+      }
+    }
+  } catch {
+    textContent = "[Extraction texte échouée]";
+  }
+
+  // Store chunks
+  const chunks = splitIntoChunks(textContent, 2000);
+  for (let i = 0; i < chunks.length; i++) {
+    await supabase.from("source_document_chunks").insert({
+      document_id: documentId,
+      chunk_index: i,
+      content: chunks[i],
+      section_type: i === 0 ? "header" : "body",
+    });
+  }
+
+  await supabase.from("source_documents").update({ status: "analyzing", extraction_mode: "native" }).eq("id", documentId);
+
+  // AI extraction with project-type-specific prompt
+  let entities: Array<Record<string, unknown>> = [];
+  let detectedRole = "unknown";
+  let roleConfidence = 0;
+
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (LOVABLE_API_KEY && textContent.length > 20) {
+    try {
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: getWorkflowPrompt(projectType) },
+            { role: "user", content: textContent.slice(0, 40000) },
+          ],
+          temperature: 0.15,
+          response_format: { type: "json_object" },
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const parsed = JSON.parse(data.choices?.[0]?.message?.content || "{}");
+        entities = parsed.entities || [];
+        detectedRole = parsed.document_role || "unknown";
+        roleConfidence = Number(parsed.role_confidence) || 0;
+      }
+    } catch (e) {
+      console.error("AI extraction error:", e);
+    }
+  }
+
+  await supabase.from("source_documents").update({
+    document_role: detectedRole,
+    role_confidence: roleConfidence,
+  }).eq("id", documentId);
+
+  // Store entities
+  for (const entity of entities) {
+    await supabase.from("source_document_entities").insert({
+      document_id: documentId,
+      entity_type: entity.entity_type as string,
+      entity_key: entity.entity_key as string || "unknown",
+      entity_value: entity.entity_value || {},
+      source_passage: entity.source_passage as string || null,
+      extraction_confidence: Number(entity.extraction_confidence) || 0.5,
+      mapping_confidence: estimateMappingConfidence(entity),
+      semantic_confidence: Number(entity.extraction_confidence) || 0.5,
+      ambiguity_flag: Number(entity.extraction_confidence) < 0.6,
+      status: Number(entity.extraction_confidence) >= 0.8 ? "confirmed" : "proposed",
+    });
+  }
+
+  await supabase.from("source_documents").update({ status: "ready_for_review" }).eq("id", documentId);
+
+  await supabase.from("audit_logs").insert({
+    user_id: userId,
+    action: "wizard_document_processed",
+    entity_type: "source_document",
+    entity_id: documentId,
+    details: {
+      file_name: doc.file_name,
+      document_role: detectedRole,
+      entities_found: entities.length,
+      project_type: projectType,
+    },
+  });
+}
+
 // ─── Helpers ───
 
 function splitIntoChunks(text: string, maxLen: number): string[] {
