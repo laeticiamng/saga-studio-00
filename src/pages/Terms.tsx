@@ -13,7 +13,7 @@ export default function Terms() {
           <p>Dernière mise à jour : 9 mars 2026</p>
 
           <h2>1. Objet</h2>
-          <p>Les présentes CGU régissent l'utilisation de la plateforme CineClip AI, service de génération vidéo par intelligence artificielle édité par EMOTIONSCARE SASU (SIREN 944 505 445), dont le siège social est situé à 80000 Amiens, France.</p>
+          <p>Les présentes CGU régissent l'utilisation de la plateforme Saga Studio, service de génération vidéo par intelligence artificielle édité par EMOTIONSCARE SASU (SIREN 944 505 445), dont le siège social est situé à 80000 Amiens, France.</p>
 
           <h2>2. Inscription</h2>
           <p>L'accès aux fonctionnalités de génération nécessite la création d'un compte avec une adresse email valide. L'utilisateur est responsable de la confidentialité de ses identifiants.</p>
@@ -22,13 +22,13 @@ export default function Terms() {
           <p>La génération de vidéos consomme des crédits. Les crédits achetés ne sont ni remboursables ni transférables, sauf en cas de dysfonctionnement avéré du service.</p>
 
           <h2>4. Propriété intellectuelle</h2>
-          <p>Les vidéos générées par CineClip AI sont la propriété de l'utilisateur. L'utilisateur garantit détenir les droits sur les médias (musiques, images) uploadés sur la plateforme.</p>
+          <p>Les vidéos générées par Saga Studio sont la propriété de l'utilisateur. L'utilisateur garantit détenir les droits sur les médias (musiques, images) uploadés sur la plateforme.</p>
 
           <h2>5. Contenu interdit</h2>
-          <p>Il est interdit d'utiliser CineClip AI pour générer du contenu illégal, diffamatoire, pornographique ou portant atteinte aux droits de tiers. Tout abus entraînera la suspension du compte.</p>
+          <p>Il est interdit d'utiliser Saga Studio pour générer du contenu illégal, diffamatoire, pornographique ou portant atteinte aux droits de tiers. Tout abus entraînera la suspension du compte.</p>
 
           <h2>6. Limitation de responsabilité</h2>
-          <p>CineClip AI est fourni « en l'état ». Nous ne garantissons pas une disponibilité ininterrompue ni un résultat spécifique de la génération IA.</p>
+          <p>Saga Studio est fourni « en l'état ». Nous ne garantissons pas une disponibilité ininterrompue ni un résultat spécifique de la génération IA.</p>
 
           <h2>7. Contact</h2>
           <p>

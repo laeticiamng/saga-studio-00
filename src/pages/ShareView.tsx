@@ -83,7 +83,7 @@ export default function ShareView() {
         <p className="text-xl font-medium mb-2">Vidéo non disponible</p>
         <p className="text-sm mb-6">Cette vidéo n'existe pas ou n'a pas encore fini le rendu.</p>
         <Button variant="hero" asChild>
-          <Link to="/">Aller sur CineClip AI</Link>
+          <Link to="/">Aller sur Saga Studio</Link>
         </Button>
       </div>
     );
@@ -95,7 +95,7 @@ export default function ShareView() {
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 text-primary hover:opacity-80 transition-opacity mb-6">
             <Film className="h-5 w-5" />
-            <span className="font-bold">CineClip AI</span>
+            <span className="font-bold">Saga Studio</span>
           </Link>
           <h1 className="text-3xl font-bold mt-4">{project.title}</h1>
           <div className="flex items-center justify-center gap-2 mt-2">
@@ -157,11 +157,11 @@ export default function ShareView() {
         )}
 
         <p className="text-center text-xs text-muted-foreground mt-8">
-          Créé avec <Link to="/" className="text-primary hover:underline">CineClip AI</Link>
+          Créé avec <Link to="/" className="text-primary hover:underline">Saga Studio</Link>
         </p>
       </div>
       <footer className="border-t border-border/50 py-6 text-center text-xs text-muted-foreground mt-12">
-        © {new Date().getFullYear()} EMOTIONSCARE SASU — CineClip AI. Tous droits réservés.
+        © {new Date().getFullYear()} EMOTIONSCARE SASU — Saga Studio. Tous droits réservés.
       </footer>
     </div>
   );
