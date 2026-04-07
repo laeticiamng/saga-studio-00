@@ -17,7 +17,7 @@ const Index = () => {
   return (
     <div className="min-h-screen">
       <Navbar />
-      <Hero />
+      <main id="main-content">
       <ClientLogos />
       <AnimatedCounters />
       <Features />
