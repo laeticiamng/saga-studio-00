@@ -588,6 +588,43 @@ function buildStyleConsistentPrompt(
   return parts.join(". ") + ".\n\n" + basePrompt;
 }
 
+// ─── Base64 to Storage Upload ───────────────────────────────────────────────
+
+async function uploadBase64ToStorage(
+  supabase: ReturnType<typeof createClient>,
+  projectId: string,
+  shotId: string,
+  dataUri: string
+): Promise<string> {
+  // Parse data URI: data:image/png;base64,iVBOR...
+  const match = dataUri.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) throw new Error("Invalid data URI format");
+
+  const mimeType = match[1];
+  const base64Data = match[2];
+  const ext = mimeType.split("/")[1]?.replace("jpeg", "jpg") || "png";
+  const fileName = `${projectId}/${shotId}.${ext}`;
+
+  // Decode base64 to Uint8Array
+  const binaryString = atob(base64Data);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+
+  const { error } = await supabase.storage
+    .from("shot-outputs")
+    .upload(fileName, bytes, {
+      contentType: mimeType,
+      upsert: true,
+    });
+
+  if (error) throw error;
+
+  const { data: urlData } = supabase.storage.from("shot-outputs").getPublicUrl(fileName);
+  return urlData.publicUrl;
+}
+
 // ─── Main Handler ───────────────────────────────────────────────────────────
 
 serve(async (req) => {
@@ -685,7 +722,19 @@ serve(async (req) => {
           if (result.status === "completed") {
             if (!result.url) throw new Error(`${usedProvider.name} completed without URL`);
             if (!ALLOW_PLACEHOLDER_PROVIDERS && isPlaceholderUrl(result.url)) throw new Error(`${usedProvider.name} returned placeholder`);
-            await supabase.from("shots").update({ status: "completed", output_url: result.url, cost_credits: 2, error_message: null }).eq("id", shot.id);
+
+            // Upload base64 data URIs to storage for persistence
+            let finalUrl = result.url;
+            if (finalUrl.startsWith("data:")) {
+              try {
+                finalUrl = await uploadBase64ToStorage(supabase, project_id, shot.id, finalUrl);
+                console.log(`[generate-shots] Uploaded base64 to storage: ${finalUrl}`);
+              } catch (uploadErr) {
+                console.warn(`[generate-shots] Storage upload failed, keeping data URI:`, uploadErr);
+              }
+            }
+
+            await supabase.from("shots").update({ status: "completed", output_url: finalUrl, cost_credits: 2, error_message: null }).eq("id", shot.id);
             creditsUsed += 2;
             results.push({ shot_id: shot.id, provider: usedProvider.name, model: usedProvider.modelId, output_type: usedProvider.outputType, status: "completed" });
             continue;
@@ -700,6 +749,17 @@ serve(async (req) => {
         console.error(`[generate-shots] Shot ${shot.idx} failed:`, message);
         await supabase.from("shots").update({ status: "failed", error_message: message }).eq("id", shot.id);
         results.push({ shot_id: shot.id, error: message });
+
+        // Auto-create incident for permanent failures
+        await supabase.from("incidents").insert({
+          project_id,
+          title: `Shot #${shot.idx} generation failed`,
+          detail: `Provider chain exhausted. Error: ${message}`,
+          severity: "warning",
+          scope: "shot",
+          scope_id: shot.id,
+          status: "open",
+        }).then(({ error: incErr }) => { if (incErr) console.error("Incident insert failed:", incErr); });
       }
     }
 
