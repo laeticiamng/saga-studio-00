@@ -55,6 +55,11 @@ const CreateProject = lazy(() => import("./pages/CreateProject"));
 const TimelineStudio = lazy(() => import("./pages/TimelineStudio"));
 const GovernanceDashboard = lazy(() => import("./pages/GovernanceDashboard"));
 
+// New pages
+const Contact = lazy(() => import("./pages/Contact"));
+const Changelog = lazy(() => import("./pages/Changelog"));
+const Help = lazy(() => import("./pages/Help"));
+
 const PageLoader = () => (
   <div className="min-h-screen bg-background flex items-center justify-center">
     <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -126,6 +131,9 @@ const App = () => (
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/legal" element={<Legal />} />
                 <Route path="/about" element={<About />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/changelog" element={<Changelog />} />
+                <Route path="/help" element={<Help />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
