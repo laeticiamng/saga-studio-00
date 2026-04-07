@@ -56,6 +56,7 @@ const DocumentsCenter = lazy(() => import("./pages/DocumentsCenter"));
 // Production Studio pages
 const CreateProject = lazy(() => import("./pages/CreateProject"));
 const TimelineStudio = lazy(() => import("./pages/TimelineStudio"));
+const GovernanceDashboard = lazy(() => import("./pages/GovernanceDashboard"));
 
 const PageLoader = () => (
   <div className="min-h-screen bg-background flex items-center justify-center">
@@ -111,6 +112,7 @@ const App = () => (
                 <Route path="/series/:id/documents" element={<ProtectedRoute><DocumentsCenter /></ProtectedRoute>} />
                 <Route path="/create" element={<ProtectedRoute><CreateProject /></ProtectedRoute>} />
                 <Route path="/project/:id/studio" element={<ProtectedRoute><TimelineStudio /></ProtectedRoute>} />
+                <Route path="/project/:id/governance" element={<ProtectedRoute><GovernanceDashboard /></ProtectedRoute>} />
                 <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
                 <Route path="/admin/agents" element={<AdminRoute><AdminAgentManager /></AdminRoute>} />
                 <Route path="/admin/providers" element={<AdminRoute><AdminProviderDashboard /></AdminRoute>} />

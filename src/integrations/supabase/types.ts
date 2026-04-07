@@ -1324,6 +1324,7 @@ export type Database = {
       }
       export_versions: {
         Row: {
+          approved_by: string | null
           aspect_ratio: string | null
           checksum: string | null
           created_at: string
@@ -1342,10 +1343,12 @@ export type Database = {
           retry_count: number | null
           status: string
           timeline_id: string | null
+          timeline_version_ref: string | null
           updated_at: string
           version: number
         }
         Insert: {
+          approved_by?: string | null
           aspect_ratio?: string | null
           checksum?: string | null
           created_at?: string
@@ -1364,10 +1367,12 @@ export type Database = {
           retry_count?: number | null
           status?: string
           timeline_id?: string | null
+          timeline_version_ref?: string | null
           updated_at?: string
           version?: number
         }
         Update: {
+          approved_by?: string | null
           aspect_ratio?: string | null
           checksum?: string | null
           created_at?: string
@@ -1386,6 +1391,7 @@ export type Database = {
           retry_count?: number | null
           status?: string
           timeline_id?: string | null
+          timeline_version_ref?: string | null
           updated_at?: string
           version?: number
         }
@@ -1490,6 +1496,192 @@ export type Database = {
             columns: ["source_document_id"]
             isOneToOne: false
             referencedRelation: "source_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      governance_policies: {
+        Row: {
+          created_at: string
+          description: string | null
+          domain: string
+          enforcement_mode: string
+          id: string
+          is_active: boolean
+          policy_key: string
+          rule: Json
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          domain?: string
+          enforcement_mode?: string
+          id?: string
+          is_active?: boolean
+          policy_key: string
+          rule?: Json
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          domain?: string
+          enforcement_mode?: string
+          id?: string
+          is_active?: boolean
+          policy_key?: string
+          rule?: Json
+        }
+        Relationships: []
+      }
+      governance_transitions: {
+        Row: {
+          created_at: string
+          domain: string
+          from_state: string
+          guard_conditions: Json | null
+          id: string
+          is_active: boolean
+          required_approvals: Json | null
+          to_state: string
+        }
+        Insert: {
+          created_at?: string
+          domain?: string
+          from_state: string
+          guard_conditions?: Json | null
+          id?: string
+          is_active?: boolean
+          required_approvals?: Json | null
+          to_state: string
+        }
+        Update: {
+          created_at?: string
+          domain?: string
+          from_state?: string
+          guard_conditions?: Json | null
+          id?: string
+          is_active?: boolean
+          required_approvals?: Json | null
+          to_state?: string
+        }
+        Relationships: []
+      }
+      governance_violations: {
+        Row: {
+          actor_id: string | null
+          actor_type: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          policy_key: string
+          project_id: string | null
+          reason: string
+          resolved: boolean
+          severity: string
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_type?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          policy_key: string
+          project_id?: string | null
+          reason: string
+          resolved?: boolean
+          severity?: string
+        }
+        Update: {
+          actor_id?: string | null
+          actor_type?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          policy_key?: string
+          project_id?: string | null
+          reason?: string
+          resolved?: boolean
+          severity?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "governance_violations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "governance_violations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      incidents: {
+        Row: {
+          auto_retry_count: number
+          created_at: string
+          detail: string | null
+          id: string
+          project_id: string | null
+          resolution_notes: string | null
+          root_cause_class: string | null
+          scope: string
+          scope_id: string | null
+          severity: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          auto_retry_count?: number
+          created_at?: string
+          detail?: string | null
+          id?: string
+          project_id?: string | null
+          resolution_notes?: string | null
+          root_cause_class?: string | null
+          scope?: string
+          scope_id?: string | null
+          severity?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          auto_retry_count?: number
+          created_at?: string
+          detail?: string | null
+          id?: string
+          project_id?: string | null
+          resolution_notes?: string | null
+          root_cause_class?: string | null
+          scope?: string
+          scope_id?: string | null
+          severity?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incidents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incidents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects_public"
             referencedColumns: ["id"]
           },
         ]
@@ -1735,6 +1927,7 @@ export type Database = {
         Row: {
           asset_type: string
           created_at: string
+          created_by: string | null
           id: string
           lifecycle_state: string | null
           metadata: Json | null
@@ -1749,6 +1942,7 @@ export type Database = {
         Insert: {
           asset_type?: string
           created_at?: string
+          created_by?: string | null
           id?: string
           lifecycle_state?: string | null
           metadata?: Json | null
@@ -1763,6 +1957,7 @@ export type Database = {
         Update: {
           asset_type?: string
           created_at?: string
+          created_by?: string | null
           id?: string
           lifecycle_state?: string | null
           metadata?: Json | null
@@ -1851,6 +2046,7 @@ export type Database = {
           created_at: string
           duration_sec: number | null
           face_urls: Json | null
+          governance_state: string
           id: string
           mode: string | null
           provider_default: string | null
@@ -1873,6 +2069,7 @@ export type Database = {
           created_at?: string
           duration_sec?: number | null
           face_urls?: Json | null
+          governance_state?: string
           id?: string
           mode?: string | null
           provider_default?: string | null
@@ -1895,6 +2092,7 @@ export type Database = {
           created_at?: string
           duration_sec?: number | null
           face_urls?: Json | null
+          governance_state?: string
           id?: string
           mode?: string | null
           provider_default?: string | null
@@ -2423,49 +2621,64 @@ export type Database = {
       }
       review_gates: {
         Row: {
+          approved_by: string | null
           created_at: string
           decided_at: string | null
           decided_by: string | null
           decision_action: string | null
           episode_id: string | null
+          gate_owner: string | null
           gate_type: string
           id: string
           metadata: Json | null
           notes: string | null
           project_id: string
           scene_id: string | null
+          stale: boolean
           status: string
+          superseded_by: string | null
           updated_at: string
+          version_ref: string | null
         }
         Insert: {
+          approved_by?: string | null
           created_at?: string
           decided_at?: string | null
           decided_by?: string | null
           decision_action?: string | null
           episode_id?: string | null
+          gate_owner?: string | null
           gate_type: string
           id?: string
           metadata?: Json | null
           notes?: string | null
           project_id: string
           scene_id?: string | null
+          stale?: boolean
           status?: string
+          superseded_by?: string | null
           updated_at?: string
+          version_ref?: string | null
         }
         Update: {
+          approved_by?: string | null
           created_at?: string
           decided_at?: string | null
           decided_by?: string | null
           decision_action?: string | null
           episode_id?: string | null
+          gate_owner?: string | null
           gate_type?: string
           id?: string
           metadata?: Json | null
           notes?: string | null
           project_id?: string
           scene_id?: string | null
+          stale?: boolean
           status?: string
+          superseded_by?: string | null
           updated_at?: string
+          version_ref?: string | null
         }
         Relationships: [
           {
@@ -2494,6 +2707,13 @@ export type Database = {
             columns: ["scene_id"]
             isOneToOne: false
             referencedRelation: "scenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_gates_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "review_gates"
             referencedColumns: ["id"]
           },
         ]
@@ -3335,10 +3555,12 @@ export type Database = {
       timelines: {
         Row: {
           created_at: string
+          created_by: string | null
           duration_ms: number | null
           episode_id: string | null
           fps: number | null
           id: string
+          locked_by: string | null
           look_preset: string | null
           metadata: Json | null
           name: string
@@ -3349,10 +3571,12 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
           duration_ms?: number | null
           episode_id?: string | null
           fps?: number | null
           id?: string
+          locked_by?: string | null
           look_preset?: string | null
           metadata?: Json | null
           name?: string
@@ -3363,10 +3587,12 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          created_by?: string | null
           duration_ms?: number | null
           episode_id?: string | null
           fps?: number | null
           id?: string
+          locked_by?: string | null
           look_preset?: string | null
           metadata?: Json | null
           name?: string
