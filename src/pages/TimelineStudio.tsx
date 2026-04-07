@@ -278,6 +278,10 @@ export default function TimelineStudio() {
               <TabsContent value="diagnostics">
                 <DiagnosticsPanel projectId={id!} />
               </TabsContent>
+
+              <TabsContent value="validation">
+                <ProjectValidationPanel projectId={id!} />
+              </TabsContent>
             </Tabs>
 
             {/* Right sidebar — cost governance */}
