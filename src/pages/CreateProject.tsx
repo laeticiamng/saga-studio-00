@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -66,6 +66,15 @@ export default function CreateProject() {
 
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
+
+  // Warn before leaving mid-wizard
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (step > 0) { e.preventDefault(); }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [step]);
 
   // Step 1: Type
   const [projectType, setProjectType] = useState<ProjectType>("film");
