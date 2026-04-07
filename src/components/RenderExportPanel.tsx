@@ -126,7 +126,7 @@ export function RenderExportPanel({ projectId, render, projectStatus }: RenderEx
     if (!renderedBlobUrl) return;
     const a = document.createElement("a");
     a.href = renderedBlobUrl;
-    a.download = `cineclip-export-${projectId.slice(0, 8)}.mp4`;
+    a.download = `saga-studio-export-${projectId.slice(0, 8)}.mp4`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

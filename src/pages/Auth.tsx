@@ -148,7 +148,7 @@ export default function Auth() {
             </div>
             <CardTitle className="text-2xl">{isLogin ? "Content de vous revoir" : "Créer un compte"}</CardTitle>
             <CardDescription>
-              {isLogin ? "Connectez-vous à votre compte CineClip AI" : "Commencez à créer des vidéos avec l'IA"}
+              {isLogin ? "Connectez-vous à votre compte Saga Studio" : "Commencez à créer des vidéos avec l'IA"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
