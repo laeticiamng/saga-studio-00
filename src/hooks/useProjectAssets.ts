@@ -29,7 +29,8 @@ export function useCreateProjectAsset() {
       metadata?: Record<string, unknown>;
       tags?: string[];
     }) => {
-      const { data, error } = await supabase.from("project_assets").insert([input]).select().single();
+      const row = { ...input, metadata: (input.metadata ?? {}) as import("@/integrations/supabase/types").Json };
+      const { data, error } = await supabase.from("project_assets").insert([row]).select().single();
       if (error) throw error;
       return data;
     },
