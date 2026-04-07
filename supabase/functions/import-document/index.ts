@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import pako from "https://esm.sh/pako@2.1.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -239,13 +240,15 @@ async function zipExtractEntry(
           // Stored (uncompressed)
           return { data: zipData.slice(dataStart, dataStart + uncompSize), found: true };
         } else if (method === 8) {
-          // DEFLATE — try multiple decompression strategies
+          // DEFLATE — try multiple decompression strategies (pako first, then DecompressionStream)
           const compressedData = zipData.slice(dataStart, dataStart + compSize);
-          const decompressed = await decompressDeflate(compressedData);
-          if (decompressed) {
+          console.log(`[ZIP] Decompressing ${targetName}: compressed=${compSize} bytes, uncompressed=${uncompSize} bytes`);
+          const { data: decompressed, strategy } = await decompressDeflate(compressedData);
+          if (decompressed && decompressed.length > 0) {
+            console.log(`[ZIP] Decompression OK via ${strategy}: got ${decompressed.length} bytes`);
             return { data: decompressed, found: true };
           }
-          return { data: new Uint8Array(), found: false, error: "DEFLATE decompression failed for all strategies" };
+          return { data: new Uint8Array(), found: false, error: `DEFLATE decompression failed for all strategies (compressed=${compSize}, expected=${uncompSize})` };
         } else {
           return { data: new Uint8Array(), found: false, error: `Unsupported compression method: ${method}` };
         }
@@ -261,32 +264,59 @@ async function zipExtractEntry(
 }
 
 /**
- * Decompress DEFLATE data. Tries multiple strategies for runtime compatibility:
- * 1. DecompressionStream("deflate-raw") — standard for ZIP raw deflate
- * 2. DecompressionStream("deflate") — zlib-wrapped, in case runtime misinterprets
- * 3. Manual inflate via minimal pure-JS implementation
+ * Decompress DEFLATE data. Uses pako (pure-JS zlib) as primary strategy,
+ * with DecompressionStream as fallback.
+ *
+ * CRITICAL: DecompressionStream("deflate-raw") is unreliable in Deno Edge Functions.
+ * pako.inflateRaw() is proven and works everywhere.
  */
-async function decompressDeflate(compressed: Uint8Array): Promise<Uint8Array | null> {
-  // Strategy 1: deflate-raw (correct for ZIP)
+async function decompressDeflate(compressed: Uint8Array): Promise<{ data: Uint8Array | null; strategy: string }> {
+  // Strategy 1: pako.inflateRaw (pure JS — works everywhere, correct for ZIP raw deflate)
+  try {
+    const result = pako.inflateRaw(compressed);
+    if (result && result.length > 0) {
+      console.log(`[DECOMPRESS] pako.inflateRaw succeeded: ${compressed.length} → ${result.length} bytes`);
+      return { data: result, strategy: "pako_inflate_raw" };
+    }
+  } catch (e) {
+    console.warn(`[DECOMPRESS] pako.inflateRaw failed: ${e instanceof Error ? e.message : String(e)}`);
+  }
+
+  // Strategy 2: pako.inflate (zlib-wrapped — some DOCX generators add zlib header)
+  try {
+    const result = pako.inflate(compressed);
+    if (result && result.length > 0) {
+      console.log(`[DECOMPRESS] pako.inflate succeeded: ${compressed.length} → ${result.length} bytes`);
+      return { data: result, strategy: "pako_inflate_zlib" };
+    }
+  } catch (e) {
+    console.warn(`[DECOMPRESS] pako.inflate failed: ${e instanceof Error ? e.message : String(e)}`);
+  }
+
+  // Strategy 3: DecompressionStream("deflate-raw") — native, if available
   try {
     const result = await decompressWithStream("deflate-raw", compressed);
-    if (result && result.length > 0) return result;
-  } catch { /* try next */ }
+    if (result && result.length > 0) {
+      console.log(`[DECOMPRESS] DecompressionStream(deflate-raw) succeeded: ${result.length} bytes`);
+      return { data: result, strategy: "stream_deflate_raw" };
+    }
+  } catch (e) {
+    console.warn(`[DECOMPRESS] DecompressionStream(deflate-raw) failed: ${e instanceof Error ? e.message : String(e)}`);
+  }
 
-  // Strategy 2: deflate (zlib-wrapped — some runtimes need this)
+  // Strategy 4: DecompressionStream("deflate") — zlib-wrapped
   try {
     const result = await decompressWithStream("deflate", compressed);
-    if (result && result.length > 0) return result;
-  } catch { /* try next */ }
+    if (result && result.length > 0) {
+      console.log(`[DECOMPRESS] DecompressionStream(deflate) succeeded: ${result.length} bytes`);
+      return { data: result, strategy: "stream_deflate" };
+    }
+  } catch (e) {
+    console.warn(`[DECOMPRESS] DecompressionStream(deflate) failed: ${e instanceof Error ? e.message : String(e)}`);
+  }
 
-  // Strategy 3: raw (alias in some environments)
-  try {
-    const result = await decompressWithStream("raw" as CompressionFormat, compressed);
-    if (result && result.length > 0) return result;
-  } catch { /* exhausted */ }
-
-  console.error("All decompression strategies failed for DEFLATE data");
-  return null;
+  console.error("[DECOMPRESS] ALL decompression strategies failed for DEFLATE data");
+  return { data: null, strategy: "all_failed" };
 }
 
 async function decompressWithStream(format: CompressionFormat | string, data: Uint8Array): Promise<Uint8Array> {
@@ -398,48 +428,75 @@ async function extractDocxText(fileBytes: Uint8Array): Promise<{
   };
 
   try {
+    console.log(`[DOCX] Starting extraction: ${fileBytes.length} bytes`);
+
+    // Detect MIME type from magic bytes
+    const magicHex = Array.from(fileBytes.slice(0, 8)).map(b => b.toString(16).padStart(2, "0")).join(" ");
+    (debug as Record<string, unknown>).magicBytes = magicHex;
+    console.log(`[DOCX] Magic bytes: ${magicHex}`);
+
     // Validate it's actually a ZIP file (PK signature)
     if (fileBytes.length < 4 || fileBytes[0] !== 0x50 || fileBytes[1] !== 0x4B) {
-      debug.error = "File does not start with PK signature — not a ZIP/DOCX file";
+      // Check for OLE2 (.doc) magic: D0 CF 11 E0
+      if (fileBytes[0] === 0xD0 && fileBytes[1] === 0xCF && fileBytes[2] === 0x11 && fileBytes[3] === 0xE0) {
+        debug.error = "File is OLE2 binary (.doc), not DOCX (.docx ZIP). Convert to .docx first.";
+      } else {
+        debug.error = `File does not start with PK signature (got ${magicHex}) — not a ZIP/DOCX file`;
+      }
+      console.error(`[DOCX] FAILED: ${debug.error}`);
       return { text: "", method: PARSER_STATUS.DOCX_PARSE_FAILED, success: false, debug };
     }
     debug.zipValid = true;
+    console.log(`[DOCX] ZIP signature valid (PK)`);
 
-    // Extract word/document.xml from ZIP
-    const entry = await zipExtractEntry(fileBytes, "word/document.xml");
+    // Extract word/document.xml from ZIP — try primary path, then fallback
+    let entry = await zipExtractEntry(fileBytes, "word/document.xml");
     if (!entry.found) {
-      debug.error = entry.error || "word/document.xml not found in DOCX ZIP";
+      console.warn(`[DOCX] word/document.xml not found, trying word/document2.xml`);
+      entry = await zipExtractEntry(fileBytes, "word/document2.xml");
+    }
+    if (!entry.found) {
+      debug.error = entry.error || "Neither word/document.xml nor word/document2.xml found in DOCX ZIP";
+      console.error(`[DOCX] FAILED: ${debug.error}`);
       return { text: "", method: PARSER_STATUS.DOCX_PARSE_FAILED, success: false, debug };
     }
     debug.entryFound = true;
+    console.log(`[DOCX] XML entry found: ${entry.data.length} bytes`);
 
     const xmlString = new TextDecoder("utf-8").decode(entry.data);
     debug.xmlLength = xmlString.length;
 
     if (xmlString.length < 50) {
       debug.error = `document.xml too small (${xmlString.length} bytes) — likely empty document`;
+      console.error(`[DOCX] FAILED: ${debug.error}`);
       return { text: "", method: PARSER_STATUS.DOCX_PARSE_FAILED, success: false, debug };
     }
+    console.log(`[DOCX] XML decoded: ${xmlString.length} chars`);
 
     // Extract text from XML
     const { paragraphs, headingCount } = extractTextFromDocumentXml(xmlString);
     debug.paragraphCount = paragraphs.length;
     debug.headingCount = headingCount;
+    console.log(`[DOCX] Parsed: ${paragraphs.length} paragraphs, ${headingCount} headings`);
 
     // Decode XML entities
     const text = decodeXmlEntities(paragraphs.join("\n"));
 
     if (text.length < 20) {
       debug.error = `Extracted text too short (${text.length} chars) — document may be empty or image-only`;
+      console.error(`[DOCX] FAILED: ${debug.error}`);
       return { text, method: PARSER_STATUS.DOCX_PARSE_FAILED, success: false, debug };
     }
 
-    console.log(`DOCX parse OK: ${text.length} chars, ${paragraphs.length} paragraphs, ${headingCount} headings`);
+    console.log(`[DOCX] SUCCESS: ${text.length} chars, ${paragraphs.length} paragraphs, ${headingCount} headings`);
     return { text, method: PARSER_STATUS.DOCX_PARSE_SUCCEEDED, success: true, debug };
   } catch (e) {
     const errMsg = e instanceof Error ? e.message : String(e);
-    console.error("DOCX extraction error:", errMsg);
+    const errStack = e instanceof Error ? e.stack?.slice(0, 500) : undefined;
+    console.error(`[DOCX] EXCEPTION: ${errMsg}`);
+    if (errStack) console.error(`[DOCX] Stack: ${errStack}`);
     debug.error = errMsg.slice(0, 300);
+    (debug as Record<string, unknown>).stack = errStack;
     return { text: "", method: PARSER_STATUS.DOCX_PARSE_FAILED, success: false, debug };
   }
 }
@@ -539,7 +596,13 @@ async function extractTextFromFile(
   charCount: number;
   parserDebug?: Record<string, unknown>;
 }> {
-  console.log(`[ROUTER] extractTextFromFile: fileType="${fileType}" fileName="${fileName}" blobSize=${fileData.size}`);
+  console.log(`══════════════════════════════════════════════════`);
+  console.log(`[ROUTER] DOCUMENT INGESTION STARTED`);
+  console.log(`[ROUTER]   fileName   = ${fileName}`);
+  console.log(`[ROUTER]   fileType   = ${fileType}`);
+  console.log(`[ROUTER]   blobSize   = ${fileData.size} bytes`);
+  console.log(`[ROUTER]   blobType   = ${fileData.type || "(no MIME)"}`);
+  console.log(`══════════════════════════════════════════════════`);
 
   // Plain text files
   if (fileType === "txt" || fileType === "markdown" || fileType === "rtf") {
@@ -559,9 +622,14 @@ async function extractTextFromFile(
   // DOCX — ZIP+XML parser ONLY. NEVER falls back to PDF Vision.
   // ══════════════════════════════════════════════════════════
   if (fileType === "docx") {
-    console.log(`[ROUTER] Entering DOCX parser for ${fileName} (${bytes.length} bytes)`);
+    console.log(`[ROUTER] ➜ DOCX parser selected for ${fileName} (${bytes.length} bytes)`);
+    console.log(`[ROUTER]   NOTE: DOCX NEVER falls back to PDF Vision. If this fails, it fails honestly.`);
     const result = await extractDocxText(bytes);
-    console.log(`[ROUTER] DOCX result: method=${result.method} success=${result.success} chars=${result.text.length}`);
+    console.log(`[ROUTER] DOCX RESULT:`);
+    console.log(`[ROUTER]   method  = ${result.method}`);
+    console.log(`[ROUTER]   success = ${result.success}`);
+    console.log(`[ROUTER]   chars   = ${result.text.length}`);
+    console.log(`[ROUTER]   debug   = ${JSON.stringify(result.debug).slice(0, 300)}`);
     return {
       text: result.text,
       method: result.method,

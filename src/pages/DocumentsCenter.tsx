@@ -64,6 +64,9 @@ const PARSER_FAILURE_LABELS: Record<string, string> = {
   unsupported_file_type: "Type de fichier non supporté pour l'extraction de texte",
   download_failed: "Impossible de télécharger le fichier depuis le stockage",
   no_api_key: "Clé API manquante pour l'extraction PDF",
+  // Legacy status from old edge function version — should no longer appear after deploy
+  pdf_vision_api_error: "Ancienne version du parseur (erreur PDF Vision sur un DOCX) — re-importez le document",
+  pdf_vision_api: "Ancien mode d'extraction — re-importez pour utiliser le nouveau parseur DOCX",
 };
 
 function getParserFailureMessage(extractionMode: string | null | undefined): string | null {
@@ -508,6 +511,8 @@ function DocumentDetail({
                     ? "Lecture du PDF échouée"
                     : (doc.extraction_mode as string) === "download_failed"
                     ? "Téléchargement du fichier échoué"
+                    : (doc.extraction_mode as string) === "pdf_vision_api_error"
+                    ? "Ancien parseur (DOCX envoyé à PDF Vision par erreur)"
                     : "Extraction du texte échouée"}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -523,17 +528,50 @@ function DocumentDetail({
             </div>
           )}
           {/* Extraction debug panel */}
-          {(doc.metadata as Record<string, unknown>)?.extraction_debug && (
-            <div className="rounded-lg bg-secondary/30 p-3 text-xs mb-3 space-y-1 font-mono">
-              <p className="font-medium text-foreground text-sm mb-1">Diagnostic d'extraction</p>
-              {Object.entries((doc.metadata as Record<string, unknown>).extraction_debug as Record<string, unknown>).map(([k, v]) => (
-                <p key={k} className="text-muted-foreground">
-                  <span className="text-foreground">{k}:</span>{" "}
-                  {typeof v === "string" && v.length > 120 ? v.slice(0, 120) + "…" : String(v ?? "null")}
-                </p>
-              ))}
-            </div>
-          )}
+          {(doc.metadata as Record<string, unknown>)?.extraction_debug && (() => {
+            const debug = (doc.metadata as Record<string, unknown>).extraction_debug as Record<string, unknown>;
+            const textPreview = debug?.text_preview as string | undefined;
+            const textLen = debug?.extracted_text_length as number | undefined;
+            const parserDebug = debug?.parser_debug as Record<string, unknown> | undefined;
+            return (
+              <div className="rounded-lg bg-secondary/30 p-3 text-xs mb-3 space-y-2 font-mono">
+                <p className="font-medium text-foreground text-sm mb-1">Diagnostic d'extraction</p>
+                {/* Key metrics */}
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                  <p><span className="text-foreground font-medium">parser:</span> {String(debug.parser_chosen ?? "—")}</p>
+                  <p><span className="text-foreground font-medium">status:</span> {String(debug.parser_status ?? "—")}</p>
+                  <p><span className="text-foreground font-medium">file_type:</span> {String(debug.file_type_detected ?? "—")}</p>
+                  <p><span className="text-foreground font-medium">text_length:</span> {String(textLen ?? 0)} chars</p>
+                  <p><span className="text-foreground font-medium">fallback:</span> {String(debug.fallback_attempted ?? false)}</p>
+                  <p><span className="text-foreground font-medium">chunks:</span> {String(debug.chunk_count ?? "—")}</p>
+                </div>
+                {debug.error_message && (
+                  <p className="text-destructive"><span className="font-medium">error:</span> {String(debug.error_message)}</p>
+                )}
+                {/* Parser-specific debug */}
+                {parserDebug && (
+                  <div className="border-t border-border/50 pt-1 mt-1">
+                    <p className="font-medium text-foreground mb-0.5">Parser debug:</p>
+                    {Object.entries(parserDebug).map(([k, v]) => (
+                      <p key={k} className="text-muted-foreground">
+                        <span className="text-foreground">{k}:</span>{" "}
+                        {typeof v === "string" && v.length > 150 ? v.slice(0, 150) + "…" : String(v ?? "null")}
+                      </p>
+                    ))}
+                  </div>
+                )}
+                {/* Text preview — first 500 chars */}
+                {textPreview && textPreview !== "(empty)" && (
+                  <div className="border-t border-border/50 pt-1 mt-1">
+                    <p className="font-medium text-foreground mb-0.5">Aperçu du texte extrait ({textLen?.toLocaleString()} chars) :</p>
+                    <p className="text-muted-foreground whitespace-pre-wrap break-words max-h-32 overflow-y-auto">
+                      {textPreview.slice(0, 500)}{(textPreview.length > 500) ? "…" : ""}
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </CardContent>
       </Card>
 
