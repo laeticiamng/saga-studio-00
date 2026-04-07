@@ -598,6 +598,44 @@ export default function ProjectView() {
         </Tabs>
       </main>
       <Footer />
+
+      {/* Delete confirmation */}
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Supprimer ce projet ?"
+        description={`Le projet « ${project.title} » et toutes ses données seront supprimés définitivement.`}
+        confirmLabel="Supprimer"
+        onConfirm={handleDelete}
+        isPending={deleting}
+      />
+
+      {/* Edit dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifier le projet</DialogTitle>
+            <DialogDescription>Mettez à jour le titre et le synopsis de votre projet.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Titre</label>
+              <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Synopsis</label>
+              <Textarea value={editSynopsis} onChange={(e) => setEditSynopsis(e.target.value)} rows={4} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>Annuler</Button>
+            <Button variant="hero" onClick={handleEditSave} disabled={editSaving || !editTitle.trim()}>
+              {editSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Enregistrer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
