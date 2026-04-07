@@ -15,11 +15,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Play, Film, RefreshCw, Music, Palette, List, Share2, Eye, ArrowLeft, Clock, Clapperboard, Info, Wand2, Activity } from "lucide-react";
+import { Loader2, Play, Film, RefreshCw, Music, Palette, List, Share2, Eye, ArrowLeft, Clock, Clapperboard, Info, Wand2, Activity, Trash2, Pencil } from "lucide-react";
 import { logger } from "@/lib/logger";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 import { statusLabels, statusVariants, typeLabels, styleLabels, qualityTierLabels, clipTypeLabels, artistPresenceLabels, renderTargetLabels } from "@/lib/labels";
@@ -41,6 +45,12 @@ export default function ProjectView() {
   const [pipelineRunning, setPipelineRunning] = useState(false);
   const [enriching, setEnriching] = useState(false);
   const [creditsError, setCreditsError] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editSynopsis, setEditSynopsis] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
 
   const { data: project, isLoading } = useQuery({
     queryKey: ["project", id],
@@ -152,6 +162,48 @@ export default function ProjectView() {
     const shareUrl = `${window.location.origin}/share/${id}`;
     navigator.clipboard.writeText(shareUrl);
     toast({ title: "Lien copié !", description: "Le lien de partage a été copié dans le presse-papier" });
+  };
+
+  const handleDelete = async () => {
+    if (!project) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase.from("projects").delete().eq("id", project.id);
+      if (error) throw error;
+      toast({ title: "Projet supprimé" });
+      navigate("/dashboard");
+    } catch (err: unknown) {
+      toast({ title: "Erreur", description: err instanceof Error ? err.message : "Impossible de supprimer", variant: "destructive" });
+    } finally {
+      setDeleting(false);
+      setDeleteOpen(false);
+    }
+  };
+
+  const openEdit = () => {
+    if (!project) return;
+    setEditTitle(project.title);
+    setEditSynopsis(project.synopsis || "");
+    setEditOpen(true);
+  };
+
+  const handleEditSave = async () => {
+    if (!project || !editTitle.trim()) return;
+    setEditSaving(true);
+    try {
+      const { error } = await supabase.from("projects").update({
+        title: editTitle.trim(),
+        synopsis: editSynopsis.trim() || null,
+      }).eq("id", project.id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["project", id] });
+      toast({ title: "Projet mis à jour" });
+      setEditOpen(false);
+    } catch (err: unknown) {
+      toast({ title: "Erreur", description: err instanceof Error ? err.message : "Impossible de sauvegarder", variant: "destructive" });
+    } finally {
+      setEditSaving(false);
+    }
   };
 
   const handleEnrichSynopsis = async () => {
@@ -276,7 +328,10 @@ export default function ProjectView() {
               )}
             </div>
 
-            <div className="flex gap-2 shrink-0">
+            <div className="flex gap-2 shrink-0 flex-wrap">
+              <Button variant="ghost" size="sm" onClick={openEdit} className="gap-1.5 text-muted-foreground">
+                <Pencil className="h-3.5 w-3.5" /> Modifier
+              </Button>
               {project.status === "completed" && (
                 <Button variant="glass" size="sm" onClick={handleShare} className="gap-2">
                   <Share2 className="h-4 w-4" /> Partager
@@ -293,6 +348,9 @@ export default function ProjectView() {
                   <RefreshCw className="h-4 w-4" /> Réessayer
                 </Button>
               )}
+              <Button variant="ghost" size="sm" onClick={() => setDeleteOpen(true)} className="gap-1.5 text-destructive hover:text-destructive">
+                <Trash2 className="h-3.5 w-3.5" /> Supprimer
+              </Button>
             </div>
           </div>
 
@@ -540,6 +598,44 @@ export default function ProjectView() {
         </Tabs>
       </main>
       <Footer />
+
+      {/* Delete confirmation */}
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Supprimer ce projet ?"
+        description={`Le projet « ${project.title} » et toutes ses données seront supprimés définitivement.`}
+        confirmLabel="Supprimer"
+        onConfirm={handleDelete}
+        isPending={deleting}
+      />
+
+      {/* Edit dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifier le projet</DialogTitle>
+            <DialogDescription>Mettez à jour le titre et le synopsis de votre projet.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Titre</label>
+              <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Synopsis</label>
+              <Textarea value={editSynopsis} onChange={(e) => setEditSynopsis(e.target.value)} rows={4} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>Annuler</Button>
+            <Button variant="hero" onClick={handleEditSave} disabled={editSaving || !editTitle.trim()}>
+              {editSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Enregistrer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

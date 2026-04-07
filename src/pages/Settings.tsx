@@ -12,7 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { Loader2, ArrowUp, ArrowDown, Webhook, Plus, Trash2, Eye, EyeOff, Copy, KeyRound, CreditCard } from "lucide-react";
+import { Loader2, ArrowUp, ArrowDown, Webhook, Plus, Trash2, Eye, EyeOff, Copy, KeyRound, CreditCard, Camera } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -35,11 +36,18 @@ export default function Settings() {
   const [revealedSecrets, setRevealedSecrets] = useState<Set<string>>(new Set());
   const [webhookToDelete, setWebhookToDelete] = useState<string | null>(null);
   const [deletingWebhook, setDeletingWebhook] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("profiles").select("display_name").eq("id", user.id).single()
-      .then(({ data }) => { if (data) setDisplayName(data.display_name || ""); });
+    supabase.from("profiles").select("display_name, avatar_url").eq("id", user.id).single()
+      .then(({ data }) => {
+        if (data) {
+          setDisplayName(data.display_name || "");
+          setAvatarUrl(data.avatar_url || null);
+        }
+      });
   }, [user]);
 
   const { data: ledger, isLoading: ledgerLoading } = useQuery({
@@ -77,6 +85,26 @@ export default function Settings() {
     },
     enabled: !!user,
   });
+
+  const handleAvatarUpload = async (file: File) => {
+    if (!user) return;
+    setUploadingAvatar(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${user.id}/avatar.${ext}`;
+      const { error: upErr } = await supabase.storage.from("face-references").upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from("face-references").getPublicUrl(path);
+      const publicUrl = urlData.publicUrl + `?t=${Date.now()}`;
+      await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", user.id);
+      setAvatarUrl(publicUrl);
+      toast({ title: "Avatar mis à jour" });
+    } catch (err: unknown) {
+      toast({ title: "Erreur", description: err instanceof Error ? err.message : "Upload échoué", variant: "destructive" });
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!user) return;
@@ -172,6 +200,23 @@ export default function Settings() {
         <Card className="border-border/50 bg-card/60">
           <CardHeader><CardTitle className="text-lg">Profil</CardTitle></CardHeader>
           <CardContent className="space-y-4">
+            {/* Avatar */}
+            <div className="flex items-center gap-4">
+              <div className="relative group">
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src={avatarUrl || undefined} />
+                  <AvatarFallback className="text-lg">{displayName?.charAt(0)?.toUpperCase() || "U"}</AvatarFallback>
+                </Avatar>
+                <label className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
+                  {uploadingAvatar ? <Loader2 className="h-5 w-5 animate-spin text-white" /> : <Camera className="h-5 w-5 text-white" />}
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleAvatarUpload(e.target.files[0])} />
+                </label>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                <p className="font-medium text-foreground">{displayName || "Utilisateur"}</p>
+                <p className="text-xs">{user?.email}</p>
+              </div>
+            </div>
             <div className="space-y-2">
               <Label>Email</Label>
               <Input value={user?.email || ""} disabled className="text-muted-foreground" />
