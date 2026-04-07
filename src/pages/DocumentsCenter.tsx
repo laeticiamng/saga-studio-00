@@ -238,8 +238,11 @@ export default function DocumentsCenter() {
             <TabsTrigger value="documents" className="gap-1.5">
               <FileText className="h-3.5 w-3.5" /> Documents ({documents?.length || 0})
             </TabsTrigger>
-            {effectiveProjectId && (
+             {effectiveProjectId && (
               <>
+                <TabsTrigger value="knowledge" className="gap-1.5">
+                  <Brain className="h-3.5 w-3.5" /> Cerveau projet
+                </TabsTrigger>
                 <TabsTrigger value="conflicts" className="gap-1.5">
                   <AlertTriangle className="h-3.5 w-3.5" /> Conflits
                 </TabsTrigger>
