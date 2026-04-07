@@ -115,6 +115,7 @@ export default function ExtractionSummary({ result }: Props) {
                   d.extractionMode === "doc_legacy_unsupported" ? "Format .doc ancien — convertissez en .docx" :
                   d.extractionMode?.startsWith("docx_parse_failed") ? "DOCX illisible (structure ZIP/XML invalide)" :
                   d.extractionMode?.startsWith("pdf_parse_failed") ? "PDF illisible par l'API Vision" :
+                  d.extractionMode === "pdf_vision_api_error" ? "Ancien parseur — re-importez le document" :
                   d.extractionMode === "download_failed" ? "Téléchargement échoué" :
                   d.extractionMode === "unsupported_file_type" ? "Type de fichier non supporté" :
                   d.extractionMode || "erreur inconnue"

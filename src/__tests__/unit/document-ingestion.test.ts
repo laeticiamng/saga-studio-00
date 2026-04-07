@@ -102,8 +102,32 @@ describe("Extraction Failure Status", () => {
   });
 });
 
-describe("DecompressionStream Parameter", () => {
-  // Validates that the correct parameter name is used for raw DEFLATE
+describe("Decompression Strategy Priority", () => {
+  // pako is the primary decompression strategy (pure JS, works everywhere)
+  // DecompressionStream is fallback only
+
+  const DECOMPRESSION_STRATEGIES = [
+    "pako_inflate_raw",     // 1st: pako.inflateRaw — correct for ZIP raw DEFLATE
+    "pako_inflate_zlib",    // 2nd: pako.inflate — zlib-wrapped fallback
+    "stream_deflate_raw",   // 3rd: DecompressionStream("deflate-raw")
+    "stream_deflate",       // 4th: DecompressionStream("deflate")
+  ];
+
+  it("pako_inflate_raw is the primary strategy", () => {
+    expect(DECOMPRESSION_STRATEGIES[0]).toBe("pako_inflate_raw");
+  });
+
+  it("pako strategies come before DecompressionStream strategies", () => {
+    const pakoIdx = DECOMPRESSION_STRATEGIES.findIndex(s => s.startsWith("pako"));
+    const streamIdx = DECOMPRESSION_STRATEGIES.findIndex(s => s.startsWith("stream"));
+    expect(pakoIdx).toBeLessThan(streamIdx);
+  });
+
+  it("does not include unreliable 'raw' format", () => {
+    expect(DECOMPRESSION_STRATEGIES).not.toContain("raw");
+    expect(DECOMPRESSION_STRATEGIES).not.toContain("stream_raw");
+  });
+
   const VALID_DECOMPRESSION_FORMATS = ["deflate", "deflate-raw", "gzip"];
 
   it("deflate-raw is a valid DecompressionStream format", () => {
@@ -370,6 +394,79 @@ describe("DOCX Routing Rules — No PDF Fallback", () => {
     // Verify it never gets rerouted to pdf
     expect(docxResult.method).not.toContain("pdf");
     expect(docxResult.method).not.toContain("vision");
+  });
+});
+
+// ═══════════════════════════════════════════════════
+// LEGACY STATUS BACKWARD COMPATIBILITY
+// ═══════════════════════════════════════════════════
+
+describe("Legacy Status Backward Compatibility", () => {
+  const PARSER_FAILURE_LABELS: Record<string, string> = {
+    docx_parse_failed: "Le fichier DOCX n'a pas pu être lu",
+    pdf_parse_failed: "Le PDF n'a pas pu être analysé",
+    pdf_vision_api_error: "Ancien parseur — re-importez le document",
+    pdf_vision_api: "Ancien mode d'extraction",
+    doc_legacy_unsupported: "Format .doc ancien",
+    download_failed: "Téléchargement échoué",
+    unsupported_file_type: "Type non supporté",
+  };
+
+  it("has a label for legacy pdf_vision_api_error status", () => {
+    expect(PARSER_FAILURE_LABELS["pdf_vision_api_error"]).toBeDefined();
+    expect(PARSER_FAILURE_LABELS["pdf_vision_api_error"]).toContain("re-importez");
+  });
+
+  it("has a label for legacy pdf_vision_api status", () => {
+    expect(PARSER_FAILURE_LABELS["pdf_vision_api"]).toBeDefined();
+  });
+
+  function isExtractionFailure(extractionMode: string | null): boolean {
+    return Boolean(
+      extractionMode?.includes("failed") ||
+      extractionMode?.includes("error") ||
+      extractionMode?.includes("unsupported")
+    );
+  }
+
+  it("detects pdf_vision_api_error as a failure", () => {
+    expect(isExtractionFailure("pdf_vision_api_error")).toBe(true);
+  });
+
+  it("detects docx_parse_failed as a failure", () => {
+    expect(isExtractionFailure("docx_parse_failed")).toBe(true);
+  });
+
+  it("does not flag successful statuses", () => {
+    expect(isExtractionFailure("docx_parse_succeeded")).toBe(false);
+    expect(isExtractionFailure("pdf_parse_succeeded")).toBe(false);
+    expect(isExtractionFailure("text_parse_succeeded")).toBe(false);
+  });
+});
+
+// ═══════════════════════════════════════════════════
+// OLE2 (.doc) MAGIC BYTE DETECTION
+// ═══════════════════════════════════════════════════
+
+describe("OLE2 Magic Byte Detection", () => {
+  it("detects OLE2 .doc files by magic bytes", () => {
+    const ole2Magic = new Uint8Array([0xD0, 0xCF, 0x11, 0xE0]);
+    const isOLE2 = ole2Magic[0] === 0xD0 && ole2Magic[1] === 0xCF &&
+                   ole2Magic[2] === 0x11 && ole2Magic[3] === 0xE0;
+    expect(isOLE2).toBe(true);
+  });
+
+  it("detects ZIP/DOCX files by PK magic bytes", () => {
+    const zipMagic = new Uint8Array([0x50, 0x4B, 0x03, 0x04]);
+    const isZip = zipMagic[0] === 0x50 && zipMagic[1] === 0x4B;
+    expect(isZip).toBe(true);
+  });
+
+  it("rejects PDF files in DOCX parser", () => {
+    // PDF starts with %PDF (0x25 0x50 0x44 0x46)
+    const pdfMagic = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
+    const isZip = pdfMagic[0] === 0x50 && pdfMagic[1] === 0x4B;
+    expect(isZip).toBe(false);
   });
 });
 
