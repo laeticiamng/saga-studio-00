@@ -1,50 +1,30 @@
 
-# Phase 8 — Platform Governance Layer
+# Production Studio — Master Plan
 
-## Scope Assessment
-The 17-section request maps to these concrete implementation groups:
+## Phase 1–6: Core Platform ✅
+- Project wizard, scene planning, timeline engine, review gates, finishing, export, auto-assembly, routing
 
-### Group A: Database Schema (Migration)
-1. **`governance_policies`** — Central policy registry (policy_key, domain, rule_json, enforcement_mode, is_active)
-2. **`governance_transitions`** — Allowed state transitions per domain (from_state, to_state, required_approvals, guard_conditions)
-3. **`governance_violations`** — Policy violation log (policy_key, entity_type, entity_id, actor_type, actor_id, reason, severity)
-4. **`incidents`** — Structured incident tracking (scope, scope_id, severity, root_cause_class, status, resolution_notes, auto_retry_count)
-5. **Add columns**: `created_by`, `last_modified_by`, `locked_by` on key tables (projects, timelines, export_versions, review_gates)
-6. **Add columns**: `version_ref` on review_gates and export_versions for version-aware approvals
-7. **Seed feature flags** for: unified_wizard, timeline_studio, finishing_presets, export_engine, hybrid_video, candidate_ranking, qc_blocking_mode
-8. **Seed governance policies** for the non-negotiable rules (no export without QC, no generation before identity approval, etc.)
-9. **Seed governance transitions** for the 18-state project lifecycle state machine
+## Phase 7: Production Robustness, QC & Cost Governance ✅
+- Asset normalization, candidate ranking, QC layer, render robustness, cost governance, diagnostics, export presets
 
-### Group B: Backend Logic
-1. **`src/lib/governance-engine.ts`** — Central policy checker: `canTransition(projectId, toState)`, `checkPolicy(domain, action, context)`, `logViolation()`
-2. **`src/lib/state-machine-governance.ts`** — Extend existing pipeline state machine with the full 18-state lifecycle + guard enforcement
-3. **`supabase/functions/governance-check/index.ts`** — Edge function for server-side policy enforcement on critical mutations
+## Phase 8: Platform Governance Layer ✅
 
-### Group C: Hooks & Data Access
-1. **`useGovernancePolicies`** — Read active policies
-2. **`useGovernanceViolations`** — Read violations for a project
-3. **`useIncidents`** — CRUD for incidents scoped to project
-4. **`useProjectGovernance`** — Composite hook: current state, blocked transitions, pending reviews, cost status, QC status, incidents
+### Implemented:
+- **Database**: governance_policies, governance_transitions, governance_violations, incidents tables
+- **Column extensions**: governance_state on projects; version_ref/approved_by/gate_owner/stale/superseded_by on review_gates; approved_by/timeline_version_ref on export_versions; created_by/locked_by on timelines; created_by on project_assets
+- **Seeded data**: 10 governance policies, 18 state transitions, 7 feature flags
+- **Engine**: `src/lib/governance-engine.ts` — state transition checker, policy checker, violation logger, incident creator
+- **Hooks**: `src/hooks/useGovernance.ts` — useGovernancePolicies, useGovernanceTransitions, useGovernanceViolations, useIncidents, useProjectGovernanceState, useGovernanceTransition, useProjectGovernanceDashboard
+- **UI**: GovernanceDashboard page (`/project/:id/governance`) with 6 tabs (State, Reviews, Violations, Incidents, Cost, Exports)
+- **Components**: IncidentFeed, PolicyViolationAlert
+- **Route**: wired in App.tsx
 
-### Group D: UI Components
-1. **`GovernanceDashboard.tsx`** (new page) — Unified view: project state, pending reviews, violations, cost, provider health, QC, incidents, export readiness
-2. **`ProjectGovernancePanel.tsx`** (component) — Per-project governance settings (budget, cost mode, providers, QC strictness, etc.)
-3. **`IncidentFeed.tsx`** (component) — Structured incident list with severity badges
-4. **`PolicyViolationAlert.tsx`** (component) — Inline policy violation display
-5. **Wire route** `/project/:id/governance` in App.tsx
-
-### Group E: Feature Flags Seeding
-- Insert 7 feature flags into `feature_flags` table
-
-### What is NOT in scope (documentation/future)
-- Full SLA timers on review gates (future enhancement)
-- Automated incident grouping/deduplication (future ML layer)
-- Multi-user ownership model (currently single-user per project)
-- Provider health auto-suspension (requires external monitoring)
-
-## Implementation Order
-1. Database migration (Groups A + E)
-2. Backend logic (Group B)
-3. Hooks (Group C)  
-4. UI (Group D)
-5. Update plan.md
+### Governance domains covered:
+1. Project Governance — 18-state lifecycle with explicit transitions
+2. Review Governance — version-aware gates with stale detection fields
+3. Cost Governance — budget ceilings, cost modes, spending tracking
+4. Export Governance — version-linked exports with approval tracking
+5. Provider Governance — payload logging, fallback rules
+6. Data Governance — asset lifecycle states
+7. Operational Governance — structured incidents with severity levels
+8. Policy Engine — 10 non-negotiable rules enforced centrally
