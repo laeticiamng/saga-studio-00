@@ -239,6 +239,9 @@ export default function TimelineStudio() {
                 <TabsTrigger value="diagnostics" className="gap-1.5 rounded-lg">
                   <Activity className="h-4 w-4" /> Diagnostics
                 </TabsTrigger>
+                <TabsTrigger value="validation" className="gap-1.5 rounded-lg">
+                  <ShieldCheck className="h-4 w-4" /> Anti-Aberrations
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="timeline">
