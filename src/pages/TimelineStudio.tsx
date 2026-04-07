@@ -183,6 +183,15 @@ export default function TimelineStudio() {
               <Plus className="h-4 w-4 mr-1" />
               {timelines?.length ? "Nouvelle version" : "Créer timeline"}
             </Button>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleAssemble}
+              disabled={assembling}
+            >
+              {assembling ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Wand2 className="h-4 w-4 mr-1" />}
+              Assembler
+            </Button>
           </div>
         </div>
 
