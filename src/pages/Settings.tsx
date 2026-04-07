@@ -36,11 +36,18 @@ export default function Settings() {
   const [revealedSecrets, setRevealedSecrets] = useState<Set<string>>(new Set());
   const [webhookToDelete, setWebhookToDelete] = useState<string | null>(null);
   const [deletingWebhook, setDeletingWebhook] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("profiles").select("display_name").eq("id", user.id).single()
-      .then(({ data }) => { if (data) setDisplayName(data.display_name || ""); });
+    supabase.from("profiles").select("display_name, avatar_url").eq("id", user.id).single()
+      .then(({ data }) => {
+        if (data) {
+          setDisplayName(data.display_name || "");
+          setAvatarUrl(data.avatar_url || null);
+        }
+      });
   }, [user]);
 
   const { data: ledger, isLoading: ledgerLoading } = useQuery({
