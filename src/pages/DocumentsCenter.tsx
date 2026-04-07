@@ -12,6 +12,7 @@ import {
   useCanonicalConflicts, useCanonicalFields, useApproveCanonicalField,
   useInferredCompletions, useReviewInferredCompletion, useResolveConflict,
 } from "@/hooks/useDocuments";
+import { useProjectKnowledgeGraph } from "@/hooks/useProjectKnowledge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,7 @@ import { toast } from "sonner";
 import {
   FileText, Upload, CheckCircle, XCircle, AlertTriangle, Eye, Loader2, FileUp,
   BookOpen, Users, Tv, MapPin, Music, Image, Shield, Zap, GitMerge, HelpCircle,
-  Star, FileWarning, Layers, Film, Check,
+  Star, FileWarning, Layers, Film, Check, Brain, BarChart3,
 } from "lucide-react";
 import { getSeriesProjectTitle } from "@/lib/series-helpers";
 
@@ -237,8 +238,11 @@ export default function DocumentsCenter() {
             <TabsTrigger value="documents" className="gap-1.5">
               <FileText className="h-3.5 w-3.5" /> Documents ({documents?.length || 0})
             </TabsTrigger>
-            {effectiveProjectId && (
+             {effectiveProjectId && (
               <>
+                <TabsTrigger value="knowledge" className="gap-1.5">
+                  <Brain className="h-3.5 w-3.5" /> Cerveau projet
+                </TabsTrigger>
                 <TabsTrigger value="conflicts" className="gap-1.5">
                   <AlertTriangle className="h-3.5 w-3.5" /> Conflits
                 </TabsTrigger>
@@ -289,6 +293,9 @@ export default function DocumentsCenter() {
 
           {effectiveProjectId && (
             <>
+              <TabsContent value="knowledge">
+                <KnowledgePanel projectId={effectiveProjectId} />
+              </TabsContent>
               <TabsContent value="conflicts">
                 <ConflictsPanel projectId={effectiveProjectId} />
               </TabsContent>
@@ -555,6 +562,146 @@ function DocumentDetail({
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+}
+
+// ——— Knowledge Graph Panel ———
+function KnowledgePanel({ projectId }: { projectId: string }) {
+  const { data: graph, isLoading } = useProjectKnowledgeGraph(projectId);
+
+  if (isLoading) return <Card><CardContent className="py-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></CardContent></Card>;
+  if (!graph) return null;
+
+  const entityTypeLabels: Record<string, string> = {
+    character: "Personnages", episode: "Épisodes", scene: "Scènes",
+    location: "Lieux", music: "Musique", prop: "Accessoires",
+    mood: "Ambiances", continuity_rule: "Continuité", visual_reference: "Réf. visuelles",
+    title: "Titres", logline: "Loglines", synopsis: "Synopsis",
+    wardrobe: "Costumes", relationship: "Relations", lyric: "Paroles",
+    season_arc: "Arcs saison", act_structure: "Structure actes",
+    beat_map: "Beat map", performance_cue: "Cues perf.",
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 mb-2">
+        <Brain className="h-5 w-5 text-primary" />
+        <h2 className="text-lg font-semibold">Cerveau projet — Graphe de connaissances</h2>
+      </div>
+
+      {/* Stats overview */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Card>
+          <CardContent className="py-4 text-center">
+            <p className="text-3xl font-bold text-primary">{graph.documents_count}</p>
+            <p className="text-xs text-muted-foreground">Documents</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-4 text-center">
+            <p className="text-3xl font-bold text-primary">{graph.total_entities}</p>
+            <p className="text-xs text-muted-foreground">Entités extraites</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-4 text-center">
+            <p className="text-3xl font-bold text-primary">{graph.canonical_approved}/{graph.canonical_fields}</p>
+            <p className="text-xs text-muted-foreground">Canoniques approuvées</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-4 text-center">
+            <p className="text-3xl font-bold">{graph.conflicts_unresolved}</p>
+            <p className="text-xs text-muted-foreground">Conflits ouverts</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Entity breakdown */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" /> Entités par type
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {Object.entries(graph.entities_by_type)
+              .sort(([, a], [, b]) => (b as number) - (a as number))
+              .map(([type, count]) => (
+                <div key={type} className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    {ENTITY_ICONS[type] || <Layers className="h-3.5 w-3.5" />}
+                    <span className="text-sm">{entityTypeLabels[type] || type}</span>
+                  </div>
+                  <Badge variant="secondary" className="text-xs">{count as number}</Badge>
+                </div>
+              ))}
+          </div>
+          {Object.keys(graph.entities_by_type).length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              Aucune entité extraite. Importez des documents pour alimenter le cerveau projet.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Document roles breakdown */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <FileText className="h-4 w-4" /> Documents par rôle
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            {graph.documents_by_role.map(([role, count]) => (
+              <Badge key={role} variant="outline" className="text-sm py-1 px-3">
+                {ROLE_LABELS[role] || role}: {count}
+              </Badge>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Health indicators */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Shield className="h-4 w-4" /> Santé de la mémoire projet
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm">Couverture canonique</span>
+            <div className="flex items-center gap-2">
+              <Progress value={graph.canonical_fields > 0 ? (graph.canonical_approved / graph.canonical_fields) * 100 : 0} className="w-24 h-2" />
+              <span className="text-xs text-muted-foreground">
+                {graph.canonical_fields > 0 ? Math.round((graph.canonical_approved / graph.canonical_fields) * 100) : 0}%
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm">Conflits résolus</span>
+            <div className="flex items-center gap-2">
+              <Progress value={graph.conflicts_total > 0 ? ((graph.conflicts_total - graph.conflicts_unresolved) / graph.conflicts_total) * 100 : 100} className="w-24 h-2" />
+              <span className="text-xs text-muted-foreground">
+                {graph.conflicts_total > 0 ? `${graph.conflicts_total - graph.conflicts_unresolved}/${graph.conflicts_total}` : "—"}
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm">Gaps comblés</span>
+            <div className="flex items-center gap-2">
+              <Progress value={graph.inferred_total > 0 ? ((graph.inferred_total - graph.inferred_pending) / graph.inferred_total) * 100 : 100} className="w-24 h-2" />
+              <span className="text-xs text-muted-foreground">
+                {graph.inferred_total > 0 ? `${graph.inferred_total - graph.inferred_pending}/${graph.inferred_total}` : "—"}
+              </span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
