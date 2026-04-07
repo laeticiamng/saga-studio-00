@@ -1,6 +1,7 @@
-import { FileText, Users, MapPin, Layers, Music, AlertTriangle, CheckCircle2, XCircle, Info, ChevronDown, ChevronUp } from "lucide-react";
+import { FileText, Users, MapPin, Layers, Music, AlertTriangle, CheckCircle2, XCircle, Info, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
 export interface DocumentDiagnostic {
@@ -36,6 +37,9 @@ export interface ExtractionResult {
 
 interface Props {
   result: ExtractionResult;
+  onReprocessDocument?: (documentId: string) => void;
+  onReprocessAllLegacy?: () => void;
+  isReprocessing?: boolean;
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -53,7 +57,7 @@ const ROLE_LABELS: Record<string, string> = {
   unknown: "Non classé",
 };
 
-export default function ExtractionSummary({ result }: Props) {
+export default function ExtractionSummary({ result, onReprocessDocument, onReprocessAllLegacy, isReprocessing }: Props) {
   const [showDiagnostics, setShowDiagnostics] = useState(false);
 
   const hasRealExtraction = result.totalEntities > 0;
@@ -64,8 +68,15 @@ export default function ExtractionSummary({ result }: Props) {
       d.extractionMode?.includes("error") ||
       d.status?.includes("failed")
     );
+  const isLegacyDoc = (d: DocumentDiagnostic) =>
+    d.extractionMode === "pdf_vision_api_error" ||
+    d.extractionMode === "pdf_vision_api" ||
+    d.extractionMode?.startsWith("vision_api") ||
+    d.extractionMode?.startsWith("pdf_vision");
   const hasParserFailures = result.diagnostics?.some(isParserFailure);
   const allFailed = result.diagnostics?.filter(d => d.fileType !== "image").every(isParserFailure);
+  const legacyDocs = result.diagnostics?.filter(d => d.fileType !== "image" && isLegacyDoc(d)) || [];
+  const hasLegacyDocs = legacyDocs.length > 0;
 
   const stats = [
     { icon: FileText, label: "Documents analysés", value: result.documentsProcessed },
@@ -102,20 +113,61 @@ export default function ExtractionSummary({ result }: Props) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Legacy documents banner — actionable reprocessing */}
+        {hasLegacyDocs && (
+          <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-3 text-sm">
+            <p className="font-medium text-yellow-700 mb-1 flex items-center gap-1.5">
+              <RefreshCw className="h-4 w-4" />
+              {legacyDocs.length} document{legacyDocs.length > 1 ? "s" : ""} analysé{legacyDocs.length > 1 ? "s" : ""} avec l'ancien parseur
+            </p>
+            <p className="text-muted-foreground text-xs mb-2">
+              Ces documents ont été traités par une version précédente du parseur. Relancez l'analyse avec le parseur actuel pour de meilleurs résultats.
+            </p>
+            {legacyDocs.map(d => (
+              <div key={d.id} className="flex items-center justify-between text-xs mt-1">
+                <span className="text-muted-foreground truncate mr-2">{d.fileName}</span>
+                {onReprocessDocument && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-6 text-xs px-2 shrink-0"
+                    disabled={isReprocessing}
+                    onClick={() => onReprocessDocument(d.id)}
+                  >
+                    <RefreshCw className={`h-3 w-3 mr-1 ${isReprocessing ? "animate-spin" : ""}`} />
+                    Ré-analyser
+                  </Button>
+                )}
+              </div>
+            ))}
+            {legacyDocs.length > 1 && onReprocessAllLegacy && (
+              <Button
+                size="sm"
+                variant="default"
+                className="mt-2 h-7 text-xs w-full"
+                disabled={isReprocessing}
+                onClick={onReprocessAllLegacy}
+              >
+                <RefreshCw className={`h-3 w-3 mr-1 ${isReprocessing ? "animate-spin" : ""}`} />
+                Ré-analyser tous les documents hérités
+              </Button>
+            )}
+          </div>
+        )}
+
         {/* Parser failure warning */}
-        {allFailed && (
+        {allFailed && !hasLegacyDocs && (
           <div className="rounded-lg bg-destructive/10 p-3 text-sm">
             <p className="font-medium text-destructive mb-1">L'extraction a échoué sur tous les documents</p>
             <p className="text-muted-foreground text-xs">
               Les fichiers n'ont pas pu être lus correctement. Vérifiez qu'il s'agit bien de documents textuels (PDF, DOCX, TXT) et non de fichiers corrompus ou protégés.
             </p>
-            {result.diagnostics?.filter(d => d.fileType !== "image" && isParserFailure(d)).map(d => (
+            {result.diagnostics?.filter(d => d.fileType !== "image" && isParserFailure(d) && !isLegacyDoc(d)).map(d => (
               <p key={d.id} className="text-xs text-destructive/80 mt-1">
                 {d.fileName}: {
                   d.extractionMode === "doc_legacy_unsupported" ? "Format .doc ancien — convertissez en .docx" :
                   d.extractionMode?.startsWith("docx_parse_failed") ? "DOCX illisible (structure ZIP/XML invalide)" :
                   d.extractionMode?.startsWith("pdf_parse_failed") ? "PDF illisible par l'API Vision" :
-                  d.extractionMode === "pdf_vision_api_error" ? "Ancien parseur — re-importez le document" :
                   d.extractionMode === "download_failed" ? "Téléchargement échoué" :
                   d.extractionMode === "unsupported_file_type" ? "Type de fichier non supporté" :
                   d.extractionMode || "erreur inconnue"
