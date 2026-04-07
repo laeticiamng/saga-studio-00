@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,8 +17,21 @@ import { useCreateSeries } from "@/hooks/useSeries";
 import { logger } from "@/lib/logger";
 import {
   Film, Music, Tv, Upload, ArrowRight, ArrowLeft, Check,
-  Loader2, Sparkles, Video, ImagePlus, X, Wand2,
+  Loader2, Sparkles, Video, ImagePlus, X, Wand2, Coins,
+  Clock, RectangleHorizontal, Square, Smartphone,
 } from "lucide-react";
+
+// Style preview images
+import styleCinematic from "@/assets/styles/cinematic.jpg";
+import styleAnime from "@/assets/styles/anime.jpg";
+import styleRealistic from "@/assets/styles/realistic.jpg";
+import styleNoir from "@/assets/styles/noir.jpg";
+import styleVintage from "@/assets/styles/vintage.jpg";
+import styleNeon from "@/assets/styles/neon.jpg";
+import styleDocumentary from "@/assets/styles/documentary.jpg";
+import styleFantasy from "@/assets/styles/fantasy.jpg";
+import styleWatercolor from "@/assets/styles/watercolor.jpg";
+import style3dRender from "@/assets/styles/3d_render.jpg";
 
 type ProjectType = "series" | "film" | "music_video" | "hybrid_video";
 
@@ -31,30 +43,37 @@ const PROJECT_TYPES: { value: ProjectType; label: string; icon: React.ElementTyp
 ];
 
 const QUALITY_TIERS = [
-  { value: "premium", label: "Premium", desc: "Vidéo native, rendu serveur" },
-  { value: "standard", label: "Standard", desc: "Recommandé — bon équilibre qualité/coût" },
-  { value: "economy", label: "Économique", desc: "Plus rapide, assemblage navigateur" },
+  { value: "premium", label: "Premium", desc: "Vidéo native, rendu serveur", creditsPerMin: 10 },
+  { value: "standard", label: "Standard", desc: "Recommandé — bon équilibre qualité/coût", creditsPerMin: 5 },
+  { value: "economy", label: "Économique", desc: "Plus rapide, assemblage navigateur", creditsPerMin: 2 },
 ];
 
-const STYLES = [
-  { value: "cinematic", label: "Cinématique" },
-  { value: "anime", label: "Anime" },
-  { value: "realistic", label: "Réaliste" },
-  { value: "noir", label: "Noir" },
-  { value: "vintage", label: "Vintage" },
-  { value: "neon", label: "Néon" },
-  { value: "documentary", label: "Documentaire" },
-  { value: "fantasy", label: "Fantaisie" },
-  { value: "watercolor", label: "Aquarelle" },
-  { value: "3d_render", label: "Rendu 3D" },
+const STYLES: { value: string; label: string; img: string }[] = [
+  { value: "cinematic", label: "Cinématique", img: styleCinematic },
+  { value: "anime", label: "Anime", img: styleAnime },
+  { value: "realistic", label: "Réaliste", img: styleRealistic },
+  { value: "noir", label: "Noir", img: styleNoir },
+  { value: "vintage", label: "Vintage", img: styleVintage },
+  { value: "neon", label: "Néon", img: styleNeon },
+  { value: "documentary", label: "Documentaire", img: styleDocumentary },
+  { value: "fantasy", label: "Fantaisie", img: styleFantasy },
+  { value: "watercolor", label: "Aquarelle", img: styleWatercolor },
+  { value: "3d_render", label: "Rendu 3D", img: style3dRender },
 ];
 
 const WIZARD_STEPS = [
   { label: "Type", short: "1" },
   { label: "Brief", short: "2" },
-  { label: "Style & Qualité", short: "3" },
-  { label: "Identité", short: "4" },
-  { label: "Confirmer", short: "5" },
+  { label: "Paramètres", short: "3" },
+  { label: "Style & Qualité", short: "4" },
+  { label: "Identité", short: "5" },
+  { label: "Confirmer", short: "6" },
+];
+
+const ASPECT_RATIOS = [
+  { value: "16:9", label: "16:9", desc: "Paysage", icon: RectangleHorizontal },
+  { value: "9:16", label: "9:16", desc: "Portrait", icon: Smartphone },
+  { value: "1:1", label: "1:1", desc: "Carré", icon: Square },
 ];
 
 export default function CreateProject() {
@@ -66,6 +85,7 @@ export default function CreateProject() {
 
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [enriching, setEnriching] = useState(false);
 
   // Warn before leaving mid-wizard
   useEffect(() => {
@@ -76,12 +96,14 @@ export default function CreateProject() {
     return () => window.removeEventListener("beforeunload", handler);
   }, [step]);
 
-  // Step 1: Type
+  // Step 0: Type
   const [projectType, setProjectType] = useState<ProjectType>("film");
 
-  // Step 2: Brief
+  // Step 1: Brief
   const [title, setTitle] = useState("");
   const [synopsis, setSynopsis] = useState("");
+
+  // Step 2: Params
   const [durationMin, setDurationMin] = useState("5");
   const [aspectRatio, setAspectRatio] = useState("16:9");
   const [audioFile, setAudioFile] = useState<File | null>(null);
@@ -100,12 +122,37 @@ export default function CreateProject() {
   };
   const removeRef = (idx: number) => setRefPhotos(prev => prev.filter((_, i) => i !== idx));
 
+  // Cost estimation
+  const estimatedCredits = useMemo(() => {
+    const tier = QUALITY_TIERS.find(q => q.value === qualityTier);
+    const mins = parseInt(durationMin) || 5;
+    return (tier?.creditsPerMin || 5) * mins;
+  }, [qualityTier, durationMin]);
+
   const canNext = (s: number): boolean => {
     if (s === 0) return !!projectType;
     if (s === 1) return title.trim().length > 0;
     if (s === 2) return true;
     if (s === 3) return true;
+    if (s === 4) return true;
     return true;
+  };
+
+  const handleEnrichSynopsis = async () => {
+    if (!synopsis.trim() || enriching) return;
+    setEnriching(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("enhance-synopsis", {
+        body: { synopsis, type: projectType, style },
+      });
+      if (error) throw error;
+      if (data?.enhanced) setSynopsis(data.enhanced);
+    } catch (err) {
+      logger.error("EnrichSynopsis", err);
+      toast({ title: "Erreur lors de l'enrichissement", variant: "destructive" });
+    } finally {
+      setEnriching(false);
+    }
   };
 
   const handleCreate = async () => {
@@ -114,7 +161,6 @@ export default function CreateProject() {
     try {
       const durationSec = parseInt(durationMin) * 60;
 
-      // Upload audio if music_video
       let audioUrl: string | undefined;
       if (audioFile && projectType === "music_video") {
         const path = `${user.id}/${Date.now()}-${audioFile.name}`;
@@ -123,7 +169,6 @@ export default function CreateProject() {
         audioUrl = path;
       }
 
-      // Upload ref photos
       const refUrls: string[] = [];
       for (const file of refPhotos) {
         const path = `${user.id}/refs/${Date.now()}-${file.name}`;
@@ -145,7 +190,6 @@ export default function CreateProject() {
         return;
       }
 
-      // Film / music_video / hybrid_video
       const dbType = projectType === "hybrid_video" ? "film" : projectType === "music_video" ? "music_video" : "film";
       const { data, error } = await supabase.functions.invoke("create-project", {
         body: {
@@ -196,7 +240,7 @@ export default function CreateProject() {
               }`}>
                 {i < step ? <Check className="h-4 w-4" /> : i + 1}
               </div>
-              <span className={`text-xs font-medium ${i <= step ? "text-foreground" : "text-muted-foreground"}`}>
+              <span className={`text-xs font-medium hidden sm:block ${i <= step ? "text-foreground" : "text-muted-foreground"}`}>
                 {s.label}
               </span>
             </div>
@@ -232,12 +276,12 @@ export default function CreateProject() {
           </div>
         )}
 
-        {/* Step 1: Brief */}
+        {/* Step 1: Brief (Title + Synopsis + AI enrich) */}
         {step === 1 && (
           <Card>
             <CardHeader>
               <CardTitle>Brief du projet</CardTitle>
-              <CardDescription>Décrivez votre projet — l'IA fera le reste</CardDescription>
+              <CardDescription>Décrivez votre idée — l'IA s'occupe du reste</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
@@ -245,61 +289,97 @@ export default function CreateProject() {
                 <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Mon projet" />
               </div>
               <div className="space-y-2">
-                <Label>Synopsis / Brief</Label>
-                <Textarea value={synopsis} onChange={(e) => setSynopsis(e.target.value)}
-                  placeholder="Décrivez votre idée, l'univers, les personnages…" rows={5} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Durée cible</Label>
-                  <Select value={durationMin} onValueChange={setDurationMin}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {projectType === "music_video" ? (
-                        <>
-                          <SelectItem value="3">3 min</SelectItem>
-                          <SelectItem value="4">4 min</SelectItem>
-                          <SelectItem value="5">5 min</SelectItem>
-                        </>
-                      ) : projectType === "series" ? (
-                        <>
-                          <SelectItem value="5">5 min</SelectItem>
-                          <SelectItem value="10">10 min</SelectItem>
-                          <SelectItem value="22">22 min</SelectItem>
-                          <SelectItem value="25">25 min</SelectItem>
-                          <SelectItem value="45">45 min</SelectItem>
-                          <SelectItem value="50">50 min</SelectItem>
-                        </>
-                      ) : (
-                        <>
-                          <SelectItem value="2">2 min</SelectItem>
-                          <SelectItem value="5">5 min</SelectItem>
-                          <SelectItem value="10">10 min</SelectItem>
-                          <SelectItem value="20">20 min</SelectItem>
-                          <SelectItem value="30">30 min</SelectItem>
-                          <SelectItem value="60">60 min</SelectItem>
-                          <SelectItem value="90">90 min</SelectItem>
-                        </>
-                      )}
-                    </SelectContent>
-                  </Select>
+                <div className="flex items-center justify-between">
+                  <Label>Synopsis / Brief</Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleEnrichSynopsis}
+                    disabled={!synopsis.trim() || enriching}
+                    className="text-primary hover:text-primary/80 gap-1.5 h-8 text-xs"
+                  >
+                    {enriching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+                    Enrichir avec l'IA
+                  </Button>
                 </div>
-                <div className="space-y-2">
-                  <Label>Format</Label>
-                  <RadioGroup value={aspectRatio} onValueChange={setAspectRatio} className="flex gap-4 pt-2">
-                    <div className="flex items-center gap-1.5">
-                      <RadioGroupItem value="16:9" id="ar-16" />
-                      <Label htmlFor="ar-16" className="text-sm cursor-pointer">16:9</Label>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <RadioGroupItem value="9:16" id="ar-9" />
-                      <Label htmlFor="ar-9" className="text-sm cursor-pointer">9:16</Label>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <RadioGroupItem value="1:1" id="ar-1" />
-                      <Label htmlFor="ar-1" className="text-sm cursor-pointer">1:1</Label>
-                    </div>
-                  </RadioGroup>
+                <Textarea
+                  value={synopsis}
+                  onChange={(e) => setSynopsis(e.target.value)}
+                  placeholder="Décrivez votre idée, l'univers, les personnages…"
+                  rows={6}
+                  className="resize-none"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Écrivez quelques lignes puis cliquez « Enrichir avec l'IA » pour développer automatiquement votre brief.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 2: Params (Duration, Format, Uploads) */}
+        {step === 2 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Paramètres techniques</CardTitle>
+              <CardDescription>Durée, format et fichiers source</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2"><Clock className="h-4 w-4 text-primary" /> Durée cible</Label>
+                <Select value={durationMin} onValueChange={setDurationMin}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {projectType === "music_video" ? (
+                      <>
+                        <SelectItem value="3">3 min</SelectItem>
+                        <SelectItem value="4">4 min</SelectItem>
+                        <SelectItem value="5">5 min</SelectItem>
+                      </>
+                    ) : projectType === "series" ? (
+                      <>
+                        <SelectItem value="5">5 min</SelectItem>
+                        <SelectItem value="10">10 min</SelectItem>
+                        <SelectItem value="22">22 min</SelectItem>
+                        <SelectItem value="25">25 min</SelectItem>
+                        <SelectItem value="45">45 min</SelectItem>
+                        <SelectItem value="50">50 min</SelectItem>
+                      </>
+                    ) : (
+                      <>
+                        <SelectItem value="2">2 min</SelectItem>
+                        <SelectItem value="5">5 min</SelectItem>
+                        <SelectItem value="10">10 min</SelectItem>
+                        <SelectItem value="20">20 min</SelectItem>
+                        <SelectItem value="30">30 min</SelectItem>
+                        <SelectItem value="60">60 min</SelectItem>
+                        <SelectItem value="90">90 min</SelectItem>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Format / Ratio</Label>
+                <div className="grid grid-cols-3 gap-3">
+                  {ASPECT_RATIOS.map((ar) => {
+                    const Icon = ar.icon;
+                    const selected = aspectRatio === ar.value;
+                    return (
+                      <button
+                        key={ar.value}
+                        onClick={() => setAspectRatio(ar.value)}
+                        className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                          selected ? "border-primary bg-primary/5" : "border-border/50 hover:border-primary/30"
+                        }`}
+                      >
+                        <Icon className={`h-6 w-6 ${selected ? "text-primary" : "text-muted-foreground"}`} />
+                        <span className={`text-sm font-semibold ${selected ? "text-foreground" : "text-muted-foreground"}`}>{ar.label}</span>
+                        <span className="text-xs text-muted-foreground">{ar.desc}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -348,29 +428,50 @@ export default function CreateProject() {
           </Card>
         )}
 
-        {/* Step 2: Style & Quality */}
-        {step === 2 && (
+        {/* Step 3: Style & Quality */}
+        {step === 3 && (
           <Card>
             <CardHeader>
               <CardTitle>Style visuel & Qualité</CardTitle>
+              <CardDescription>Choisissez l'esthétique et le niveau de rendu</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
+            <CardContent className="space-y-8">
+              <div className="space-y-3">
                 <Label>Style visuel</Label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {STYLES.map((s) => (
-                    <Button
-                      key={s.value}
-                      variant={style === s.value ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setStyle(s.value)}
-                      className="justify-start"
-                    >
-                      {s.label}
-                    </Button>
-                  ))}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                  {STYLES.map((s) => {
+                    const selected = style === s.value;
+                    return (
+                      <button
+                        key={s.value}
+                        onClick={() => setStyle(s.value)}
+                        className={`group relative rounded-xl overflow-hidden border-2 transition-all aspect-square ${
+                          selected ? "border-primary ring-2 ring-primary/30 shadow-lg" : "border-border/50 hover:border-primary/30"
+                        }`}
+                      >
+                        <img
+                          src={s.img}
+                          alt={s.label}
+                          loading="lazy"
+                          className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                        <span className={`absolute bottom-2 left-0 right-0 text-center text-xs font-semibold ${
+                          selected ? "text-primary" : "text-white"
+                        }`}>
+                          {s.label}
+                        </span>
+                        {selected && (
+                          <div className="absolute top-2 right-2 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+                            <Check className="h-3 w-3 text-primary-foreground" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
+
               <div className="space-y-3">
                 <Label>Niveau de qualité</Label>
                 {QUALITY_TIERS.map((q) => (
@@ -381,13 +482,16 @@ export default function CreateProject() {
                     }`}
                     onClick={() => setQualityTier(q.value)}
                   >
-                    <div className={`h-4 w-4 rounded-full border-2 ${
+                    <div className={`h-4 w-4 rounded-full border-2 flex-shrink-0 ${
                       qualityTier === q.value ? "border-primary bg-primary" : "border-muted-foreground"
                     }`} />
-                    <div>
+                    <div className="flex-1">
                       <span className="font-medium">{q.label}</span>
                       <p className="text-xs text-muted-foreground">{q.desc}</p>
                     </div>
+                    <Badge variant="outline" className="text-xs gap-1">
+                      <Coins className="h-3 w-3" /> ~{q.creditsPerMin}/min
+                    </Badge>
                   </label>
                 ))}
               </div>
@@ -395,14 +499,17 @@ export default function CreateProject() {
           </Card>
         )}
 
-        {/* Step 3: Identity */}
-        {step === 3 && (
+        {/* Step 4: Identity (Optional) */}
+        {step === 4 && (
           <Card>
             <CardHeader>
-              <CardTitle>Identité visuelle</CardTitle>
+              <div className="flex items-center gap-3">
+                <CardTitle>Identité visuelle</CardTitle>
+                <Badge variant="secondary" className="text-xs">Optionnel</Badge>
+              </div>
               <CardDescription>
                 Uploadez des photos de référence pour les personnages, décors ou ambiances.
-                Ces images guideront la génération pour maintenir la cohérence visuelle.
+                Vous pourrez aussi en générer par IA plus tard.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -412,6 +519,7 @@ export default function CreateProject() {
                     <img src={URL.createObjectURL(file)} alt="" className="h-full w-full object-cover" />
                     <button
                       onClick={() => removeRef(i)}
+                      aria-label="Supprimer la référence"
                       className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       <X className="h-3 w-3" />
@@ -426,68 +534,88 @@ export default function CreateProject() {
                   </label>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Optionnel — vous pourrez aussi générer des références par IA dans l'étape suivante du projet.
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Step 4: Confirm */}
-        {step === 4 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Résumé du projet</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Type</span>
-                  <p className="font-medium">{PROJECT_TYPES.find(t => t.value === projectType)?.label}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Titre</span>
-                  <p className="font-medium">{title || "—"}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Durée</span>
-                  <p className="font-medium">{durationMin} min</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Format</span>
-                  <p className="font-medium">{aspectRatio}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Style</span>
-                  <p className="font-medium">{STYLES.find(s => s.value === style)?.label}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Qualité</span>
-                  <p className="font-medium">{QUALITY_TIERS.find(q => q.value === qualityTier)?.label}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Références</span>
-                  <p className="font-medium">{refPhotos.length} photo(s)</p>
-                </div>
-                {audioFile && (
-                  <div>
-                    <span className="text-muted-foreground">Audio</span>
-                    <p className="font-medium">{audioFile.name}</p>
-                  </div>
-                )}
-              </div>
-              {synopsis && (
-                <div>
-                  <span className="text-sm text-muted-foreground">Synopsis</span>
-                  <p className="text-sm mt-1">{synopsis}</p>
-                </div>
+              {refPhotos.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4 bg-secondary/30 rounded-lg">
+                  Aucune référence ajoutée — pas de souci, l'IA générera les visuels à partir de votre brief.
+                </p>
               )}
             </CardContent>
           </Card>
         )}
 
+        {/* Step 5: Confirm with cost estimate */}
+        {step === 5 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Résumé du projet</CardTitle>
+              <CardDescription>Vérifiez les paramètres avant de lancer la création</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground text-xs uppercase tracking-wide">Type</span>
+                  <p className="font-medium mt-0.5">{PROJECT_TYPES.find(t => t.value === projectType)?.label}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-xs uppercase tracking-wide">Titre</span>
+                  <p className="font-medium mt-0.5">{title || "—"}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-xs uppercase tracking-wide">Durée</span>
+                  <p className="font-medium mt-0.5">{durationMin} min</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-xs uppercase tracking-wide">Format</span>
+                  <p className="font-medium mt-0.5">{aspectRatio}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-xs uppercase tracking-wide">Style</span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <img src={STYLES.find(s => s.value === style)?.img} alt="" className="h-6 w-6 rounded object-cover" />
+                    <span className="font-medium">{STYLES.find(s => s.value === style)?.label}</span>
+                  </div>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-xs uppercase tracking-wide">Qualité</span>
+                  <p className="font-medium mt-0.5">{QUALITY_TIERS.find(q => q.value === qualityTier)?.label}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-xs uppercase tracking-wide">Références</span>
+                  <p className="font-medium mt-0.5">{refPhotos.length} photo(s)</p>
+                </div>
+                {audioFile && (
+                  <div>
+                    <span className="text-muted-foreground text-xs uppercase tracking-wide">Audio</span>
+                    <p className="font-medium mt-0.5">{audioFile.name}</p>
+                  </div>
+                )}
+              </div>
+
+              {synopsis && (
+                <div>
+                  <span className="text-muted-foreground text-xs uppercase tracking-wide">Synopsis</span>
+                  <p className="text-sm mt-1 whitespace-pre-wrap">{synopsis}</p>
+                </div>
+              )}
+
+              {/* Cost estimation */}
+              <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-4 flex items-center gap-4">
+                <div className="p-3 rounded-full bg-primary/10">
+                  <Coins className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <p className="font-semibold text-lg">~{estimatedCredits} crédits</p>
+                  <p className="text-xs text-muted-foreground">
+                    Estimation basée sur {durationMin} min en qualité {QUALITY_TIERS.find(q => q.value === qualityTier)?.label?.toLowerCase()}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Navigation */}
-        <div className="flex justify-between mt-8">
+        <div className="flex justify-between mt-8 mb-12">
           <Button variant="outline" onClick={() => setStep(s => s - 1)} disabled={step === 0}>
             <ArrowLeft className="h-4 w-4 mr-2" /> Précédent
           </Button>
@@ -503,7 +631,6 @@ export default function CreateProject() {
           )}
         </div>
       </main>
-      <Footer />
     </div>
   );
 }
