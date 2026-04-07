@@ -1,39 +1,47 @@
-## Phase 1: Foundation (this message)
+## Analyse post-lecture du code
 
-### 1. Database Migration
-Add to `source_documents`:
-- `document_role` (enum: script_master, episode_script, series_bible, character_sheet, moodboard_doc, music_doc, etc.)
-- `role_confidence` (float)
-- `source_priority` (enum: source_of_truth, preferred_source, supporting_reference, deprecated, draft_only)
-- `tags` (text[])
+### Ce qui est DÉJÀ implémenté (contrairement à l'analyse initiale)
+- ✅ **Provider integrations** : Runway Gen-4.5, Act-Two, Aleph, Luma Ray-2, Photon, Veo 3.1/Lite, Nano Banana 2/Pro, OpenAI GPT Image — tous avec vrais appels API
+- ✅ **Validate-asset** : Juge IA via Lovable AI (Gemini 2.5 Flash) avec tool calling structuré, scores multi-axes, anomalies catégorisées
+- ✅ **Check-shot-status** : Polling réel pour tous les providers (Runway, Luma, Veo, Sora2) avec retry et stale timeout
+- ✅ **Assemble-rough-cut** : Logique de placement séquentiel avec respect des clips verrouillés
 
-New tables:
-- `canonical_conflicts` — detected conflicts between documents (field, doc_a, doc_b, severity, resolution, canonical_value)
-- `canonical_fields` — merged canonical project truth (project_id, field_key, canonical_value, source_document_id, approved)
-- `ingestion_runs` — batch ingestion tracking (project_id, status, docs_processed, entities_extracted, conflicts_found, missing_detected)
-- `inferred_completions` — AI-suggested gap fills (project_id, field_key, inferred_value, source_context, status)
+### Ce qui MANQUE réellement
 
-### 2. Edge Function Upgrade (`import-document`)
-- Document role auto-classification via AI
-- Enhanced extraction with 25+ entity types (props, locations, wardrobe, continuity, legal, VFX, dialogue)
-- Conflict detection across existing entities
-- Missing information detection
-- Image/photo role classification
-- Multi-file batch support
-- Canonical merge logic
+#### 1. Candidate Ranking dans Auto-Assembly
+**Fichier** : `supabase/functions/assemble-rough-cut/index.ts`
+- Actuellement : les clips sont placés séquentiellement sans scoring
+- **À ajouter** : 
+  - Scoring des candidats par scène (validation score, provider tier, freshness)
+  - Sélection du meilleur candidat quand plusieurs shots existent pour une même scène
+  - Tri par score décroissant avant placement
 
-### 3. Frontend Upgrade (`DocumentsCenter`)
-- Multi-file drag-and-drop upload
-- Project-level (not just series) support
-- Document role badges + editor
-- Source priority selector
-- Conflict resolution panel
-- Missing info panel
-- Canonical project view
-- Batch upload progress
-- Image upload support
+#### 2. Review Gate Cascade / Stale Invalidation  
+**Fichier** : `src/hooks/useReviewGates.ts` + nouvelle edge function
+- Actuellement : les gates sont indépendantes, pas de cascade
+- **À ajouter** :
+  - Matrice de dépendances entre gates (character_pack → scene_plan → scene_clips → rough_cut → fine_cut → final_export)
+  - Quand une gate amont est rejetée ou régénérée → invalider toutes les gates en aval
+  - Mutation `useInvalidateDownstreamGates`
 
-### 4. Hooks Enhancement
-- `useCanonicalConflicts`, `useCanonicalFields`, `useInferredCompletions`
-- `useBatchUpload` for multi-file
-- `useUpdateDocumentRole`, `useUpdateSourcePriority`
+#### 3. Timeline Locking après approbation
+**Fichier** : `supabase/functions/assemble-rough-cut/index.ts` + `src/hooks/useReviewGates.ts`
+- Actuellement : les clips ont un champ `locked` mais rien ne le toggle automatiquement
+- **À ajouter** :
+  - Quand rough_cut gate → approved : verrouiller tous les clips de la timeline
+  - Quand fine_cut gate → approved : verrouiller la timeline elle-même (status: locked)
+  - Empêcher la suppression/modification de clips verrouillés côté hook
+
+#### 4. Incident auto-population
+**Fichier** : Modifier les edge functions critiques (generate-shots, validate-asset, stitch-render)
+- Actuellement : les erreurs sont loggées mais pas insérées dans la table `incidents`
+- **À ajouter** :
+  - Helper `createIncident()` réutilisable
+  - Insertion automatique dans `incidents` quand un shot échoue définitivement, une validation bloque, ou un render échoue
+
+#### 5. Upload base64 vers Storage
+**Fichier** : `supabase/functions/generate-shots/index.ts`
+- Actuellement : les images Nano Banana retournent des data URIs base64 (énormes, pas persistées)
+- **À ajouter** :
+  - Upload automatique des base64 dans le bucket `shot-outputs`
+  - Remplacement du data URI par l'URL publique du storage
