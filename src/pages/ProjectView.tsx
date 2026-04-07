@@ -20,6 +20,10 @@ import { logger } from "@/lib/logger";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 import { statusLabels, statusVariants, typeLabels, styleLabels, qualityTierLabels, clipTypeLabels, artistPresenceLabels, renderTargetLabels } from "@/lib/labels";
