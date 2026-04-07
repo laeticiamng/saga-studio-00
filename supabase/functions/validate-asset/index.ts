@@ -136,6 +136,19 @@ serve(async (req) => {
       scope_id: validation_id,
     });
 
+    // Auto-create incident for blocking validations
+    if (hasBlocking) {
+      await sb.from("incidents").insert({
+        project_id,
+        title: `Blocking validation failure on ${asset_type || "asset"}`,
+        detail: `${anomalies.filter(a => a.blocking || a.severity === "blocking").map(a => `[${a.category}/${a.subcategory}] ${a.explanation}`).join("; ")}`,
+        severity: "critical",
+        scope: "validation",
+        scope_id: validation_id,
+        status: "open",
+      }).then(({ error: incErr }) => { if (incErr) console.error("Incident insert failed:", incErr); });
+    }
+
     return new Response(
       JSON.stringify({ validation_id, status, anomaly_count: anomalies.length, scores }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
