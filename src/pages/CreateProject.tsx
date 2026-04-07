@@ -76,6 +76,7 @@ export default function CreateProject() {
   const [durationMin, setDurationMin] = useState("5");
   const [aspectRatio, setAspectRatio] = useState("16:9");
   const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
 
   // Step 3: Style
   const [style, setStyle] = useState("cinematic");
