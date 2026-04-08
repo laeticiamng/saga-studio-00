@@ -898,8 +898,12 @@ EXTRACTION SPÉCIFIQUE SÉRIES :
 - Extrais les RÈGLES DE CONTINUITÉ entre épisodes.
 - Si "MINI-ÉPISODE" est utilisé, traite-le comme entity_type="episode".
 - Identifie les dépendances de continuité entre épisodes.
+- Extrais les DIRECTIVES DE RÉALISATION : cadrage, mouvements de caméra, style visuel, palette de couleurs, ambiances lumineuses.
+- Extrais les indications SENSORIELLES : textures, odeurs, sons d'ambiance décrits dans le texte.
+- Extrais le SOUND DESIGN mentionné : musique, bruitages, silences dramatiques.
+- Identifie les TRANSITIONS entre scènes si décrites.
 
-Types additionnels : episode, season_arc, continuity_dependency, recurring_element, episode_callback.`;
+Types additionnels : episode, season_arc, continuity_dependency, recurring_element, episode_callback, camera_direction, lighting, color_palette, sound_design, transition, sensory_note, production_directive.`;
   }
 
   if (projectType === "film") {
