@@ -284,6 +284,37 @@ export function useReprocessLegacyDocuments() {
   });
 }
 
+// ——— Mark legacy documents (transition stale state) ———
+
+export function useMarkLegacyDocuments() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      projectId,
+      seriesId,
+      documentIds,
+    }: {
+      projectId?: string;
+      seriesId?: string;
+      documentIds?: string[];
+    }) => {
+      const { data, error } = await supabase.functions.invoke("import-document", {
+        body: {
+          action: "mark_legacy",
+          project_id: projectId || null,
+          series_id: seriesId || null,
+          document_ids: documentIds || null,
+        },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["source_documents"] });
+    },
+  });
+}
+
 // ——— Mapping actions ———
 
 export function useUpdateMapping() {

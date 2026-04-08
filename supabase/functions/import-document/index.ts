@@ -71,6 +71,7 @@ serve(async (req) => {
     if (action === "extract" && body.document_id) return await processDocument(supabase, body.document_id, user.id);
     if (action === "reprocess" && body.document_id) return await reprocessDocument(supabase, body.document_id, user.id);
     if (action === "reprocess_legacy") return await reprocessLegacyDocuments(supabase, body, user.id);
+    if (action === "mark_legacy") return await markLegacyDocuments(supabase, body, user.id);
     if (action === "wizard_extract") return await wizardExtract(supabase, body, user.id);
     if (action === "debug_document") return await debugDocument(supabase, body.document_id);
 
@@ -2291,6 +2292,104 @@ async function reprocessLegacyDocuments(
     total_legacy: legacyDocs.length,
     results,
   }), { headers });
+}
+
+// ═══════════════════════════════════════════════════
+// MARK LEGACY DOCUMENTS — transition stale state
+// ═══════════════════════════════════════════════════
+
+/**
+ * Transitions legacy documents from their stale failure state (e.g. parsing_failed +
+ * pdf_vision_api_error) to `legacy_result_detected`. Archives old extraction data
+ * into run_history and clears the stale extraction_mode so the UI no longer shows
+ * the old error as current truth.
+ */
+async function markLegacyDocuments(
+  supabase: ReturnType<typeof createClient>,
+  body: { project_id?: string; series_id?: string; document_ids?: string[] },
+  userId: string
+): Promise<Response> {
+  const headers = { ...corsHeaders, "Content-Type": "application/json" };
+  const { project_id, series_id, document_ids } = body;
+
+  // Find candidate documents
+  let query = supabase.from("source_documents").select("*");
+  if (document_ids?.length) {
+    query = query.in("id", document_ids);
+  } else if (project_id) {
+    query = query.eq("project_id", project_id);
+  } else if (series_id) {
+    query = query.eq("series_id", series_id);
+  } else {
+    return new Response(JSON.stringify({ error: "project_id, series_id, or document_ids required" }), { status: 400, headers });
+  }
+
+  const { data: docs, error } = await query;
+  if (error) throw error;
+
+  // Filter to legacy docs that haven't already been marked or reprocessed
+  const legacyDocs = (docs || []).filter(d => {
+    if (d.status === "legacy_result_detected" || d.status === "reprocess_pending" || d.status === "reprocessing") return false;
+    return isLegacyDocument(d as Record<string, unknown>);
+  });
+
+  if (legacyDocs.length === 0) {
+    return new Response(JSON.stringify({ marked: 0, message: "No unmarked legacy documents found." }), { headers });
+  }
+
+  let marked = 0;
+  for (const doc of legacyDocs) {
+    const oldMeta = (typeof doc.metadata === "object" && doc.metadata ? doc.metadata : {}) as Record<string, unknown>;
+    const runHistory = (oldMeta.run_history || oldMeta.previous_runs || []) as Array<Record<string, unknown>>;
+
+    // Archive old extraction debug into run_history if not already there
+    const oldDebug = oldMeta.extraction_debug || oldMeta.current_active_run;
+    if (oldDebug) {
+      const alreadyArchived = runHistory.some(
+        (r) => r.old_extraction_mode === doc.extraction_mode && r.old_status === doc.status
+      );
+      if (!alreadyArchived) {
+        runHistory.push({
+          ...(oldDebug as Record<string, unknown>),
+          archived_at: new Date().toISOString(),
+          old_status: doc.status,
+          old_extraction_mode: doc.extraction_mode,
+          old_version: doc.version,
+          parser_version: (oldDebug as Record<string, unknown>).parser_version || "legacy",
+        });
+      }
+    }
+
+    await supabase.from("source_documents").update({
+      status: "legacy_result_detected",
+      extraction_mode: null,
+      metadata: {
+        ...oldMeta,
+        run_history: runHistory,
+        previous_runs: runHistory,
+        current_active_run: null,
+        extraction_debug: null,
+        legacy_original_status: doc.status,
+        legacy_original_extraction_mode: doc.extraction_mode,
+      },
+    }).eq("id", doc.id);
+
+    marked++;
+  }
+
+  await supabase.from("audit_logs").insert({
+    user_id: userId,
+    action: "legacy_documents_marked",
+    entity_type: "source_document",
+    entity_id: project_id || series_id || document_ids?.[0] || "bulk",
+    details: {
+      marked_count: marked,
+      total_scanned: (docs || []).length,
+      document_ids: legacyDocs.map(d => d.id),
+    },
+  });
+
+  return new Response(JSON.stringify({ marked, total_scanned: (docs || []).length }), { headers });
 }
 
 // ═══════════════════════════════════════════════════
