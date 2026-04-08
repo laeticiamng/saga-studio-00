@@ -1090,44 +1090,83 @@ async function processDocument(
 
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (LOVABLE_API_KEY && textContent.length > 20) {
-    try {
-      // Send up to 60k chars for better extraction on large docs
-      const textForAI = textContent.slice(0, 60000);
-      
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            { role: "system", content: getWorkflowPrompt(projectType) },
-            { role: "user", content: textForAI },
-          ],
-          temperature: 0.15,
-          response_format: { type: "json_object" },
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const rawContent = data.choices?.[0]?.message?.content || "{}";
-        const parsed = JSON.parse(rawContent);
-        entities = parsed.entities || [];
-        detectedRole = parsed.document_role || "unknown";
-        roleConfidence = Number(parsed.role_confidence) || 0;
-        aiParserStatus = "success";
-        console.log(`AI extraction for ${doc.file_name}: role=${detectedRole} entities=${entities.length}`);
-      } else {
-        const errBody = await response.text();
-        console.error("AI extraction API error:", response.status, errBody);
-        aiParserStatus = `api_error_${response.status}`;
+    const BATCH_SIZE = 40000; // chars per AI call
+    const MAX_BATCHES = 4;
+    const textBatches: string[] = [];
+    
+    // Split text into manageable batches for large documents
+    if (textContent.length <= 60000) {
+      textBatches.push(textContent);
+    } else {
+      for (let i = 0; i < Math.min(MAX_BATCHES, Math.ceil(textContent.length / BATCH_SIZE)); i++) {
+        textBatches.push(textContent.slice(i * BATCH_SIZE, (i + 1) * BATCH_SIZE));
       }
-    } catch (e) {
-      console.error("AI extraction error:", e);
-      aiParserStatus = "exception";
+    }
+
+    console.log(`AI extraction: ${textBatches.length} batch(es) for ${doc.file_name} (${textContent.length} chars)`);
+
+    for (let batchIdx = 0; batchIdx < textBatches.length; batchIdx++) {
+      try {
+        const textForAI = textBatches[batchIdx];
+        const isContinuation = batchIdx > 0;
+        const batchPrompt = isContinuation
+          ? `Ceci est la PARTIE ${batchIdx + 1}/${textBatches.length} du même document "${doc.file_name}".
+Continue l'extraction d'entités. N'inclus PAS les entités déjà extraites dans les parties précédentes.
+Ne re-classifie PAS le document (garde le même rôle).
+Extrais uniquement les NOUVELLES entités de cette section.`
+          : "";
+
+        const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages: [
+              { role: "system", content: getWorkflowPrompt(projectType) },
+              ...(batchPrompt ? [{ role: "system", content: batchPrompt }] : []),
+              { role: "user", content: textForAI },
+            ],
+            temperature: 0.15,
+            response_format: { type: "json_object" },
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const rawContent = data.choices?.[0]?.message?.content || "{}";
+          const parsed = JSON.parse(rawContent);
+          const batchEntities = parsed.entities || [];
+          entities.push(...batchEntities);
+          
+          // Use role from first batch only
+          if (batchIdx === 0) {
+            detectedRole = parsed.document_role || "unknown";
+            roleConfidence = Number(parsed.role_confidence) || 0;
+          }
+          aiParserStatus = "success";
+          console.log(`AI batch ${batchIdx + 1}/${textBatches.length} for ${doc.file_name}: entities=${batchEntities.length} (total=${entities.length})`);
+        } else {
+          const errBody = await response.text();
+          console.error(`AI extraction batch ${batchIdx + 1} error:`, response.status, errBody);
+          if (batchIdx === 0) aiParserStatus = `api_error_${response.status}`;
+        }
+      } catch (e: any) {
+        console.error(`AI extraction batch ${batchIdx + 1} error:`, e?.message || e);
+        if (batchIdx === 0) aiParserStatus = "exception";
+      }
+    }
+
+    // For script documents: ensure proper role classification
+    if (detectedRole === "unknown" && roleConfidence === 0) {
+      const hasSceneMarkers = /SC[ÈE]NE\s*\d|INT\.|EXT\./i.test(textContent.slice(0, 10000));
+      const hasEpisodeMarkers = /[ÉE]PISODE\s*\d|MINI-[ÉE]PISODE/i.test(textContent.slice(0, 10000));
+      if (hasSceneMarkers) {
+        detectedRole = hasEpisodeMarkers ? "episode_script" : "script_master";
+        roleConfidence = 0.85;
+      }
     }
   }
 
@@ -1136,6 +1175,18 @@ async function processDocument(
     document_role: detectedRole,
     role_confidence: roleConfidence,
   }).eq("id", documentId);
+
+  // Deduplicate entities by entity_type + entity_key
+  const entityKeySet = new Set<string>();
+  const dedupedEntities: Array<Record<string, unknown>> = [];
+  for (const entity of entities) {
+    const key = `${entity.entity_type}::${entity.entity_key}`;
+    if (!entityKeySet.has(key)) {
+      entityKeySet.add(key);
+      dedupedEntities.push(entity);
+    }
+  }
+  entities = dedupedEntities;
 
   // Store entities
   for (const entity of entities) {
