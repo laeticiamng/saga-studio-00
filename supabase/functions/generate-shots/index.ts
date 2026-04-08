@@ -646,9 +646,55 @@ serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    const styleBible = (plan?.style_bible_json as Record<string, any>) || null;
+    let styleBible = (plan?.style_bible_json as Record<string, any>) || null;
     const characterBible = plan?.character_bible_json || null;
     const shotlistJson = (plan?.shotlist_json as any[]) || [];
+
+    // ── Corpus enrichment: inject extracted production directives into style bible ──
+    const { data: docs } = await supabase
+      .from("source_documents")
+      .select("id, document_role")
+      .eq("project_id", project_id)
+      .neq("status", "parsing_failed");
+    const docIds = (docs || []).map((d: any) => d.id);
+
+    if (docIds.length > 0) {
+      const { data: prodEntities } = await supabase
+        .from("source_document_entities")
+        .select("entity_type, entity_key, entity_value")
+        .in("document_id", docIds)
+        .in("entity_type", ["camera_direction", "lighting", "color_palette", "sound_design", "sensory_note", "production_directive", "visual_reference", "cinematic_reference"])
+        .gte("extraction_confidence", 0.6)
+        .in("status", ["confirmed", "proposed"])
+        .limit(30);
+
+      if (prodEntities?.length) {
+        // Merge corpus directives into style bible
+        if (!styleBible) styleBible = {};
+        const corpusDirectives = prodEntities.map((e: any) => `[${e.entity_type}] ${e.entity_key}: ${JSON.stringify(e.entity_value)}`).join("\n");
+        styleBible.corpus_production_directives = corpusDirectives;
+        console.log(`[generate-shots] Injected ${prodEntities.length} corpus production directives`);
+      }
+
+      // Also load corpus characters to enrich character bible
+      const { data: corpusChars } = await supabase
+        .from("source_document_entities")
+        .select("entity_key, entity_value")
+        .in("document_id", docIds)
+        .eq("entity_type", "character")
+        .gte("extraction_confidence", 0.7)
+        .in("status", ["confirmed", "proposed"])
+        .limit(20);
+
+      if (corpusChars?.length && !characterBible) {
+        // No plan character bible exists — use corpus characters
+        styleBible.corpus_characters = corpusChars.map((c: any) => ({
+          name: c.entity_key,
+          ...c.entity_value as Record<string, unknown>,
+        }));
+        console.log(`[generate-shots] Injected ${corpusChars.length} corpus characters as fallback`);
+      }
+    }
 
     const providerChain = buildProviderChain(project.provider_default || undefined);
     if (providerChain.length === 0) {
