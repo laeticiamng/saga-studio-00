@@ -1354,11 +1354,11 @@ async function retrieveContext(
 
   const relevantEntities = (entities || []).filter((e: any) => {
     if (scope === "project") return true;
-    if (scope === "character" && ["character", "relationship", "wardrobe", "costume"].includes(e.entity_type)) return true;
-    if (scope === "scene" && ["scene", "location", "prop", "mood", "ambiance", "visual_reference", "continuity_rule"].includes(e.entity_type)) return true;
-    if (scope === "episode" && ["episode", "scene", "character", "continuity_rule", "cliffhanger", "season_arc"].includes(e.entity_type)) return true;
-    if (scope === "timeline" && ["chronology", "scene", "episode", "music", "montage_note"].includes(e.entity_type)) return true;
-    if (scope === "continuity" && ["continuity_rule", "character", "wardrobe", "prop", "location", "recurring_element"].includes(e.entity_type)) return true;
+    if (scope === "character" && ["character", "relationship", "wardrobe", "costume", "character_arc", "emotional_arc"].includes(e.entity_type)) return true;
+    if (scope === "scene" && ["scene", "location", "prop", "mood", "ambiance", "visual_reference", "continuity_rule", "camera_direction", "lighting", "color_palette", "sound_design", "transition", "sensory_note", "production_directive"].includes(e.entity_type)) return true;
+    if (scope === "episode" && ["episode", "scene", "character", "continuity_rule", "cliffhanger", "season_arc", "camera_direction", "lighting", "sound_design", "transition", "production_directive"].includes(e.entity_type)) return true;
+    if (scope === "timeline" && ["chronology", "scene", "episode", "music", "montage_note", "transition", "sound_design"].includes(e.entity_type)) return true;
+    if (scope === "continuity" && ["continuity_rule", "character", "wardrobe", "prop", "location", "recurring_element", "color_palette", "sensory_note"].includes(e.entity_type)) return true;
     return false;
   });
 
@@ -1395,10 +1395,17 @@ async function retrieveContext(
   context.continuity_rules = continuityRules;
 
   const styleEntities = (entities || [])
-    .filter((e: any) => ["visual_reference", "mood", "ambiance", "cinematic_reference"].includes(e.entity_type))
-    .slice(0, 10)
+    .filter((e: any) => ["visual_reference", "mood", "ambiance", "cinematic_reference", "camera_direction", "lighting", "color_palette", "sensory_note"].includes(e.entity_type))
+    .slice(0, 20)
     .map((e: any) => ({ type: e.entity_type, key: e.entity_key, value: e.entity_value }));
   context.style_references = styleEntities;
+
+  // Production directives for render pipeline
+  const productionDirectives = (entities || [])
+    .filter((e: any) => ["production_directive", "camera_direction", "sound_design", "transition"].includes(e.entity_type))
+    .slice(0, 15)
+    .map((e: any) => ({ type: e.entity_type, key: e.entity_key, value: e.entity_value }));
+  context.production_directives = productionDirectives;
 
   return new Response(JSON.stringify({
     scope,
