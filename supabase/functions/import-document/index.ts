@@ -870,7 +870,7 @@ Retourne un JSON avec :
   ]
 }
 
-Types d'entités : title, logline, synopsis, genre, tone, target_audience, format, duration, character, location, prop, costume, wardrobe, music, lyric, visual_reference, scene, dialogue_sample, theme, continuity_rule, legal_note, vfx_overlay, aspect_ratio, chronology, relationship, mood, cinematic_reference, cliffhanger, ambiance.
+Types d'entités : title, logline, synopsis, genre, tone, target_audience, format, duration, character, location, prop, costume, wardrobe, music, lyric, visual_reference, scene, dialogue_sample, theme, continuity_rule, legal_note, vfx_overlay, aspect_ratio, chronology, relationship, mood, cinematic_reference, cliffhanger, ambiance, camera_direction, lighting, color_palette, sound_design, transition, production_directive, sensory_note, emotional_arc.
 
 Pour les personnages: name, age, role, personality, visual_description, relationships, backstory, arc, wardrobe, gender.
 Pour les scènes: title, description, location, characters, mood, props, time_of_day, int_ext.
