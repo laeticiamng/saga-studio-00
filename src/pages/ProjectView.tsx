@@ -11,11 +11,12 @@ import { ShotPreviewPlayer } from "@/components/ShotPreviewPlayer";
 import { RenderExportPanel } from "@/components/RenderExportPanel";
 import { ProjectDiagnostics } from "@/components/ProjectDiagnostics";
 import { InsufficientCreditsAlert, isInsufficientCreditsError } from "@/components/InsufficientCreditsAlert";
+import { ProjectBrainCard } from "@/components/studio/ProjectBrainCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Play, Film, RefreshCw, Music, Palette, List, Share2, Eye, ArrowLeft, Clock, Clapperboard, Info, Wand2, Activity, Trash2, Pencil, Copy, Download } from "lucide-react";
+import { Loader2, Play, Film, RefreshCw, Music, Palette, List, Share2, Eye, ArrowLeft, Clock, Clapperboard, Info, Wand2, Activity, Trash2, Pencil, Copy, Download, Brain } from "lucide-react";
 import { logger } from "@/lib/logger";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useCallback, useEffect } from "react";
@@ -97,6 +98,31 @@ export default function ProjectView() {
     queryFn: async () => {
       const { data } = await supabase.from("audio_analysis").select("*").eq("project_id", id!).maybeSingle();
       return data;
+    },
+    enabled: !!id,
+  });
+
+  const { data: brainData, isLoading: brainLoading, refetch: refetchBrain } = useQuery({
+    queryKey: ["project-brain", id],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("import-document", {
+        body: { action: "project_brain_summary", project_id: id },
+      });
+      if (error) return null;
+      return data;
+    },
+    enabled: !!id,
+  });
+
+  const { data: legacyDocCount } = useQuery({
+    queryKey: ["legacy-doc-count", id],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("source_documents")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", id!)
+        .eq("parser_version", "legacy");
+      return count ?? 0;
     },
     enabled: !!id,
   });
@@ -490,6 +516,10 @@ export default function ProjectView() {
                 <span>Export</span>
               </TabsTrigger>
             )}
+            <TabsTrigger value="brain" className="gap-1.5 text-xs sm:text-sm rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">
+              <Brain className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Cerveau</span>
+            </TabsTrigger>
             <TabsTrigger value="diagnostics" className="gap-1.5 text-xs sm:text-sm rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">
               <Activity className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Diagnostic</span>
@@ -665,6 +695,19 @@ export default function ProjectView() {
               </motion.div>
             </TabsContent>
           )}
+
+          {/* Brain Tab */}
+          <TabsContent value="brain" forceMount className="data-[state=inactive]:hidden">
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: "easeOut" }}>
+              <ProjectBrainCard
+                projectId={project.id}
+                brainData={brainData}
+                legacyDocCount={legacyDocCount ?? 0}
+                isLoading={brainLoading}
+                onRefresh={() => refetchBrain()}
+              />
+            </motion.div>
+          </TabsContent>
 
           {/* Diagnostics Tab */}
           <TabsContent value="diagnostics" forceMount className="data-[state=inactive]:hidden">

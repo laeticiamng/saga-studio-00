@@ -11,6 +11,7 @@ export interface DocumentDiagnostic {
   roleConfidence: number;
   fileType: string;
   extractionMode?: string;
+  parserVersion?: string;
   status: string;
   entitiesCount: number;
   textLength?: number;
@@ -60,7 +61,8 @@ const ROLE_LABELS: Record<string, string> = {
 export default function ExtractionSummary({ result, onReprocessDocument, onReprocessAllLegacy, isReprocessing }: Props) {
   const [showDiagnostics, setShowDiagnostics] = useState(false);
 
-  const hasRealExtraction = result.totalEntities > 0;
+  const hasLegacyOnly = result.diagnostics?.filter(d => d.fileType !== "image").every(d => isLegacyDoc(d)) ?? false;
+  const hasRealExtraction = result.totalEntities > 0 && !hasLegacyOnly;
   const isParserFailure = (d: DocumentDiagnostic) =>
     d.fileType !== "image" && (
       d.entitiesCount === 0 ||
@@ -69,10 +71,13 @@ export default function ExtractionSummary({ result, onReprocessDocument, onRepro
       d.status?.includes("failed")
     );
   const isLegacyDoc = (d: DocumentDiagnostic) =>
-    d.extractionMode === "pdf_vision_api_error" ||
-    d.extractionMode === "pdf_vision_api" ||
-    d.extractionMode?.startsWith("vision_api") ||
-    d.extractionMode?.startsWith("pdf_vision");
+    d.parserVersion === "legacy" ||
+    (!d.parserVersion && (
+      d.extractionMode === "pdf_vision_api_error" ||
+      d.extractionMode === "pdf_vision_api" ||
+      d.extractionMode?.startsWith("vision_api") ||
+      d.extractionMode?.startsWith("pdf_vision")
+    ));
   const hasParserFailures = result.diagnostics?.some(isParserFailure);
   const allFailed = result.diagnostics?.filter(d => d.fileType !== "image").every(isParserFailure);
   const legacyDocs = result.diagnostics?.filter(d => d.fileType !== "image" && isLegacyDoc(d)) || [];
@@ -301,7 +306,12 @@ export default function ExtractionSummary({ result, onReprocessDocument, onRepro
                         <Badge variant="outline" className="text-[10px]">
                           {ROLE_LABELS[d.role] || d.role}
                         </Badge>
-                        {d.entitiesCount > 0 ? (
+                        {d.parserVersion && (
+                          <Badge variant="outline" className="text-[10px] font-mono">
+                            v{d.parserVersion}
+                          </Badge>
+                        )}
+                        {d.entitiesCount > 0 && !isLegacyDoc(d) ? (
                           <Badge variant="secondary" className="text-[10px]">
                             {d.entitiesCount} entités
                           </Badge>

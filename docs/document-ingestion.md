@@ -50,7 +50,42 @@ Manual edit > Validated document > Raw document > AI suggestion
 - `source_document_mappings` — Entity → platform field mappings
 - `source_document_autofill_runs` — Extraction run statistics
 - `field_provenance` — Tracks origin of pre-filled fields
+- `canonical_fields` — Merged canonical values per entity/field
+- `canonical_conflicts` — Cross-document value conflicts
 
 ## Edge Functions
 
 - `import-document` — Handles upload registration, text extraction, AI analysis, and mapping generation
+
+## Parser Versioning
+
+Every document is stamped with a `parser_version` column on `source_documents`:
+
+| Value | Meaning |
+|-------|---------|
+| `"2.0.0"` | Current parser (ZIP/XML for DOCX, Gemini Vision for PDF) |
+| `"legacy"` | Pre-versioning documents (old Vision API pipeline) |
+| `NULL` | Never processed |
+
+Legacy documents can be reprocessed individually or in bulk via the `reprocess` / `reprocess_legacy` actions on `import-document`.
+
+See [docs/parser-versioning.md](./parser-versioning.md) for full details on versioning, migration, and run history.
+
+## Active Result vs History
+
+- **Active truth**: `latest_successful_run` (JSONB on `source_documents`) + current entities in `source_document_entities`
+- **History**: `metadata.run_history[]` — archived previous extraction runs with `archived_at` timestamps
+- **Rule**: UI always displays data from the latest active run, never from stale or failed runs
+- **Reprocess flow**: archive current results → delete old entities/chunks/mappings → re-run pipeline → update `parser_version` and `latest_successful_run`
+
+## Diagnostic Events
+
+The ingestion pipeline emits structured events into `diagnostic_events` (scope: `ingestion`):
+
+| Event Type | Severity | When |
+|-----------|----------|------|
+| `parser_completed` | info | Parser succeeded for a document |
+| `parser_failed` | error | Parser failed (corrupt file, unsupported format) |
+| `extraction_completed` | info/warning | AI extraction finished (warning if 0 entities extracted) |
+
+These events are visible in the Diagnostics panel under the "Ingestion" tab.
