@@ -1,127 +1,83 @@
 
 
-# Plan: Episode Data Autofill + Full Audit + README Update
+# Plan: Real Studio Renders & End-to-End Preview Pipeline
 
-## Summary
+## Problem Statement
 
-Three-part hardening: (1) Wire extracted episode data into series creation and every downstream step, (2) Audit all pipelines end-to-end for gaps, (3) Rewrite the README with complete governance documentation.
+The Studio (Timeline Studio) currently shows only **colored rectangles** for clips — no thumbnails, no video previews, no media at all. This is nothing like DaVinci Resolve. Additionally, several data flow gaps prevent the end-to-end render pipeline from working correctly:
 
----
-
-## Part 1 — Episode Data Preservation & Autofill
-
-### Problem
-When documents are imported, episode entities ARE extracted (title, number, synopsis, scenes, act_structure) and stored in `source_document_entities`. However:
-- **`create-series`** creates blank "Épisode 1", "Épisode 2"... episodes — it never queries extracted episode entities to pre-fill titles, synopses, or scene counts
-- **No post-creation autofill**: After series creation, there's no mechanism to apply extracted episode data to the existing `episodes` rows
-- **Character profiles not auto-created**: Extracted `character` entities remain in `source_document_entities` but are never written to `character_profiles`
-- **Bibles not auto-populated**: Extracted `location`, `visual_reference`, `mood` entities are not assembled into bible entries
-
-### Fixes
-
-**A. `create-series` edge function** — After episode rows are created, query `source_document_entities` for the project's extracted episodes and update each row with title, synopsis, and duration if available. Also auto-create `character_profiles` rows from extracted character entities. Also auto-create bible entries from extracted locations/world data.
-
-**B. New `apply-corpus` action in `import-document`** — A callable action that takes a `project_id` and applies all confirmed/proposed entities to their target tables:
-- `episode` entities → update matching `episodes` rows (by number) with title, synopsis
-- `character` entities → upsert into `character_profiles`
-- `location` entities → upsert into `bibles` (type='world')
-- `scene` entities → insert into `scenes` if episode exists
-- `continuity_rule` entities → insert into `continuity_memory_nodes`
-
-**C. Frontend trigger** — In `SeriesView.tsx` or `DocumentsCenter`, after batch document processing completes, automatically invoke `apply-corpus` to propagate extracted data.
+1. **`assemble-rough-cut` doesn't populate `source_url`** — clips are inserted without any media reference, so the UI has nothing to show
+2. **`TimelineView` has no media rendering** — it only draws CSS rectangles with text labels
+3. **No shot preview in Studio** — the `ShotPreviewPlayer` exists in `ProjectView` but is absent from `TimelineStudio`
+4. **No clip-level preview** — clicking a clip in the timeline shows nothing
+5. **`assemble-rough-cut` doesn't link clips to shots** — `shot_id` and `episode_shot_id` columns exist but are never set
+6. **Export from Studio uses `export_versions` table** — but `ExportPanel` only inserts DB rows, no actual render is triggered (no edge function called)
+7. **No visual feedback during generation** — while shots generate, there's no progressive thumbnail display in Studio
 
 ---
 
-## Part 2 — Full Platform Audit (by pipeline step)
+## Implementation
 
-### Ingestion Pipeline
-- **OK**: Document upload, classification, extraction, batching, conflict detection, missing info — all functional
-- **Gap**: `wizard_extract` pre-fills episodes in the prefill response but never writes them to DB → Fix in Part 1B
+### 1. Fix `assemble-rough-cut` to populate media URLs
 
-### Series Creation
-- **Gap**: Episodes created as blank shells → Fix in Part 1A
-- **Gap**: No `quality_tier` propagated (fixed in prior audit, verify column exists)
+In `supabase/functions/assemble-rough-cut/index.ts`, when building `clipInserts`, populate:
+- `source_url` from `shot.output_url` (for project shots) or `episode_shot.output_url` (for episode shots)
+- `shot_id` for project shots
+- `episode_shot_id` for episode shots
 
-### Episode Pipeline (Autopilot)
-- **OK**: 10-step pipeline with agents, approval gates, auto-advance, idempotency
-- **Gap**: `episode-pipeline` doesn't inject extracted episode-specific corpus data (synopsis, scenes from script) into agent `input` — agents only get duration estimates, not the actual extracted content for that episode
-- **Fix**: In `episode-pipeline`, before dispatching agents, query `source_document_entities` for entities matching the episode number and inject them into the agent run's `input` field
+This is the root cause — without `source_url`, the entire downstream preview chain is broken.
 
-### Agent Execution (`run-agent`)
-- **OK**: Corpus context injection (canonical fields, entities, production directives) is comprehensive
-- **OK**: Per-agent entity type mapping is well-designed
-- **OK**: Specialized output writers (scenes, scripts, reviews) work correctly
-- **Gap**: `showrunner` agent is defined in prompts but not used in any pipeline step
-- **Note**: The showrunner should be the first agent in the pipeline to validate the overall direction — consider adding it
+### 2. Rebuild `TimelineView` with real media previews
 
-### Shot Generation (`generate-shots`)
-- **OK**: Provider routing with priority chain, credit deduction, batch limits (5/invocation)
-- **OK**: Corpus production directives injected into prompts
-- **Gap**: `validate-asset` not called post-generation (identified in prior audit, verify it was wired)
+Transform `src/components/studio/TimelineView.tsx` from a simple rectangle renderer into a proper NLE-style timeline:
+- Each clip shows a **thumbnail** (first frame extracted from `source_url`, or the image itself for image shots)
+- Clips display as video/image thumbnails inside the track lane, sized proportionally
+- Clicking a clip opens a **preview drawer** showing the video/image at full size with playback controls
+- Track lanes become taller (~80px) to accommodate visual previews
+- Add a playhead indicator
 
-### Assembly & Rendering
-- **OK**: `assemble-rough-cut` and `stitch-render` handle timeline creation and beat-sync
-- **OK**: Beat-sync engine in `stitch-render` properly aligns cuts to bars/beats
+### 3. Add `ShotPreviewPlayer` to Timeline Studio
 
-### Review Gates
-- **OK**: Auto-approve thresholds, manual fallback, stale gate invalidation
-- **OK**: Confidence scoring per agent dimension
+In `src/pages/TimelineStudio.tsx`, add the existing `ShotPreviewPlayer` component as a preview viewport above the timeline (like the Program Monitor in Premiere/DaVinci). Fetch project shots and wire them in.
 
-### QC & Export
-- **OK**: `delivery-qc` checks multiple dimensions
-- **OK**: `export-assets` generates versioned outputs (verify `.eq("status", "completed")` filter was added)
+### 4. Add clip detail drawer/modal
 
-### Governance
-- **OK**: 18-state governance engine, policy checking, violation logging
-- **Gap**: Governance state not synced with pipeline status (identified, implement reconciliation)
+Create a new component `src/components/studio/ClipPreviewDrawer.tsx`:
+- Shows when user clicks a clip in the timeline
+- Displays the clip's video/image from `source_url`
+- Shows metadata: provider, model, duration, score
+- Allows trimming (in/out points) via `in_trim_ms`/`out_trim_ms`
+- Lock/unlock toggle
 
-### Missing Cross-Cutting Concerns
-1. **No episode-level synopsis pre-fill from scripts** — When a `script_master` or `episode_script` is imported, episode synopses should be auto-populated
-2. **No character count validation** — If extracted characters differ significantly from what's in `character_profiles`, no warning is raised
-3. **No "Project Brain" summary endpoint** — A single endpoint that returns the complete state of a project's knowledge (how many episodes filled, how many characters, coverage %) for the dashboard
+### 5. Wire Studio Export to actual render
 
-### Implementation List
+In `src/components/studio/ExportPanel.tsx`:
+- When user clicks an export button, invoke `stitch-render` edge function (not just insert a DB row)
+- Show progress via realtime subscription on the `renders` table
+- Display download links when render completes
 
-| # | Fix | File |
-|---|-----|------|
-| 1 | Auto-apply extracted episodes in `create-series` | `supabase/functions/create-series/index.ts` |
-| 2 | Add `apply-corpus` action to `import-document` | `supabase/functions/import-document/index.ts` |
-| 3 | Inject episode-specific corpus in `episode-pipeline` | `supabase/functions/episode-pipeline/index.ts` |
-| 4 | Add governance state reconciliation helper | `supabase/functions/run-agent/index.ts` (in `maybeAdvanceEpisode`) |
-| 5 | Add project knowledge summary endpoint | `supabase/functions/import-document/index.ts` (new action `project_brain_summary`) |
-| 6 | Frontend: trigger apply-corpus after doc processing | `src/hooks/useDocuments.ts` or equivalent |
+### 6. Progressive shot display during generation
+
+In `TimelineStudio`, subscribe to realtime changes on the `shots` table for the project. As shots complete (status → `completed` with `output_url`), show them progressively in a thumbnail strip or within the timeline tracks.
 
 ---
 
-## Part 3 — README Rewrite
+## Files Modified
 
-Complete rewrite of `README.md` to include:
+| File | Change |
+|------|--------|
+| `supabase/functions/assemble-rough-cut/index.ts` | Populate `source_url`, `shot_id`, `episode_shot_id` in clip inserts |
+| `src/components/studio/TimelineView.tsx` | Full rewrite: thumbnail clips, click-to-preview, playhead, taller tracks |
+| `src/components/studio/ClipPreviewDrawer.tsx` | New: clip detail panel with video player, metadata, trim controls |
+| `src/pages/TimelineStudio.tsx` | Add shot preview player (Program Monitor), shot query, realtime subscription for progressive display |
+| `src/components/studio/ExportPanel.tsx` | Wire export buttons to `stitch-render` edge function, show render progress and download links |
 
-1. **Governance section expanded**: Full 18-state machine documented with allowed transitions, guard conditions, and enforcement modes
-2. **Episode pipeline**: 10-step autopilot pipeline with agents, gates, thresholds
-3. **Document ingestion**: Complete extraction pipeline with 30+ entity types, confidence rules, source hierarchy
-4. **Autofill lifecycle**: How extracted data flows from documents → entities → canonical fields → episodes/characters/bibles → agent context → generation prompts
-5. **Provider routing**: Complete provider matrix with quality tiers, fallback chains, cost per provider
-6. **Anti-aberration**: Taxonomy, auto-repair logic, validation passes
-7. **Cost governance**: Credits, budget ceilings, provider-aware costing
-8. **Security**: RLS, JWT, audit, secrets management
-9. **All edge functions**: Complete function reference with inputs/outputs
-10. **Data model**: All table groups with key columns
+## Technical Notes
 
----
-
-## Execution Order
-
-1. Part 1A: `create-series` autofill from extracted entities
-2. Part 1B: `apply-corpus` action in `import-document`
-3. Part 2 fixes: Episode pipeline corpus injection, governance reconciliation, project brain summary
-4. Part 1C: Frontend trigger
-5. Part 3: README rewrite
-6. Deploy all edge functions
-
-### Estimated scope
-- 5 edge functions modified
-- 1 frontend file modified
-- README.md fully rewritten (~1200 lines)
-- All modified edge functions redeployed
+- `timeline_clips.source_url` column already exists — just needs to be populated
+- `shot_id` and `episode_shot_id` FK columns already exist on `timeline_clips`
+- No database migration needed
+- Shots `output_url` points to public `shot-outputs` bucket (already public) or external provider URLs
+- The `ShotPreviewPlayer` component already handles both image and video `output_url` formats
+- `stitch-render` already handles the full render pipeline (beat-sync, multi-format) — it just needs to be called from the Studio export panel
 
