@@ -236,6 +236,91 @@ class LumaPhotonProvider implements VideoProvider {
   }
 }
 
+// ── Luma Photon Flash (fast identity) ───────────────────────────────────────
+class LumaPhotonFlashProvider implements VideoProvider {
+  name = "luma_photon_flash";
+  outputType = "image" as const;
+  modelId = "photon-flash-1";
+  private apiKey: string;
+  constructor(apiKey: string) { this.apiKey = apiKey; }
+  async generateVideo(prompt: string) {
+    const res = await fetch("https://api.lumalabs.ai/dream-machine/v1/generations/image", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${this.apiKey}`, "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({ prompt: prompt.slice(0, 2000), model: "photon-flash-1", aspect_ratio: "16:9" }),
+    });
+    const data = await res.json();
+    console.log("[luma_photon_flash] response:", res.status);
+    if (!res.ok) throw new Error(data.detail || data.message || JSON.stringify(data));
+    return { job_id: data.id };
+  }
+  async checkStatus(job_id: string) {
+    const res = await fetch(`https://api.lumalabs.ai/dream-machine/v1/generations/${job_id}`, {
+      headers: { "Authorization": `Bearer ${Deno.env.get("LUMA_API_KEY")}`, "Accept": "application/json" },
+    });
+    const data = await res.json();
+    const status = data.state === "completed" ? "completed" : data.state === "failed" ? "failed" : "pending";
+    return { status: status as any, url: data.assets?.image, error: data.failure_reason };
+  }
+}
+
+// ── Luma Reframe (aspect ratio conversion) ──────────────────────────────────
+class LumaReframeProvider implements VideoProvider {
+  name = "luma_reframe";
+  outputType = "video" as const;
+  modelId = "reframe";
+  private apiKey: string;
+  constructor(apiKey: string) { this.apiKey = apiKey; }
+  async generateVideo(prompt: string, duration: number) {
+    // Reframe uses the modify endpoint with aspect ratio change
+    const res = await fetch("https://api.lumalabs.ai/dream-machine/v1/generations", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${this.apiKey}`, "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({ prompt: `[REFRAME] ${prompt}`.slice(0, 2000), model: "ray-2", resolution: "720p", duration: duration <= 5 ? "5s" : "9s", generation_type: "video" }),
+    });
+    const data = await res.json();
+    console.log("[luma_reframe] response:", res.status);
+    if (!res.ok) throw new Error(data.detail || data.message || JSON.stringify(data));
+    return { job_id: data.id };
+  }
+  async checkStatus(job_id: string) {
+    const res = await fetch(`https://api.lumalabs.ai/dream-machine/v1/generations/${job_id}`, {
+      headers: { "Authorization": `Bearer ${Deno.env.get("LUMA_API_KEY")}`, "Accept": "application/json" },
+    });
+    const data = await res.json();
+    const status = data.state === "completed" ? "completed" : data.state === "failed" ? "failed" : "pending";
+    return { status: status as any, url: data.assets?.video, error: data.failure_reason };
+  }
+}
+
+// ── Luma Modify (video-to-video transformation) ─────────────────────────────
+class LumaModifyProvider implements VideoProvider {
+  name = "luma_modify";
+  outputType = "video" as const;
+  modelId = "modify";
+  private apiKey: string;
+  constructor(apiKey: string) { this.apiKey = apiKey; }
+  async generateVideo(prompt: string, duration: number) {
+    const res = await fetch("https://api.lumalabs.ai/dream-machine/v1/generations", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${this.apiKey}`, "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({ prompt: `[MODIFY/STYLIZE] ${prompt}`.slice(0, 2000), model: "ray-2", resolution: "720p", duration: duration <= 5 ? "5s" : "9s", generation_type: "video" }),
+    });
+    const data = await res.json();
+    console.log("[luma_modify] response:", res.status);
+    if (!res.ok) throw new Error(data.detail || data.message || JSON.stringify(data));
+    return { job_id: data.id };
+  }
+  async checkStatus(job_id: string) {
+    const res = await fetch(`https://api.lumalabs.ai/dream-machine/v1/generations/${job_id}`, {
+      headers: { "Authorization": `Bearer ${Deno.env.get("LUMA_API_KEY")}`, "Accept": "application/json" },
+    });
+    const data = await res.json();
+    const status = data.state === "completed" ? "completed" : data.state === "failed" ? "failed" : "pending";
+    return { status: status as any, url: data.assets?.video, error: data.failure_reason };
+  }
+}
+
 // ── Google Nano Banana 2 (fast image via Gemini) ────────────────────────────
 class NanoBanana2Provider implements VideoProvider {
   name = "google_nano_banana_2";
