@@ -872,13 +872,21 @@ Retourne un JSON avec :
 
 Types d'entités : title, logline, synopsis, genre, tone, target_audience, format, duration, character, location, prop, costume, wardrobe, music, lyric, visual_reference, scene, dialogue_sample, theme, continuity_rule, legal_note, vfx_overlay, aspect_ratio, chronology, relationship, mood, cinematic_reference, cliffhanger, ambiance, camera_direction, lighting, color_palette, sound_design, transition, production_directive, sensory_note, emotional_arc.
 
-Pour les personnages: name, age, role, personality, visual_description, relationships, backstory, arc, wardrobe, gender.
-Pour les scènes: title, description, location, characters, mood, props, time_of_day, int_ext.
-Pour les lieux: name, description, mood, time_period.
+Pour les personnages: name, age, role, personality, visual_description, relationships, backstory, arc, wardrobe, gender, recurring.
+Pour les scènes: title, description, location, characters, mood, props, time_of_day, int_ext, camera_notes, lighting_notes.
+Pour les lieux: name, description, mood, time_period, visual_atmosphere.
 Pour la continuité: rule, scope, severity.
 Pour les relations: character_a, character_b, type, evolution.
+Pour camera_direction: shot_type, movement, framing, lens, description.
+Pour lighting: type, mood, color_temperature, description.
+Pour color_palette: colors, mood, reference.
+Pour sound_design: type, description, mood, source.
+Pour transition: type, from_scene, to_scene, description.
+Pour production_directive: directive, priority, scope.
+Pour sensory_note: sense, description, scene.
 
-IMPORTANT: Si le document contient clairement des personnages, lieux, scènes — extrais-les TOUS. Ne retourne JAMAIS un tableau vide si le contenu est riche.`;
+IMPORTANT: Si le document contient clairement des personnages, lieux, scènes — extrais-les TOUS. Ne retourne JAMAIS un tableau vide si le contenu est riche.
+Si le document contient des directives de réalisation (caméra, lumière, couleur, son), extrais-les aussi — elles sont ESSENTIELLES pour le rendu final.`;
 
   if (projectType === "series") {
     return base + `
