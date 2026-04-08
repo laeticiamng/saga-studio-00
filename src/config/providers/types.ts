@@ -2,7 +2,7 @@
  * Provider Types — Centralized type definitions for the provider system.
  */
 
-export type ProjectMode = "clip" | "film" | "music_video" | "series";
+export type ProjectMode = "clip" | "film" | "music_video" | "series" | "hybrid_video";
 export type QualityTier = "premium" | "standard" | "economy";
 export type RenderTarget = "server_required" | "server_preferred" | "browser_allowed";
 
