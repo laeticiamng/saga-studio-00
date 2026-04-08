@@ -1,159 +1,127 @@
 
 
-# Audit Complet — Saga Studio Platform Hardening
+# Plan: Episode Data Autofill + Full Audit + README Update
 
-## Diagnostic Summary
+## Summary
 
-After auditing all edge functions, pipelines, provider integrations, governance engine, and data flows across the 4 production modes (Series, Film, Music Video, Clip), I identified **19 issues** across 6 categories.
-
----
-
-## CATEGORY 1 — Critical Bugs (Production-Breaking)
-
-### 1.1 `analyze-audio` uses WRONG API URL
-**File**: `supabase/functions/analyze-audio/index.ts` line 42
-**Bug**: Uses `https://ai.lovable.dev/api/generate` instead of `https://ai.gateway.lovable.dev/v1/chat/completions`
-**Impact**: Audio analysis silently fails for every project → fallback BPM 120 always used → beat-sync and section detection are fake data
-**Fix**: Update URL to `https://ai.gateway.lovable.dev/v1/chat/completions` and align request body format
-
-### 1.2 `create-project` rejects `music_video` type
-**File**: `supabase/functions/create-project/index.ts` line 55
-**Bug**: Validates `["clip", "film", "series"]` — missing `music_video`. The frontend sends `music_video` but it's rejected with "Invalid project type"
-**Impact**: Music video projects cannot be created via the standard flow
-**Fix**: Add `"music_video"` to the allowed types array
-
-### 1.3 `hybrid_video` maps to `"film"` type silently
-**File**: `src/pages/CreateProject.tsx` line 385
-**Bug**: `projectType === "hybrid_video" ? "film"` — hybrid video is sent as `film` to the backend. No `hybrid_video` pipeline exists in `PROVIDER_MATRIX` or `PIPELINE_ROUTES`
-**Impact**: Hybrid video has no dedicated pipeline, no upload-source-video step, no transform/stylize step via Aleph/Modify. It just runs as a regular film
-**Fix**: Either (a) add `hybrid_video` as a proper mode with a pipeline in `pipelines.ts` and matrix entries, or (b) document it as a sub-mode of `film` and add the video-upload + transform steps conditionally
-
-### 1.4 `run-agent` model reference uses bare `gemini-2.5-flash`
-**File**: `supabase/functions/run-agent/index.ts` line 443
-**Bug**: Uses `model: "gemini-2.5-flash"` instead of `model: "google/gemini-2.5-flash"` (the Lovable AI Gateway requires the `provider/` prefix)
-**Impact**: All agent runs may fail or use wrong model routing
-**Fix**: Change to `"google/gemini-2.5-flash"`
-
-### 1.5 `plan-project` model reference uses bare `gemini-2.5-flash`
-**File**: `supabase/functions/plan-project/index.ts` line 206
-**Same issue** as 1.4
-**Fix**: Change to `"google/gemini-2.5-flash"`
+Three-part hardening: (1) Wire extracted episode data into series creation and every downstream step, (2) Audit all pipelines end-to-end for gaps, (3) Rewrite the README with complete governance documentation.
 
 ---
 
-## CATEGORY 2 — Pipeline Gaps (Missing Steps)
+## Part 1 — Episode Data Preservation & Autofill
 
-### 2.1 No `Luma Reframe` provider implementation in `generate-shots`
-**Status**: `luma_reframe` is in the pipeline definition and registry but has NO provider class in `generate-shots/index.ts`. If social export reframe step is triggered, it will silently skip
-**Fix**: Add `LumaReframeProvider` class or route through Luma Modify
+### Problem
+When documents are imported, episode entities ARE extracted (title, number, synopsis, scenes, act_structure) and stored in `source_document_entities`. However:
+- **`create-series`** creates blank "Épisode 1", "Épisode 2"... episodes — it never queries extracted episode entities to pre-fill titles, synopses, or scene counts
+- **No post-creation autofill**: After series creation, there's no mechanism to apply extracted episode data to the existing `episodes` rows
+- **Character profiles not auto-created**: Extracted `character` entities remain in `source_document_entities` but are never written to `character_profiles`
+- **Bibles not auto-populated**: Extracted `location`, `visual_reference`, `mood` entities are not assembled into bible entries
 
-### 2.2 No `Luma Modify` provider implementation in `generate-shots`
-**Status**: `luma_modify` is in the registry but no provider class exists for video-to-video transformation
-**Fix**: Add `LumaModifyProvider` class
+### Fixes
 
-### 2.3 `Luma Photon Flash` missing from provider chain
-**Status**: `luma_photon_flash` is in registry but not in `PROVIDER_PRIORITY` in `generate-shots` and has no factory in `buildProviderChain`
-**Fix**: Add to priority chain and factory map
+**A. `create-series` edge function** — After episode rows are created, query `source_document_entities` for the project's extracted episodes and update each row with title, synopsis, and duration if available. Also auto-create `character_profiles` rows from extracted character entities. Also auto-create bible entries from extracted locations/world data.
 
-### 2.4 Music Video pipeline missing audio backbone step
-**Pipeline**: The music video pipeline goes `identity_pack → lookdev → iconic_shots → acting → repair → social_exports → poster` — there's no explicit beat-sync or audio-driven shot timing step. The `stitch-render` function handles beat-sync at render time, but shot generation doesn't use audio analysis data to inform shot durations
-**Fix**: Ensure `plan-project` passes audio section data into shot planning for music videos, verifying the prompt includes beat-aligned timings
+**B. New `apply-corpus` action in `import-document`** — A callable action that takes a `project_id` and applies all confirmed/proposed entities to their target tables:
+- `episode` entities → update matching `episodes` rows (by number) with title, synopsis
+- `character` entities → upsert into `character_profiles`
+- `location` entities → upsert into `bibles` (type='world')
+- `scene` entities → insert into `scenes` if episode exists
+- `continuity_rule` entities → insert into `continuity_memory_nodes`
 
-### 2.5 No `validate-asset` call in pipeline flow
-**Status**: The `validate-asset` edge function exists and is well-implemented, but nothing in the pipeline automatically calls it. Shots go from `generating` → `completed` without quality validation
-**Fix**: After shot generation completes in `generate-shots`, automatically queue an `validate-asset` call for each completed shot, or add it as a pipeline step between generation and assembly
-
----
-
-## CATEGORY 3 — Data Flow / Consistency Issues
-
-### 3.1 Governance state machine vs Pipeline state machine disconnect
-**Issue**: Two parallel state machines exist:
-- `src/lib/pipeline-state-machine.ts` (13 states: draft → completed)
-- `src/lib/governance-engine.ts` (18 states: draft → delivered)
-
-The `projects` table has both `status` (pipeline) and `governance_state` columns, but they're never synchronized. Edge functions update `status` directly, governance engine updates `governance_state` — they can drift apart
-**Fix**: Add a reconciliation layer: when pipeline status changes, update governance_state accordingly, or unify into a single state machine
-
-### 3.2 Credit cost not mode-aware
-**File**: `supabase/functions/generate-shots/index.ts` line 748
-**Issue**: Credits are always `2 per shot` regardless of provider tier (premium Runway at 0.40/sec vs economy Nano Banana at 0.01). Premium projects should cost more
-**Fix**: Look up `costPerSecond` from the provider registry and compute accurate credit costs
-
-### 3.3 `create-project` doesn't persist `quality_tier`
-**File**: `supabase/functions/create-project/index.ts`
-**Issue**: The frontend sends quality tier selection but `create-project` never stores it. The `projects` table likely doesn't have a `quality_tier` column. Without it, the provider resolver can't enforce tier-specific rules
-**Fix**: Add `quality_tier` column to projects table and persist it at creation
+**C. Frontend trigger** — In `SeriesView.tsx` or `DocumentsCenter`, after batch document processing completes, automatically invoke `apply-corpus` to propagate extracted data.
 
 ---
 
-## CATEGORY 4 — Robustness / Error Handling
+## Part 2 — Full Platform Audit (by pipeline step)
 
-### 4.1 `check-shot-status` missing Nano Banana / Photon status checker
-**File**: `supabase/functions/check-shot-status/index.ts`
-**Issue**: Has checkers for Runway, Luma, Veo, Sora — but Nano Banana and Photon use synchronous generation (return URL directly). The `parseJobReference` function expects `job:provider:id` format but synchronous providers return URLs directly. If a shot is saved with a URL as `output_url` and status `generating`, it'll never be detected as complete
-**Fix**: In `check-shot-status`, detect shots where `output_url` is a real URL (not a job reference) and mark them as completed immediately
+### Ingestion Pipeline
+- **OK**: Document upload, classification, extraction, batching, conflict detection, missing info — all functional
+- **Gap**: `wizard_extract` pre-fills episodes in the prefill response but never writes them to DB → Fix in Part 1B
 
-### 4.2 No timeout/circuit-breaker on external provider calls
-**Issue**: `generate-shots` has a 45s per-provider timeout, but no global request timeout. If the edge function processes 10 shots sequentially, total time can reach 450s, well beyond Deno edge function limits (~60-120s)
-**Fix**: Process max 3-5 shots per invocation, then self-invoke for the remainder (similar to how `episode-pipeline` chains)
+### Series Creation
+- **Gap**: Episodes created as blank shells → Fix in Part 1A
+- **Gap**: No `quality_tier` propagated (fixed in prior audit, verify column exists)
 
-### 4.3 Export-assets doesn't verify render completeness
-**File**: `supabase/functions/export-assets/index.ts`
-**Issue**: Exports all renders for a series without checking if they're actually `completed`. Could export failed or in-progress renders
-**Fix**: Add `.eq("status", "completed")` filter
+### Episode Pipeline (Autopilot)
+- **OK**: 10-step pipeline with agents, approval gates, auto-advance, idempotency
+- **Gap**: `episode-pipeline` doesn't inject extracted episode-specific corpus data (synopsis, scenes from script) into agent `input` — agents only get duration estimates, not the actual extracted content for that episode
+- **Fix**: In `episode-pipeline`, before dispatching agents, query `source_document_entities` for entities matching the episode number and inject them into the agent run's `input` field
+
+### Agent Execution (`run-agent`)
+- **OK**: Corpus context injection (canonical fields, entities, production directives) is comprehensive
+- **OK**: Per-agent entity type mapping is well-designed
+- **OK**: Specialized output writers (scenes, scripts, reviews) work correctly
+- **Gap**: `showrunner` agent is defined in prompts but not used in any pipeline step
+- **Note**: The showrunner should be the first agent in the pipeline to validate the overall direction — consider adding it
+
+### Shot Generation (`generate-shots`)
+- **OK**: Provider routing with priority chain, credit deduction, batch limits (5/invocation)
+- **OK**: Corpus production directives injected into prompts
+- **Gap**: `validate-asset` not called post-generation (identified in prior audit, verify it was wired)
+
+### Assembly & Rendering
+- **OK**: `assemble-rough-cut` and `stitch-render` handle timeline creation and beat-sync
+- **OK**: Beat-sync engine in `stitch-render` properly aligns cuts to bars/beats
+
+### Review Gates
+- **OK**: Auto-approve thresholds, manual fallback, stale gate invalidation
+- **OK**: Confidence scoring per agent dimension
+
+### QC & Export
+- **OK**: `delivery-qc` checks multiple dimensions
+- **OK**: `export-assets` generates versioned outputs (verify `.eq("status", "completed")` filter was added)
+
+### Governance
+- **OK**: 18-state governance engine, policy checking, violation logging
+- **Gap**: Governance state not synced with pipeline status (identified, implement reconciliation)
+
+### Missing Cross-Cutting Concerns
+1. **No episode-level synopsis pre-fill from scripts** — When a `script_master` or `episode_script` is imported, episode synopses should be auto-populated
+2. **No character count validation** — If extracted characters differ significantly from what's in `character_profiles`, no warning is raised
+3. **No "Project Brain" summary endpoint** — A single endpoint that returns the complete state of a project's knowledge (how many episodes filled, how many characters, coverage %) for the dashboard
+
+### Implementation List
+
+| # | Fix | File |
+|---|-----|------|
+| 1 | Auto-apply extracted episodes in `create-series` | `supabase/functions/create-series/index.ts` |
+| 2 | Add `apply-corpus` action to `import-document` | `supabase/functions/import-document/index.ts` |
+| 3 | Inject episode-specific corpus in `episode-pipeline` | `supabase/functions/episode-pipeline/index.ts` |
+| 4 | Add governance state reconciliation helper | `supabase/functions/run-agent/index.ts` (in `maybeAdvanceEpisode`) |
+| 5 | Add project knowledge summary endpoint | `supabase/functions/import-document/index.ts` (new action `project_brain_summary`) |
+| 6 | Frontend: trigger apply-corpus after doc processing | `src/hooks/useDocuments.ts` or equivalent |
 
 ---
 
-## CATEGORY 5 — Missing Features Identified by Comparison
+## Part 3 — README Rewrite
 
-### 5.1 No image-to-video pipeline step
-**Gap**: The pipeline supports `text_to_video` but not `image_to_video`. Runway Gen-4.5 supports this natively. This would allow using Photon/Nano Banana identity pack outputs as direct video generation inputs for character consistency
-**Fix**: Add `image_to_video` as a capability to the pipeline flow, passing identity pack URLs as reference images to Runway
+Complete rewrite of `README.md` to include:
 
-### 5.2 No batch retry/resume for failed shots
-**Gap**: If 3 of 20 shots fail, the user must regenerate the entire project. There's no selective retry
-**Fix**: Add a `retry_failed_shots` action in `generate-shots` that only re-processes shots with `status: "failed"`
-
----
-
-## CATEGORY 6 — Security / Edge Cases
-
-### 6.1 `plan-project` has no auth check
-**File**: `supabase/functions/plan-project/index.ts`
-**Issue**: No JWT validation — anyone with a project_id can trigger planning
-**Fix**: Add auth header validation like other edge functions
+1. **Governance section expanded**: Full 18-state machine documented with allowed transitions, guard conditions, and enforcement modes
+2. **Episode pipeline**: 10-step autopilot pipeline with agents, gates, thresholds
+3. **Document ingestion**: Complete extraction pipeline with 30+ entity types, confidence rules, source hierarchy
+4. **Autofill lifecycle**: How extracted data flows from documents → entities → canonical fields → episodes/characters/bibles → agent context → generation prompts
+5. **Provider routing**: Complete provider matrix with quality tiers, fallback chains, cost per provider
+6. **Anti-aberration**: Taxonomy, auto-repair logic, validation passes
+7. **Cost governance**: Credits, budget ceilings, provider-aware costing
+8. **Security**: RLS, JWT, audit, secrets management
+9. **All edge functions**: Complete function reference with inputs/outputs
+10. **Data model**: All table groups with key columns
 
 ---
 
-## Implementation Plan (Priority Order)
+## Execution Order
 
-### Phase 1 — Critical Fixes (blocks production)
-1. Fix `analyze-audio` API URL
-2. Fix `create-project` to accept `music_video` type
-3. Fix `run-agent` and `plan-project` model name prefixes
-4. Add auth check to `plan-project`
-
-### Phase 2 — Pipeline Completeness
-5. Add missing provider classes (Luma Reframe, Luma Modify, Photon Flash)
-6. Wire `validate-asset` into the generation pipeline
-7. Fix `check-shot-status` for synchronous providers
-8. Add `quality_tier` to projects table and flow
-
-### Phase 3 — Robustness
-9. Fix batch size limits in `generate-shots` (max 3-5 per invocation)
-10. Reconcile governance_state with pipeline status
-11. Fix credit costs to be provider-aware
-12. Add `.eq("status", "completed")` to `export-assets`
-13. Add selective retry for failed shots
-
-### Phase 4 — Feature Gaps
-14. Add `hybrid_video` pipeline or document as film sub-mode
-15. Add `image_to_video` reference passing from identity packs
-16. Improve audio-driven shot timing for music videos
+1. Part 1A: `create-series` autofill from extracted entities
+2. Part 1B: `apply-corpus` action in `import-document`
+3. Part 2 fixes: Episode pipeline corpus injection, governance reconciliation, project brain summary
+4. Part 1C: Frontend trigger
+5. Part 3: README rewrite
+6. Deploy all edge functions
 
 ### Estimated scope
-- ~15 files modified (mostly edge functions)
-- 1 database migration (add `quality_tier` column)
-- All edge functions redeployed
+- 5 edge functions modified
+- 1 frontend file modified
+- README.md fully rewritten (~1200 lines)
+- All modified edge functions redeployed
 
