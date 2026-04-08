@@ -1278,8 +1278,18 @@ Extrais uniquement les NOUVELLES entités de cette section.`
     completed_at: new Date().toISOString(),
   };
   const existingMeta = (typeof doc.metadata === "object" && doc.metadata ? doc.metadata : {}) as Record<string, unknown>;
+  const latestSuccessfulRun = {
+    parser_version: PARSER_VERSION,
+    entities_count: entities.length,
+    text_length: textContent.length,
+    chunks_count: chunks.length,
+    ai_parser_status: aiParserStatus,
+    completed_at: new Date().toISOString(),
+  };
   await supabase.from("source_documents").update({
     status: "ready_for_review",
+    parser_version: PARSER_VERSION,
+    latest_successful_run: latestSuccessfulRun,
     metadata: {
       ...existingMeta,
       extraction_debug: finalRun,
@@ -1288,6 +1298,31 @@ Extrais uniquement les NOUVELLES entités de cette section.`
       run_history: existingMeta.run_history || existingMeta.previous_runs || [],
     },
   }).eq("id", documentId);
+
+  // Emit diagnostic event: extraction completed
+  try {
+    await supabase.from("diagnostic_events").insert({
+      project_id: doc.project_id || "00000000-0000-0000-0000-000000000000",
+      scope: "ingestion",
+      scope_id: documentId,
+      event_type: "extraction_completed",
+      severity: entities.length > 0 ? "info" : "warning",
+      title: `Extraction terminée pour ${doc.file_name}: ${entities.length} entités`,
+      detail: `Rôle: ${detectedRole} (${Math.round(roleConfidence * 100)}%) | ${textContent.length} chars | ${chunks.length} chunks | AI: ${aiParserStatus} | v${PARSER_VERSION}`,
+      raw_data: {
+        parser_version: PARSER_VERSION,
+        document_role: detectedRole,
+        role_confidence: roleConfidence,
+        entities_count: entities.length,
+        auto_filled: autoFilled,
+        needs_review: needsReview,
+        text_length: textContent.length,
+        chunks_count: chunks.length,
+      },
+    });
+  } catch (diagErr) {
+    console.warn("Failed to insert extraction diagnostic:", diagErr);
+  }
 
   await supabase.from("audit_logs").insert({
     user_id: userId,
