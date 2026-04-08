@@ -175,7 +175,7 @@ serve(async (req) => {
             status_code: 0,
             response_body: fetchMessage,
           });
-          results.push({ endpoint_id: ep.id, status: 0, error: fetchErr.message });
+          results.push({ endpoint_id: ep.id, status: 0, error: (fetchErr as Error).message });
         }
       }
     }

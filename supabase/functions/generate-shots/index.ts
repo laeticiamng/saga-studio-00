@@ -591,7 +591,7 @@ function buildStyleConsistentPrompt(
 // ─── Base64 to Storage Upload ───────────────────────────────────────────────
 
 async function uploadBase64ToStorage(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   projectId: string,
   shotId: string,
   dataUri: string

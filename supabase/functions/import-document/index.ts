@@ -347,7 +347,7 @@ async function decompressDeflate(compressed: Uint8Array): Promise<{ data: Uint8A
 async function decompressWithStream(format: CompressionFormat | string, data: Uint8Array): Promise<Uint8Array> {
   const ds = new DecompressionStream(format as CompressionFormat);
   const writer = ds.writable.getWriter();
-  const writePromise = writer.write(data).then(() => writer.close());
+  const writePromise = writer.write(data as unknown as BufferSource).then(() => writer.close());
   const reader = ds.readable.getReader();
   const chunks: Uint8Array[] = [];
   while (true) {
@@ -927,7 +927,7 @@ Types additionnels : lyric_section, music_section, performance_cue, beat_map, ic
 // ═══════════════════════════════════════════════════
 
 async function processDocument(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   documentId: string,
   userId: string
 ): Promise<Response> {
@@ -1239,7 +1239,7 @@ async function processDocument(
 // ═══════════════════════════════════════════════════
 
 async function retrieveContext(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   body: {
     project_id: string;
     scope: "scene" | "episode" | "character" | "project" | "timeline" | "continuity";
@@ -1351,7 +1351,7 @@ async function retrieveContext(
 // ═══════════════════════════════════════════════════
 
 async function batchProcess(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   body: { project_id: string; document_ids: string[]; series_id?: string },
   userId: string
 ): Promise<Response> {
@@ -1422,7 +1422,7 @@ async function batchProcess(
 // ═══════════════════════════════════════════════════
 
 async function detectConflicts(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   projectId: string,
   _userId: string
 ): Promise<Response> {
@@ -1499,7 +1499,7 @@ async function detectConflicts(
 // ═══════════════════════════════════════════════════
 
 async function detectMissingInfo(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   projectId: string,
   _userId: string
 ): Promise<Response> {
@@ -1641,7 +1641,7 @@ async function detectMissingInfo(
 // ═══════════════════════════════════════════════════
 
 async function buildCanonicalFields(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   projectId: string,
   documentId: string
 ) {
@@ -1708,7 +1708,7 @@ async function buildCanonicalFields(
 // ═══════════════════════════════════════════════════
 
 async function wizardExtract(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   body: { document_ids: string[]; project_type: string },
   userId: string
 ): Promise<Response> {
@@ -1899,7 +1899,7 @@ async function wizardExtract(
 
 // Process a document with an explicit project type (no project_id needed)
 async function processDocumentWithType(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   documentId: string,
   userId: string,
   projectType: string
@@ -2090,7 +2090,7 @@ function estimateMappingConfidence(entity: Record<string, unknown>): number {
 }
 
 async function generateMappings(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   documentId: string,
   seriesId: string | null,
   projectId: string | null
@@ -2123,7 +2123,7 @@ async function generateMappings(
 // ═══════════════════════════════════════════════════
 
 async function reprocessDocument(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   documentId: string,
   userId: string
 ): Promise<Response> {
@@ -2223,7 +2223,7 @@ async function reprocessDocument(
 // ═══════════════════════════════════════════════════
 
 async function reprocessLegacyDocuments(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   body: { project_id?: string; series_id?: string; document_ids?: string[] },
   userId: string
 ): Promise<Response> {
@@ -2298,7 +2298,7 @@ async function reprocessLegacyDocuments(
 // ═══════════════════════════════════════════════════
 
 async function debugDocument(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   documentId: string
 ): Promise<Response> {
   const headers = { ...corsHeaders, "Content-Type": "application/json" };
