@@ -120,6 +120,7 @@ Chaque prompt de plan DOIT suivre cette structure :
 - Style visuel : ${project.style_preset || "cinematic"}
 - Durée : ${durationSec} secondes
 - Synopsis : ${project.synopsis || "Aucun synopsis fourni"}
+${corpusSection}
 - BPM audio : ${analysis?.bpm || 120}
 - Sections audio : ${JSON.stringify(sections)}
 - Courbe d'énergie : ${JSON.stringify(energyData)}
