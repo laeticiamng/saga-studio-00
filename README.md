@@ -1,674 +1,470 @@
-# Saga Studio — Production-Grade AI Audiovisual Studio
+# Saga Studio — AI-Powered Production Platform
 
-Saga Studio is a production-grade AI audiovisual studio for planning, generating, assembling, validating, and delivering premium **series**, **films**, **music videos**, and **hybrid video** works.
-
-The platform ingests a project corpus (scripts, bibles, reference images, notes, governance docs), extracts structured knowledge, resolves conflicts, builds canonical project truth, and then orchestrates the entire production lifecycle — from scene planning through validated export — without requiring the user to re-enter the same information twice.
+> Transform ideas, scripts, and creative documents into fully-produced audiovisual works (series, films, music videos, hybrid video) using AI agents, multi-provider generation, and strict governance.
 
 ---
 
 ## Table of Contents
 
-1. [Product Vision](#product-vision)
-2. [Supported Project Types](#supported-project-types)
-3. [Core Capabilities](#core-capabilities)
-4. [End-to-End Workflow Lifecycle](#end-to-end-workflow-lifecycle)
-5. [Architecture Overview](#architecture-overview)
-6. [Ingestion & Project Memory](#ingestion--project-memory)
-7. [Provider Routing](#provider-routing)
-8. [Anti-Aberration & Validation](#anti-aberration--validation)
-9. [Timeline / Assembly / Editing](#timeline--assembly--editing)
-10. [Review Gates](#review-gates)
-11. [Finishing & Export](#finishing--export)
-12. [Governance Model](#governance-model)
-13. [Cost Governance](#cost-governance)
-14. [Diagnostics & QC](#diagnostics--qc)
-15. [Data Model Overview](#data-model-overview)
-16. [Frontend & UX](#frontend--ux)
-17. [Key Jobs & Orchestration](#key-jobs--orchestration)
-18. [Cloud, Security & Operations](#cloud-security--operations)
-19. [Development & Contribution Guidelines](#development--contribution-guidelines)
-20. [Roadmap & Feature Flags](#roadmap--feature-flags)
-21. [Tech Stack](#tech-stack)
-22. [Quick Start](#quick-start)
-23. [Documentation Index](#documentation-index)
+1. [Vision & Architecture](#vision--architecture)
+2. [Production Modes](#production-modes)
+3. [Document Ingestion & Autofill](#document-ingestion--autofill)
+4. [Episode Pipeline (Autopilot)](#episode-pipeline-autopilot)
+5. [Agent System](#agent-system)
+6. [Provider Matrix & Routing](#provider-matrix--routing)
+7. [Production Pipelines](#production-pipelines)
+8. [Governance Engine](#governance-engine)
+9. [Anti-Aberration & Validation](#anti-aberration--validation)
+10. [Cost & Credit Governance](#cost--credit-governance)
+11. [Review Gates & Approval System](#review-gates--approval-system)
+12. [Timeline Studio](#timeline-studio)
+13. [Export & Delivery](#export--delivery)
+14. [Security & Access Control](#security--access-control)
+15. [Edge Functions Reference](#edge-functions-reference)
+16. [Data Model](#data-model)
+17. [Tech Stack](#tech-stack)
 
 ---
 
-## Product Vision
+## Vision & Architecture
 
-Saga Studio operates as an **intelligent production reader and project brain**: the user uploads their corpus once, the system understands it, builds canonical project truth, fills small gaps coherently, and then reuses that understanding throughout the entire audiovisual generation pipeline without redundant friction.
+Saga Studio is a **Document-First** AI production studio. Users provide creative materials (scripts, bibles, moodboards, pitch decks) and the platform:
 
-The platform is **not** a basic generation playground, a simple provider hub, or a lightweight MVP. It is a governed, quality-gated production system designed to produce **export-ready audiovisual works** at professional standards.
+1. **Ingests** documents, classifies them, and extracts 30+ entity types
+2. **Plans** the production via AI agents (showrunner, story architect, visual director...)
+3. **Generates** visual assets across multiple providers (Runway, Veo, Luma, OpenAI)
+4. **Assembles** clips into multi-track timelines with beat-sync
+5. **Validates** every asset through anti-aberration passes
+6. **Delivers** mastered exports with QC checks
 
-**Target users**: independent creators, studios, production companies, and audiovisual professionals who need to go from concept to deliverable with AI assistance while retaining full creative control.
+```
+┌──────────────────────────────────────────────────────────────┐
+│                     Document Corpus                          │
+│  Scripts · Bibles · Moodboards · Pitch Decks · References    │
+└───────────────┬──────────────────────────────────────────────┘
+                ▼
+┌──────────────────────────────────────────────────────────────┐
+│              Intelligent Ingestion Engine                     │
+│  Classify → Extract → Chunk → Canonicalize → Autofill        │
+└───────────────┬──────────────────────────────────────────────┘
+                ▼
+┌──────────────────────────────────────────────────────────────┐
+│                    Project Brain                              │
+│  Canonical Fields · Character Profiles · World Bible          │
+│  Episode Data · Continuity Memory Graph                       │
+└───────────────┬──────────────────────────────────────────────┘
+                ▼
+┌──────────────────────────────────────────────────────────────┐
+│              Agent Orchestration (25 agents)                  │
+│  Showrunner → Story Architect → Scriptwriter → Visual Dir     │
+│  → Scene Designer → Shot Planner → QA Reviewer → Editor      │
+└───────────────┬──────────────────────────────────────────────┘
+                ▼
+┌──────────────────────────────────────────────────────────────┐
+│           Multi-Provider Generation Engine                    │
+│  Runway Gen-4.5 · Veo 3.1 · Luma Photon · Act-Two · Aleph   │
+└───────────────┬──────────────────────────────────────────────┘
+                ▼
+┌──────────────────────────────────────────────────────────────┐
+│              Assembly & Validation                            │
+│  Timeline → Beat-Sync → Anti-Aberration → QC → Master        │
+└──────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## Supported Project Types
+## Production Modes
 
 ### Series
-
-Multi-season, multi-episode narrative workflows. The platform understands season arcs, episode structures, recurring characters, continuity dependencies between episodes, and cliffhanger rhythm. Users upload a series corpus and the system derives a usable series structure without manual episode-by-episode data entry.
-
-**Structure**: Project → Series → Seasons → Episodes → Scenes → Shots  
-**Key modules**: Episode pipeline, season arc tracking, cross-episode continuity, recurring character/location management, series bible.
+Multi-season, multi-episode productions with full continuity tracking, character memory graphs, and episode-by-episode autopilot pipeline.
 
 ### Film
-
-Feature-length or short film workflows. The platform understands act structure (3-act, 5-act), narrative sequence, character arcs, visual motifs, prestige shot opportunities, and montage logic.
-
-**Structure**: Project → Scenes → Shots  
-**Key modules**: Act structure analysis, chronology tracking, visual motif extraction, prestige shot flagging.
+Single long-form production with emphasis on visual bible design upfront. Uses the same pipeline as Series but without episode repetition.
 
 ### Music Video
-
-Audio-driven clip workflows. The platform understands lyrics, beat maps, performance cues, section moods, refrain repetition logic, and iconic shot requirements.
-
-**Structure**: Project → Audio analysis → Sections → Shots  
-**Key modules**: Beat mapping, lyric section extraction, performance cue identification, section mood tracking, artist lookdev.
+Beat-synchronized production driven by audio analysis (BPM, energy, sections). Veo 3.1 is the primary generation engine for iconic visual shots.
 
 ### Hybrid Video
-
-Source video upload → AI transformation workflows. Users upload existing footage and the platform segments, transforms, stylizes, and reassembles it.
-
-**Structure**: Project → Source clips → Transformed clips → Assembly  
-**Key modules**: Video segmentation, style transfer, clip transformation, reassembly.
+Import existing video footage → AI-based transformation, enhancement, and stylization via Aleph/Luma Modify. Includes dedicated upload, segmentation, and transform pipeline steps.
 
 ---
 
-## Core Capabilities
+## Document Ingestion & Autofill
 
-| Capability | Description |
-|---|---|
-| **Document Ingestion** | Multi-file upload with AI classification into 20+ document roles, structured extraction of 30+ entity types |
-| **Canonical Extraction** | Merge engine that deduplicates, resolves conflicts, proposes canonical project truth |
-| **Character / World Builder** | Character profiles with visual descriptions, relationships, wardrobe, arcs; world/location/prop management via bibles |
-| **Scene Planner** | Scene breakdown with location, characters, mood, props, time of day; auto-populated from ingested scripts |
-| **Continuity Groups** | Cross-scene/episode consistency enforcement via continuity memory graph (nodes + edges) |
-| **Provider Routing** | Capability-based routing across Google, Runway, Luma, OpenAI models with quality tiers and fallback chains |
-| **Anti-Aberration Validation** | Multi-pass validation (technical, visual, semantic, continuity, narrative) with aberration taxonomy and auto-repair |
-| **Timeline Engine** | Multi-track timeline (video, dialogue, music, FX) with versioning, clip management, and lock logic |
-| **Auto-Assembly** | Automated rough cut assembly from validated shots with candidate ranking |
-| **Rough Cut / Fine Cut** | Progressive refinement from rough assembly to polished edit with review gates at each stage |
-| **Finishing Presets** | Non-destructive look harmonization (cinematic, glossy, etc.) and audio normalization |
-| **Export Engine** | Versioned exports (1080p master, 720p preview, 9:16 social) with format presets and checksum validation |
-| **QC Layer** | Quality control reports with pass/fail per dimension before any export is released |
-| **Diagnostics Hub** | Full visibility into errors, provider fallbacks, clip candidate rankings, and incident history |
-| **Governance Dashboard** | Centralized project state tracking, policy enforcement, incident management, violation logging |
-| **Cost Governance** | Project budget ceilings, cost estimation before generation, preview-first / premium-first modes, hard-stop thresholds |
-| **Storage Lifecycle** | Managed storage buckets with access policies; source documents, face references, shot outputs, renders |
-
----
-
-## End-to-End Workflow Lifecycle
-
-```
-Upload / Ingest
-  → Document classification + entity extraction
-  → Canonical merge + conflict resolution
-  → Character / world approval
-  → Scene planning
-  → Generation (provider-routed)
-  → Validation (anti-aberration)
-  → Assembly (rough cut)
-  → Rough cut review gate
-  → Fine cut
-  → Finishing (look + audio harmonization)
-  → QC (quality control report)
-  → Export (versioned, format-specific)
-```
-
-### Step Details
-
-| Step | Purpose | Inputs | Outputs | User Approval? |
-|------|---------|--------|---------|----------------|
-| **Ingest** | Upload and understand project materials | Files (PDF, DOCX, images, audio) | Classified documents, extracted entities | Optional role correction |
-| **Canonical Merge** | Build single source of truth | All extracted entities | Canonical fields, conflict list | Resolve material conflicts |
-| **Character/World** | Lock visual identity and world rules | Character sheets, bibles, reference images | Approved character packs, world packs | Yes — identity review gate |
-| **Scene Planning** | Break project into generatable units | Scripts, episode structures | Scene list with prompts, locations, characters | Yes — scene plan gate |
-| **Generation** | Produce visual/video assets per scene | Scene prompts, style refs, continuity context | Raw shots (images/videos) | No (automated) |
-| **Validation** | Check generated assets for quality | Raw shots, validation rules | Pass/fail scores, aberration flags | No (automated, triggers repair if needed) |
-| **Assembly** | Combine validated shots into timeline | Validated shots, scene order | Rough cut timeline | No (automated) |
-| **Rough Cut Review** | Human review of assembled sequence | Rough cut timeline | Approve / reject / request changes | Yes |
-| **Fine Cut** | Polish edit with replacements/adjustments | Rough cut + user feedback | Fine cut timeline | Yes |
-| **Finishing** | Apply look harmonization and audio normalization | Fine cut timeline, finishing presets | Finished master | Optional |
-| **QC** | Final quality check before export | Finished timeline | QC report (pass/fail) | Blocking if fail |
-| **Export** | Generate deliverable files | QC-passed timeline, export presets | Versioned output files (MP4, etc.) | No |
-
----
-
-## Architecture Overview
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  Frontend (React 18 + Vite + Tailwind + shadcn/ui)          │
-│  ─ Dashboard, Studio, Timeline, Review Gates, Export Center │
-└────────────────────────┬────────────────────────────────────┘
-                         │ Supabase JS Client
-┌────────────────────────▼────────────────────────────────────┐
-│  Lovable Cloud (Supabase)                                    │
-│  ├── Auth (JWT, email, OAuth)                                │
-│  ├── PostgreSQL (50+ tables, RLS on all)                     │
-│  ├── Edge Functions (30+ serverless functions)               │
-│  ├── Storage (5 buckets: source-documents, face-references,  │
-│  │           shot-outputs, renders, audio-uploads)            │
-│  └── Realtime (postgres_changes subscriptions)               │
-└────────────────────────┬────────────────────────────────────┘
-                         │ Server-side only
-┌────────────────────────▼────────────────────────────────────┐
-│  AI Providers (via Edge Functions — no client-side calls)     │
-│  ├── Lovable AI Gateway (Gemini, GPT) — extraction, analysis │
-│  ├── Google Veo 3.1 — premium hero shots                     │
-│  ├── Runway Gen-4.5 / Act-Two / Aleph — scenes, acting, fx  │
-│  ├── Luma Photon / Ray / Reframe — refs, derivatives, social │
-│  └── OpenAI GPT Image — posters, title cards, marketing      │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Invariants**:
-- All AI provider calls happen server-side via Edge Functions
-- No API keys are exposed to the client
-- All tables have Row Level Security enabled
-- All state transitions are governed
-
----
-
-## Ingestion & Project Memory
-
-### Intelligent Document Ingestion
-
-The platform supports importing multiple documents simultaneously. Each uploaded file is automatically classified into one of 20+ document roles:
-
-`script_master`, `episode_script`, `film_script`, `music_video_concept`, `series_bible`, `short_pitch`, `producer_bible`, `one_pager`, `continuity_doc`, `governance_doc`, `character_sheet`, `world_pack_doc`, `moodboard_doc`, `wardrobe_doc`, `music_doc`, `lyric_doc`, `production_notes`, `legal_notes`, `reference_images`, `unknown`
+### Supported Document Types
+| Role | Description |
+|------|-------------|
+| `script_master` | Master screenplay / master script |
+| `episode_script` | Per-episode screenplay |
+| `film_script` | Film screenplay |
+| `music_video_concept` | Music video treatment / concept |
+| `series_bible` | Series bible with characters, world, arcs |
+| `short_pitch` | Short pitch / elevator pitch |
+| `producer_bible` | Producer bible with budgets, schedules |
+| `one_pager` | Project one-pager |
+| `continuity_doc` | Continuity reference document |
+| `governance_doc` | Production governance / policy document |
+| `character_sheet` | Character design sheets |
+| `world_pack_doc` | World-building / location reference |
+| `moodboard_doc` | Visual moodboard |
+| `wardrobe_doc` | Wardrobe / costume reference |
+| `music_doc` | Music brief / soundtrack reference |
+| `lyric_doc` | Song lyrics |
+| `production_notes` | Production notes |
+| `legal_notes` | Legal / clearance notes |
+| `reference_images` | Visual reference images |
 
 ### Extraction Pipeline
 
-1. **Upload** — Files stored in `source-documents` bucket
-2. **Classification** — AI determines document role + confidence score
-3. **Text extraction** — Native text for TXT/MD; parsed text for PDF/DOCX
-4. **Chunking** — Text split into 2000-char segments
-5. **AI Entity Extraction** — Gemini extracts 30+ entity types with structured values
-6. **Canonical Merge** — Entities compared against existing project truth; higher-priority sources win
-7. **Conflict Detection** — Cross-document contradictions surfaced with severity classification
-8. **Missing Info Detection** — Required fields checked per project type; AI proposes inferred completions
-9. **Knowledge Graph** — Entities linked to scenes, characters, props, locations, timeline beats
+```
+Upload → Classify Role → Extract Text → Chunk (structured) → AI Extraction → Entity Storage
+                                                                    │
+                                                                    ▼
+                                                        Canonical Field Merge
+                                                        Conflict Detection
+                                                        Missing Info Detection
+                                                        Autofill Propagation
+```
 
-### Extraction Adapts to Project Type
-
-- **Series**: Extracts episodes, season arcs, continuity dependencies, recurring elements, callbacks
-- **Film**: Extracts act structure, narrative sequences, visual motifs, prestige shots, montage notes
-- **Music Video**: Extracts lyric sections, beat maps, performance cues, section moods, iconic shots
+### 30+ Extracted Entity Types
+`character` · `location` · `episode` · `scene` · `synopsis` · `logline` · `genre` · `tone` · `theme` · `target_audience` · `relationship` · `character_arc` · `chronology` · `dialogue_sample` · `emotional_arc` · `visual_reference` · `cinematic_reference` · `color_palette` · `lighting` · `camera_direction` · `mood` · `ambiance` · `sensory_note` · `continuity_rule` · `wardrobe` · `prop` · `act_structure` · `season_arc` · `beat_map` · `lyric_section` · `performance_cue` · `production_directive` · `transition` · `sound_design` · `music` · `format` · `duration`
 
 ### Source Priority Hierarchy
+1. **source_of_truth** (priority 5) — Definitive, overrides everything
+2. **preferred_source** (priority 4) — Primary reference
+3. **supporting_reference** (priority 3) — Supplementary
+4. **draft_only** (priority 2) — Working documents
+5. **deprecated** (priority 1) — Outdated / superseded
 
-| Priority | Label | Behavior |
-|---|---|---|
-| 5 | Source of truth | Always wins in merge conflicts |
-| 4 | Preferred source | Wins unless source of truth exists |
-| 3 | Supporting reference | Used when no higher source exists |
-| 2 | Draft only | Never auto-promoted to canonical |
-| 1 | Deprecated | Excluded from canonical context |
+### Autofill Lifecycle
 
-### Confidence Rules
+```
+Documents → Extracted Entities → Canonical Fields
+                                       │
+                ┌──────────────────────┼──────────────────────┐
+                ▼                      ▼                      ▼
+          Episodes              Characters              World Bible
+     (title, synopsis,      (name, appearance,     (locations, props,
+      duration, scenes)      personality, arc)       visual refs, moods)
+                                       │
+                                       ▼
+                              Agent Context Injection
+                              (corpus_canon, corpus_entities,
+                               production_directives)
+                                       │
+                                       ▼
+                              Generation Prompts
+```
 
-- **≥ 0.85**: Auto-approved, immediately canonical
-- **0.60–0.85**: Proposed, requires user validation
-- **< 0.60**: Suggestion only, shown but not applied
+When a series is created, the system automatically:
+- Queries extracted `episode` entities and pre-fills episode titles, synopses, durations
+- Creates `character_profiles` from extracted `character` entities
+- Assembles a `world` bible from extracted `location`, `visual_reference`, `prop`, and `mood` entities
+- The `apply_corpus` action can be triggered anytime to re-propagate latest extractions
 
-### Contextual Retrieval
-
-At generation time, the platform retrieves only the relevant context subset — not raw documents. Retrieval is scoped by:
-- **Scene**: locations, props, mood, continuity rules, visual references
-- **Episode**: scenes, characters, continuity rules, cliffhangers, season arc
-- **Character**: relationships, wardrobe, costume, visual references
-- **Timeline**: chronology, scenes, episodes, music, montage notes
-- **Continuity**: rules, characters, wardrobe, props, locations, recurring elements
-
-Context is sorted by source priority + confidence and trimmed to fit provider context windows.
+### Project Brain Summary
+The `project_brain_summary` endpoint provides a real-time coverage report:
+- Document count by role
+- Entity counts by type
+- Episode coverage percentage (how many have synopses)
+- Character count, bible count, continuity nodes
+- Unresolved canonical conflicts
+- Overall coverage score (0-100%)
 
 ---
 
-## Provider Routing
+## Episode Pipeline (Autopilot)
 
-Providers are routed by **capability**, not by brand. Each provider serves a specific production role:
+Each episode progresses through a 10-step automated pipeline with specialized AI agents, confidence scoring, and approval gates.
 
-| Provider | Model | Role |
-|---|---|---|
-| **Google** | Nano Banana / Pro | Image ideation, canonical design packs, visual bibles |
-| **Google** | Veo 3.1 | Premium hero shots, iconic moments, prestige-grade video |
-| **Runway** | Gen-4.5 | Narrative scene generation backbone (consistent, reliable) |
-| **Runway** | Act-Two | Acting, performance, character-driven motion |
-| **Runway** | Aleph | Transformation, repair, style transfer, VFX |
-| **Luma** | Photon-1 | Identity stabilization, style references, consistency |
-| **Luma** | Ray-2 / Reframe | Derivatives, social format reframing (9:16, 1:1) |
-| **OpenAI** | GPT Image 1.5 | Posters, title cards, marketing assets |
+### Pipeline Steps
 
-### Routing Principles
+| # | Step | Agents | Approval Gate | Auto-Approve Threshold |
+|---|------|--------|---------------|----------------------|
+| 1 | `story_development` | story_architect, scriptwriter | No | — |
+| 2 | `psychology_review` | psychology_reviewer | Yes | 85% |
+| 3 | `legal_ethics_review` | legal_ethics_reviewer | Yes | 90% |
+| 4 | `visual_bible` | visual_director | No | — |
+| 5 | `continuity_check` | continuity_checker | Yes | 90% |
+| 6 | `shot_generation` | scene_designer, shot_planner | No | — |
+| 7 | `shot_review` | qa_reviewer | Yes | 80% |
+| 8 | `assembly` | editor | No | — |
+| 9 | `edit_review` | qa_reviewer | Yes | 85% |
+| 10 | `delivery` | delivery_manager | No | — |
 
-- **Quality tiers**: Preview (fast/cheap), Standard (balanced), Premium (maximum quality)
-- **Fallback chains**: If primary provider fails, system routes to next capable provider
-- **No silent image fallback**: Premium projects never silently downgrade from video to static images
-- **Provider health**: Provider availability is monitored; unhealthy providers are temporarily bypassed
-- **Cost awareness**: Provider selection considers project budget mode and remaining budget
+### Features
+- **Idempotency**: Unique idempotency keys prevent duplicate agent runs
+- **Correlation IDs**: All runs share a correlation ID for tracing
+- **Auto-continuation**: Steps auto-advance when gates pass
+- **Failure handling**: Episodes marked `failed` after 3 retries
+- **Stale gate invalidation**: Upstream re-runs invalidate downstream gates
+- **Corpus injection**: Each agent receives episode-specific extracted data (synopsis, scenes, characters)
+
+---
+
+## Agent System
+
+### 25 Specialized Agents
+
+| Agent | Category | Role |
+|-------|----------|------|
+| `showrunner` | Direction | Overall creative direction and orchestration |
+| `story_architect` | Narrative | Story structure, arcs, themes, dramatic progression |
+| `scriptwriter` | Narrative | Dialogue, stage directions, transitions |
+| `script_doctor` | Narrative | Identify narrative weaknesses, propose fixes |
+| `dialogue_coach` | Narrative | Refine character voices and dialogue naturalness |
+| `psychology_reviewer` | Review | Character psychology, motivation coherence |
+| `legal_ethics_reviewer` | Review | Legal compliance, ethics, cultural sensitivity |
+| `continuity_checker` | Review | Cross-episode continuity validation |
+| `visual_director` | Visual | Visual style, color palette, lighting bible |
+| `scene_designer` | Visual | Scene breakdown with locations, moods, durations |
+| `shot_planner` | Visual | Shotlist with camera angles, movement, prompts |
+| `music_director` | Audio | Soundtrack selection, musical themes |
+| `voice_director` | Audio | Vocal casting, tone direction |
+| `editor` | Post | Edit planning, transitions, rhythm, assembly |
+| `colorist` | Post | Color grading, visual consistency |
+| `qa_reviewer` | QC | Multi-dimensional quality assessment |
+| `delivery_manager` | QC | Export specs, technical compliance |
+| `casting_consistency` | Continuity | Character visual coherence across episodes |
+| `production_designer` | Design | Set design, environment, visual world |
+| `costume_designer` | Design | Character wardrobe per scene and arc |
+| `props_designer` | Design | Key props, inter-episode consistency |
+| `sound_music` | Audio | Sound design, effects, audio atmosphere |
+| `delivery_supervisor` | QC | Final technical compliance before export |
+
+### Agent Output Writers
+- `psychology_reviewer` → `psychology_reviews`
+- `legal_ethics_reviewer` → `legal_ethics_reviews`
+- `continuity_checker` → `continuity_reports`
+- `scene_designer` → `scenes`
+- `scriptwriter` → `scripts` + `script_versions`
+
+---
+
+## Provider Matrix & Routing
+
+### Active Providers
+
+| Provider | Model | Output | Cost/sec | Use Case |
+|----------|-------|--------|----------|----------|
+| **Nano Banana 2** | gemini-3.1-flash-image-preview | Image | $0.01 | Fast image iteration |
+| **Nano Banana Pro** | gemini-3-pro-image-preview | Image | $0.03 | Premium image, world bibles |
+| **Veo 3.1** | veo-3.1-generate-preview | Video | $0.10 | Hero shots, prestige |
+| **Veo 3.1 Lite** | veo-3.1-lite-generate-preview | Video | $0.05 | Fast video iteration |
+| **Runway Gen-4.5** | gen4.5 | Video | $0.40 | Scene backbone, narrative |
+| **Runway Act-Two** | act_two | Video | $0.40 | Acting, performance |
+| **Runway Aleph** | aleph | Video | $0.35 | Transform, repair |
+| **Luma Photon-1** | photon-1 | Image | $0.02 | Identity stabilization |
+| **Luma Photon Flash** | photon-flash-1 | Image | $0.01 | Fast identity |
+| **Luma Ray-2** | ray-2 | Video | $0.15 | Alternative video gen |
+| **Luma Reframe** | reframe | Video | $0.05 | Social export derivation |
+| **Luma Modify** | modify | Video | $0.10 | Video transformation |
+| **GPT Image 1.5** | gpt-image-1.5 | Image | $0.08 | Marketing, posters |
+
+### Quality Tiers
+| Tier | Primary Providers | Credits/Shot |
+|------|------------------|-------------|
+| **premium** | Veo 3.1, Runway Gen-4.5, Act-Two | 5 |
+| **standard** | Runway Gen-4.5, Veo 3.1 Lite, Ray-2 | 2 |
+| **economy** | Nano Banana 2, Photon Flash, Veo Lite | 1 |
+
+---
+
+## Production Pipelines
+
+### Series / Film Pipeline
+```
+Identity Pack (Photon) → Lookdev (Nano Pro) → World Pack (Nano Pro)
+  → Scene Backbone (Runway Gen-4.5) → Acting (Act-Two)
+  → Hero Shots (Veo 3.1) → Repair (Aleph) → Social Exports (Reframe)
+  → Poster (GPT Image 1.5)
+```
+
+### Music Video Pipeline
+```
+Identity Pack (Photon) → Lookdev (Nano Pro)
+  → Iconic Shots (Veo 3.1) → Acting (Act-Two)
+  → Repair (Aleph) → Social Exports (Reframe) → Poster (GPT Image 1.5)
+```
+
+### Hybrid Video Pipeline
+```
+Source Upload → Segmentation (Aleph) → Transform (Luma Modify)
+  → Stylize (Aleph) → Repair (Aleph) → Social Exports (Reframe)
+  → Poster (GPT Image 1.5)
+```
+
+---
+
+## Governance Engine
+
+### 18-State Machine
+
+```
+draft → setup_in_progress → awaiting_identity_review → awaiting_world_review
+     → planning → awaiting_scene_review → generating → awaiting_clip_review
+     → assembling → awaiting_rough_cut_review → fine_cut_in_progress
+     → awaiting_fine_cut_review → qc_pending → export_ready → exporting
+     → delivered
+
+Special states: failed, archived (reachable from any state)
+```
+
+### Pipeline ↔ Governance Reconciliation
+| Pipeline Status | Governance State |
+|----------------|-----------------|
+| `story_development` | `planning` |
+| `visual_bible` | `setup_in_progress` |
+| `continuity_check` | `awaiting_scene_review` |
+| `shot_generation` | `generating` |
+| `shot_review` | `awaiting_clip_review` |
+| `assembly` | `assembling` |
+| `edit_review` | `awaiting_rough_cut_review` |
+| `delivery` | `exporting` |
+| `completed` | `delivered` |
+
+### Governance Policies
+- **block**: Hard stop — operation is prevented
+- **warn**: Operation proceeds, warning logged
+- **log**: Operation proceeds, event logged silently
+
+### Violation Tracking
+All violations logged to `governance_violations` with policy_key, actor_type, severity, and resolution status.
 
 ---
 
 ## Anti-Aberration & Validation
 
-Validation is a **core product principle**, not an optional add-on. Every generated asset passes through multi-pass validation before entering the timeline.
-
 ### Validation Passes
+| Pass | Checks |
+|------|--------|
+| **Technical** | Resolution, codec, duration, FPS, aspect ratio |
+| **Visual** | Anatomy (hands, faces), physics, composition |
+| **Semantic** | Prompt adherence, scene accuracy |
+| **Continuity** | Character consistency, wardrobe, location |
+| **Delivery** | Export spec compliance, loudness, color space |
 
-| Pass | What it checks |
-|---|---|
-| **Technical** | Resolution, aspect ratio, codec, duration, file integrity |
-| **Visual** | Anatomy, physics, lighting consistency, artifact detection |
-| **Semantic** | Script adherence, scene description match, dialogue accuracy |
-| **Continuity** | Character appearance consistency, location consistency, prop presence |
-| **Narrative** | Story logic, emotional tone, pacing appropriateness |
-| **Delivery** | Export readiness, format compliance, QC thresholds |
-
-### Aberration Taxonomy
-
-Aberrations are classified by category and subcategory (e.g., `anatomy > extra_fingers`, `physics > floating_objects`, `continuity > costume_drift`, `identity > face_mismatch`). Each aberration has:
-- Severity (critical, high, medium, low)
-- Blocking flag (whether it prevents timeline insertion)
-- Suggested fix (regenerate, repair, manual review)
-- Auto-repair eligibility
-
-### Auto-Repair Logic
-
-When a fixable aberration is detected:
-1. System checks if the aberration is eligible for auto-repair
-2. Routes to appropriate repair provider (e.g., Aleph for transformation)
-3. Re-validates the repaired asset
-4. If repair fails after max retries, flags for human review
+### Repair Router
+1. **Low severity** → Flag for review
+2. **Medium** → Auto-repair via Aleph
+3. **High** → Force regeneration with different provider
+4. **Critical** → Force regeneration, exclude original provider
 
 ---
 
-## Timeline / Assembly / Editing
+## Cost & Credit Governance
 
-### Timeline Model
-
-- **Timelines** — versioned containers for an assembled work
-- **Tracks** — typed layers within a timeline (video, dialogue, music, sfx)
-- **Clips** — individual media segments placed on tracks with in/out points
-
-### Assembly Flow
-
-1. **Candidate generation** — Multiple shot candidates generated per scene
-2. **Candidate ranking** — Validation scores, continuity scores, and aesthetic scores combined
-3. **Auto-assembly** — Best candidates placed on timeline in scene order
-4. **Rough cut** — First assembled version for human review
-5. **Fine cut** — Polished version after clip replacements, timing adjustments
-6. **Lock** — Final timeline version locked for finishing
-
-### Version Management
-
-Each timeline maintains version history. Review gates reference specific timeline versions. Stale gates (where the timeline has changed since the gate was passed) are automatically invalidated.
+- New users: **10 credits** at signup
+- `debit_credits` / `topup_credits` database functions (idempotent, row-locked)
+- Provider-aware costing: Runway = 5 credits, Veo = 4, Aleph = 3, Ray-2 = 2, economy = 1
+- Budget ceiling enforcement via `estimate-cost`
+- Full audit trail in `credit_ledger`
 
 ---
 
-## Review Gates
-
-Review gates are mandatory checkpoints requiring human or automated approval before the pipeline proceeds.
-
-| Gate | Validates | On Approve | On Reject |
-|---|---|---|---|
-| `character_pack` | Character visual identity locked | Proceed to world pack | Regenerate character refs |
-| `world_pack` | World/location visual identity locked | Proceed to scene planning | Revise world bible |
-| `scene_plan` | Scene breakdown approved | Proceed to generation | Revise scene plan |
-| `scene_clips` | Generated clips meet quality bar | Proceed to assembly | Regenerate failed clips |
-| `rough_cut` | Assembled sequence acceptable | Proceed to fine cut | Request changes |
-| `fine_cut` | Polished edit approved | Proceed to finishing | Request changes |
-| `final_export` | QC passed, export ready | Release deliverable | Block export |
-
-**Gate rules**:
-- Gates are version-aware: approving gate X at timeline version N does not cover version N+1
-- Stale gates are automatically flagged when upstream content changes
-- Dependencies are enforced: `fine_cut` cannot pass before `rough_cut` is approved
-
----
-
-## Finishing & Export
-
-### Finishing
-
-Finishing is **non-destructive** — it applies look harmonization on top of source assets without modifying originals.
-
-- **Look presets**: Cinematic, glossy, natural, noir, vintage, etc.
-- **Audio normalization**: LUFS-based loudness normalization
-- **Subtitle options**: Burn-in or sidecar subtitle tracks
-- **Title cards**: Auto-generated or custom title/end cards
-
-### Export
-
-- **Export presets**: Platform-defined presets (1080p master, 720p preview, 9:16 social, 4K master)
-- **Versioned outputs**: Each export is versioned with checksum, duration, file size
-- **QC gate**: Exports are blocked until QC report passes
-- **Format support**: MP4/H.264, MP4/H.265, WebM (configurable codec, bitrate, audio codec)
-
----
-
-## Governance Model
-
-Governance is a **platform pillar**, not an afterthought.
-
-| Domain | What is governed |
-|---|---|
-| **State Machine** | All project/episode/shot status transitions follow defined state machines |
-| **Source of Truth** | Canonical fields are explicitly sourced and traceable |
-| **Policy Engine** | Configurable policies with enforcement modes (strict, warn, log) |
-| **Ownership** | Every asset, decision, and state change is attributed to a user or agent |
-| **Versioning** | Timelines, exports, bibles, scripts — all versioned |
-| **Provider** | Provider selection follows routing policies, not ad-hoc choices |
-| **Cost** | Budget ceilings and cost modes govern generation spending |
-| **Data** | RLS on all tables; audit logs for sensitive actions |
-| **Incidents** | Failures are logged as incidents with severity, root cause, and resolution |
-| **Feature Flags** | New capabilities are gated behind feature flags for staged rollout |
-
-### Governance Transitions
-
-State transitions are defined in `governance_transitions` with:
-- `from_state` → `to_state`
-- `guard_conditions` (must be satisfied)
-- `required_approvals` (human or agent gates)
-
-Violations of governance policies are logged to `governance_violations` with severity, actor, and resolution status.
-
----
-
-## Cost Governance
-
-| Concept | Description |
-|---|---|
-| **Credit system** | Users have a credit wallet; generation jobs debit credits |
-| **Cost estimation** | Before launching batch generation, estimated cost is computed |
-| **Budget ceilings** | Projects can have a maximum spending limit |
-| **Cost modes** | `preview_first` (cheap providers first), `premium_first` (best quality first), `strict_budget` (hard cap) |
-| **Hard stop** | If budget is exhausted, generation halts (no silent overspend) |
-| **Downgrade path** | Under budget pressure, system can route to cheaper providers |
-| **Ledger** | All credits debited/credited are logged with reason and reference |
-
----
-
-## Diagnostics & QC
-
-### QC Reports
-
-Generated per episode/export with pass/fail results across multiple dimensions (visual quality, continuity, audio, format compliance). QC failure blocks export.
-
-### Diagnostics Hub
-
-- **Anomaly events**: Every detected aberration logged with category, severity, explanation
-- **Provider fallback log**: When and why the system switched providers
-- **Clip candidate rankings**: Why a particular candidate was selected over alternatives
-- **Incident feed**: Active and resolved incidents with root cause classification
-- **Blocking vs non-blocking**: Clear distinction between issues that halt the pipeline and warnings
-
-### Export Readiness
-
-Final export readiness is a composite check:
-- All review gates passed (not stale)
-- QC report passes all required dimensions
-- No blocking anomalies unresolved
-- Budget not exceeded
-- All required assets present
-
----
-
-## Data Model Overview
-
-### Content Hierarchy
+## Review Gates & Approval System
 
 ```
-projects
-  └── series → seasons → episodes → scenes → episode_shots
-  └── (film) scenes → episode_shots
-  └── (music_video) audio_analysis → sections → shots
+Agent completes → Confidence score → Check threshold
+  ├─ Above → Auto-approve → Advance pipeline
+  └─ Below → Wait for human approval
 ```
 
-### Key Table Groups
+- `approval_steps` / `approval_decisions` / `workflow_approvals` tables
+- `workflow_confidence_scores` for per-dimension transparency
+
+---
+
+## Timeline Studio
+
+- Multi-track timeline (video, audio, text, overlay)
+- Frame-precise clip placement
+- Beat-sync engine for music video mode (BPM-aligned cuts)
+- Assembly: Scenes → Shots → Timeline → Beat-Sync → Rough Cut → Fine Cut → Master
+
+---
+
+## Export & Delivery
+
+- Pre-configured export presets (resolution, FPS, codec, aspect ratio, audio)
+- Delivery QC: black frames, audio gaps, loudness, codec validation
+- Versioned exports with checksum and approval tracking
+- Only completed renders are exported (`.eq("status", "completed")`)
+
+---
+
+## Security & Access Control
+
+- JWT validation on every edge function
+- RLS on all tables (user ownership)
+- Roles in `user_roles` table with `has_role()` security definer
+- All API keys in Lovable Cloud Secrets (never client-side)
+- Full audit logging with correlation IDs
+- Rate limiting on creation endpoints
+
+---
+
+## Edge Functions Reference
+
+### Core: `create-project`, `create-series`, `plan-project`, `generate-shots`, `check-shot-status`, `assemble-rough-cut`, `stitch-render`, `batch-render`
+### Ingestion: `import-document` (register, extract, reprocess, batch_process, detect_conflicts, detect_missing, wizard_extract, apply_corpus, project_brain_summary)
+### Agents: `episode-pipeline`, `run-agent`, `agent-status`, `autopilot-run`
+### Quality: `validate-asset`, `continuity-check`, `delivery-qc`, `approval-evaluate`, `redaction-pass`
+### Export: `export-assets`, `proxy-media`
+### Workflow: `workflow-pause`, `workflow-resume`, `workflow-cancel-safe`
+### Infra: `estimate-cost`, `provider-health`, `system-health`, `enhance-synopsis`, `analyze-audio`, `project-status`, `audit-log`, `dispatch-webhooks`, `cleanup`, `client-log`
+### Billing: `create-checkout`, `check-subscription`, `customer-portal`, `stripe-webhook`
+### Admin: `admin-actions`, `delete-account`, `send-contact`, `process-email-queue`
+
+---
+
+## Data Model
 
 | Group | Tables |
-|---|---|
-| **Content** | `projects`, `series`, `seasons`, `episodes`, `scenes`, `scripts`, `bibles`, `character_profiles`, `character_reference_packs` |
-| **Ingestion** | `source_documents`, `source_document_chunks`, `source_document_entities`, `source_document_mappings`, `source_document_autofill_runs`, `field_provenance` |
-| **Canonical** | `canonical_fields`, `canonical_conflicts`, `inferred_completions`, `ingestion_runs` |
-| **Generation** | `episode_shots`, `project_assets`, `asset_normalization_results` |
-| **Validation** | `asset_validations`, `anomaly_events`, `aberration_categories` |
+|-------|--------|
+| **Projects** | `projects`, `project_assets`, `project_knowledge`, `project_budgets` |
+| **Series** | `series`, `seasons`, `episodes`, `scenes`, `episode_shots` |
+| **Scripts** | `scripts`, `script_versions` |
+| **Characters** | `character_profiles`, `character_reference_packs` |
+| **World** | `bibles`, `continuity_groups` |
+| **Continuity** | `continuity_memory_nodes`, `continuity_memory_edges`, `continuity_conflicts`, `continuity_reports` |
+| **Documents** | `source_documents`, `source_document_entities`, `source_document_chunks`, `source_document_mappings` |
+| **Canonical** | `canonical_fields`, `canonical_conflicts`, `field_provenance`, `inferred_completions` |
+| **Agents** | `agent_registry`, `agent_prompts`, `agent_runs`, `agent_outputs` |
+| **Workflow** | `workflow_runs`, `workflow_steps`, `workflow_step_runs`, `workflow_approvals`, `workflow_confidence_scores` |
+| **Quality** | `asset_validations`, `anomaly_events`, `aberration_categories` |
+| **Governance** | `governance_policies`, `governance_transitions`, `governance_violations` |
 | **Timeline** | `timelines`, `timeline_tracks`, `timeline_clips` |
-| **Review** | `approval_steps`, `approval_decisions`, `review_gates` |
-| **Continuity** | `continuity_groups`, `continuity_conflicts`, `continuity_memory_nodes`, `continuity_memory_edges`, `continuity_reports` |
-| **Export** | `export_versions`, `export_presets`, `export_jobs`, `delivery_manifests` |
-| **Governance** | `governance_policies`, `governance_transitions`, `governance_violations`, `audit_logs`, `incidents`, `diagnostic_events` |
-| **Cost** | `credit_wallets`, `credit_ledger` |
-| **Agents** | `agent_registry`, `agent_runs`, `agent_outputs`, `agent_prompts` |
-| **System** | `feature_flags`, `profiles`, `user_roles` |
-
----
-
-## Frontend & UX
-
-### Design Philosophy
-
-The frontend is designed as a **production studio interface**, not a consumer app. It uses a dark-mode-first, content-dense layout with semantic design tokens, shadcn/ui components, and framer-motion animations.
-
-### Key Screens
-
-| Screen | Purpose |
-|---|---|
-| **Homepage** | Product positioning as a full AI audiovisual studio |
-| **Dashboard** | Project overview with status, progress, and quick actions |
-| **Create Project** | Unified creation wizard for all project types |
-| **Series / Film / Music Video View** | Project-specific management with lifecycle tabs |
-| **Documents Center** | Multi-file upload, document classification, canonical truth, conflicts, knowledge graph |
-| **Timeline Studio** | Multi-track timeline editor with clip management |
-| **Review Gates** | Gate-by-gate approval interface |
-| **Finishing Panel** | Look preset selection, audio normalization, subtitle config |
-| **Export Center** | Versioned export management with QC status |
-| **Governance Dashboard** | Policy violations, incidents, project health |
-| **Diagnostics** | Anomaly events, provider fallbacks, clip rankings |
-| **Settings** | Account, preferences, API configuration |
-
-### UX Principles
-
-- Every UI screen maps to a real lifecycle step
-- No orphan screens disconnected from the production pipeline
-- Status labels and badges use consistent vocabulary across the app
-- Context-aware navigation adapts to project type and lifecycle stage
-
----
-
-## Key Jobs & Orchestration
-
-### Edge Functions
-
-| Function | Purpose |
-|---|---|
-| `import-document` | Document upload, AI classification, entity extraction, conflict detection, missing info detection, contextual retrieval |
-| `create-project` | Project initialization with type-specific scaffolding |
-| `create-series` | Series creation with season/episode structure |
-| `plan-project` | AI-assisted project planning from ingested corpus |
-| `generate-shots` | Shot generation with provider routing |
-| `check-shot-status` | Poll provider APIs for generation completion |
-| `validate-asset` | Multi-pass asset validation |
-| `assemble-rough-cut` | Auto-assembly of validated shots into timeline |
-| `batch-render` | Batch processing of render jobs |
-| `stitch-render` | Final render stitching from timeline |
-| `delivery-qc` | QC report generation |
-| `export-assets` | Export file generation with format presets |
-| `continuity-check` | Cross-episode/scene continuity validation |
-| `estimate-cost` | Pre-generation cost estimation |
-| `run-agent` | Execute AI agent with retry and scoring |
-| `autopilot-run` | Full pipeline orchestration for an episode |
-| `provider-health` | Provider availability monitoring |
-| `system-health` | Platform health check |
-| `workflow-pause` / `resume` / `cancel-safe` | Workflow lifecycle management |
-
-### Orchestration Rules
-
-- Jobs are **resumable** — failures can be retried without full restart
-- Adding new files triggers **incremental re-ingestion**, not full reset
-- State transitions are **idempotent** — duplicate calls produce the same result
-- All jobs log to `audit_logs` for traceability
-
----
-
-## Cloud, Security & Operations
-
-### Security Invariants
-
-| Rule | Enforcement |
-|---|---|
-| No API keys in frontend code | All provider calls via Edge Functions |
-| Secrets in Lovable Cloud only | Never in `.env`, never in source code |
-| RLS on all tables | Every table has Row Level Security policies |
-| JWT validation in every Edge Function | Auth header checked before any operation |
-| Service role key server-side only | Never exposed to client |
-| Audit trail | Sensitive actions logged to `audit_logs` |
-
-### Storage Buckets
-
-| Bucket | Public | Purpose |
-|---|---|---|
-| `source-documents` | No | Uploaded project files |
-| `face-references` | No | Character identity reference images |
-| `audio-uploads` | No | Audio files for music video workflows |
-| `shot-outputs` | Yes | Generated shot images/videos |
-| `renders` | Yes | Final rendered outputs |
-
-### Operational Rules
-
-- Logs and incidents are surfaced in the Diagnostics Hub
-- Failed jobs are automatically retried up to `max_retries`
-- Cleanup policies handle orphaned assets and expired data
-- Feature flags gate new functionality for staged rollout
-
----
-
-## Development & Contribution Guidelines
-
-### System Thinking
-
-Before modifying any subsystem, understand how it connects to the lifecycle:
-
-1. **Ingestion** feeds **canonical fields** which feed **scene planning** which feeds **generation**
-2. **Generation** feeds **validation** which feeds **assembly** which feeds **review gates**
-3. **Review gates** govern **finishing** which governs **export**
-
-### Rules for Contributors
-
-- **Preserve governance**: Do not bypass state machines or skip review gates
-- **Preserve validation**: Do not add generation paths that skip anti-aberration checks
-- **Preserve canonical truth**: Do not introduce parallel truth stores that conflict with `canonical_fields`
-- **Preserve routing**: Do not add provider calls without going through the routing matrix
-- **Preserve QC**: Do not add export behavior that bypasses QC checks
-- **Preserve audit**: Log meaningful state changes to `audit_logs`
-- **Preserve RLS**: Every new table must have Row Level Security policies
-- **No orphan UI**: Every new screen must connect to a real lifecycle step
-
-### Local Development
-
-```bash
-# Install dependencies
-npm install
-
-# Start dev server (port 8080)
-npm run dev
-
-# Type checking
-npm run typecheck
-
-# Run tests
-npm run test
-
-# Full CI check
-npm run ci        # typecheck + lint + tests
-```
-
-### Testing
-
-Tests cover: pipeline state machine, agent orchestration, review gates, continuity validation, confidence scoring, document ingestion logic, provider matrix resolution, quality scoring.
-
-```bash
-npm run test           # All tests
-npm run test:unit      # Unit tests
-npm run test:e2e       # E2E pipeline tests
-```
-
----
-
-## Roadmap & Feature Flags
-
-### Current Feature Flags
-
-Feature flags are stored in the `feature_flags` table and checked via `useFeatureFlag` hook. New capabilities are gated behind flags for staged rollout.
-
-### Planned Extensions
-
-| Area | Description | Status |
-|---|---|---|
-| Advanced manual editing | Frame-level trim, cross-dissolve, speed ramp | Planned |
-| XML/EDL export | Industry-standard timeline interchange formats | Planned |
-| Collaboration | Multi-user comments and annotations on timeline | Planned |
-| Advanced subtitles | SRT/VTT generation, multi-language, styled captions | Planned |
-| Higher-end finishing | LUT import, color grading curves, grain overlays | Planned |
-| Stronger multimodal judges | Video-native validation (not frame-sampled) | Planned |
-| Deeper hybrid workflows | AI-augmented editing of user-uploaded footage | Planned |
-| Real-time preview | Live preview of timeline with finishing applied | Planned |
+| **Export** | `export_presets`, `export_versions`, `export_jobs`, `delivery_manifests` |
+| **Credits** | `credit_wallets`, `credit_ledger` |
+| **Users** | `profiles`, `user_roles` |
+| **Audit** | `audit_logs`, `diagnostic_events`, `incidents` |
 
 ---
 
 ## Tech Stack
 
 | Layer | Technology |
-|---|---|
-| Frontend | React 18, TypeScript 5, Vite 5, Tailwind CSS 3, shadcn/ui |
-| Backend | Lovable Cloud (Supabase: PostgreSQL, Auth, Edge Functions, Storage, Realtime) |
-| AI Gateway | Lovable AI (Gemini, GPT models) for extraction, analysis, validation |
-| Generation | Google Veo, Runway Gen-4.5 / Act-Two / Aleph, Luma Photon / Ray / Reframe, OpenAI GPT Image |
-| Payments | Stripe (subscriptions, credit top-ups) |
-| Tests | Vitest |
+|-------|-----------|
+| **Frontend** | React 18 + Vite 5 + TypeScript 5 |
+| **Styling** | Tailwind CSS v3 + shadcn/ui |
+| **State** | TanStack Query v5 |
+| **Routing** | React Router v6 |
+| **Animation** | Framer Motion |
+| **Backend** | Lovable Cloud (Auth, Postgres, Storage, Edge Functions) |
+| **AI Gateway** | Lovable AI Gateway (multi-model routing) |
+| **Video Providers** | Runway, Google Veo, Luma, OpenAI |
+| **Payments** | Stripe |
+| **Email** | Resend + PGMQ |
+| **Assembly** | FFmpeg (WASM) |
 
 ---
 
-## Quick Start
+## Development
 
 ```bash
-# 1. Clone and install
-git clone <repo-url>
-cd saga-studio
 npm install
-
-# 2. Configuration
-cp .env.example .env
-# Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY
-
-# 3. Development
-npm run dev        # Dev server on port 8080
-npm run test       # Run tests
-npm run typecheck  # TypeScript check
-npm run ci         # Full CI suite
+npm run dev
+npm test
+npm run build
 ```
-
----
-
-## Documentation Index
-
-| Document | Path | Description |
-|---|---|---|
-| Architecture | [docs/architecture.md](docs/architecture.md) | System architecture details |
-| Agents | [docs/agents.md](docs/agents.md) | AI agent registry and configuration |
-| Autopilot | [docs/autopilot.md](docs/autopilot.md) | Automated pipeline orchestration |
-| Continuity | [docs/continuity.md](docs/continuity.md) | Cross-episode continuity memory system |
-| Delivery | [docs/delivery.md](docs/delivery.md) | Delivery pipeline and QC |
-| Security | [docs/security.md](docs/security.md) | Security policies and practices |
-| Runbooks | [docs/runbooks.md](docs/runbooks.md) | Operational procedures |
-| Document Ingestion | [docs/document-ingestion.md](docs/document-ingestion.md) | Import pipeline and autofill |
-| Autofill | [docs/autofill.md](docs/autofill.md) | Intelligent field pre-population |
-| Provider Matrix | [docs/PROVIDER_MATRIX.md](docs/PROVIDER_MATRIX.md) | Provider capabilities and routing |
-| Export Matrix | [docs/EXPORT_MATRIX.md](docs/EXPORT_MATRIX.md) | Export formats and presets |
-| Pipeline States | [docs/PIPELINE_STATES.md](docs/PIPELINE_STATES.md) | State machine definitions |
-| Quality Standards | [docs/QUALITY_STANDARDS.md](docs/QUALITY_STANDARDS.md) | Validation thresholds and rules |
-| Music Video Mode | [docs/MUSIC_VIDEO_MODE.md](docs/MUSIC_VIDEO_MODE.md) | Music video workflow specifics |

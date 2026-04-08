@@ -532,3 +532,51 @@ export function useDetectMissing() {
     },
   });
 }
+
+// ——— Apply corpus: propagate extracted entities to episodes, characters, bibles ———
+
+export function useApplyCorpus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ projectId }: { projectId: string }) => {
+      const { data, error } = await supabase.functions.invoke("import-document", {
+        body: { action: "apply_corpus", project_id: projectId },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["episodes"] });
+      queryClient.invalidateQueries({ queryKey: ["character_profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["bibles"] });
+      queryClient.invalidateQueries({ queryKey: ["scenes"] });
+      queryClient.invalidateQueries({ queryKey: ["continuity_memory_nodes"] });
+      queryClient.invalidateQueries({ queryKey: ["source_documents"] });
+    },
+  });
+}
+
+// ——— Project Brain Summary ———
+
+export function useProjectBrainSummary(projectId: string | undefined) {
+  return useQuery({
+    queryKey: ["project_brain_summary", projectId],
+    enabled: !!projectId,
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("import-document", {
+        body: { action: "project_brain_summary", project_id: projectId },
+      });
+      if (error) throw error;
+      return data as {
+        project: { id: string; title: string; type: string; status: string; governance_state: string };
+        documents: { total: number; by_role: Record<string, number> };
+        entities: Record<string, number>;
+        canonical_fields: number;
+        unresolved_conflicts: number;
+        series: Record<string, unknown> | null;
+        coverage_score_pct: number;
+      };
+    },
+    staleTime: 30_000,
+  });
+}
