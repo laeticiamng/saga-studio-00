@@ -147,28 +147,36 @@ serve(async (req) => {
     const overallScore = Math.max(0, 1 - (blockingIssues.length * 0.3) - (warnings.length * 0.1));
 
     // Create or update delivery manifest
-    const resolvedSeriesId = series_id || (await supabase
-      .from("episodes")
-      .select("season:seasons!episodes_season_id_fkey(series_id)")
-      .eq("id", episode_id)
-      .single())?.data?.season?.series_id;
+    let resolvedSeriesId = series_id;
+    if (!resolvedSeriesId) {
+      const { data: epData } = await supabase
+        .from("episodes")
+        .select("season:seasons!episodes_season_id_fkey(series_id)")
+        .eq("id", episode_id)
+        .single();
+      resolvedSeriesId = (epData?.season as any)?.series_id;
+    }
 
     if (resolvedSeriesId) {
       const manifestStatus = overallVerdict === "pass" ? "qc_passed" : overallVerdict === "conditional_pass" ? "qc_passed" : "qc_failed";
 
-      const { data: manifest } = await supabase
-        .from("delivery_manifests")
-        .upsert({
-          series_id: resolvedSeriesId,
-          episode_id,
-          manifest_type: "episode",
-          status: manifestStatus,
-          metadata: { qc_verdict: overallVerdict, checks, blockingIssues, warnings },
-        }, { onConflict: "series_id,episode_id" })
-        .select()
-        .single()
-        .then(r => r)
-        .catch(() => ({ data: null }));
+      let manifest: any = null;
+      try {
+        const { data } = await supabase
+          .from("delivery_manifests")
+          .upsert({
+            series_id: resolvedSeriesId,
+            episode_id,
+            manifest_type: "episode",
+            status: manifestStatus,
+            metadata: { qc_verdict: overallVerdict, checks, blockingIssues, warnings },
+          }, { onConflict: "series_id,episode_id" })
+          .select()
+          .single();
+        manifest = data;
+      } catch (_) {
+        manifest = null;
+      }
 
       // Create QC report
       await supabase.from("qc_reports").insert({
