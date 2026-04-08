@@ -4010,8 +4010,10 @@ export type Database = {
           file_size_bytes: number | null
           file_type: string
           id: string
+          latest_successful_run: Json | null
           metadata: Json | null
           parent_document_id: string | null
+          parser_version: string | null
           project_id: string | null
           role_confidence: number | null
           series_id: string | null
@@ -4031,8 +4033,10 @@ export type Database = {
           file_size_bytes?: number | null
           file_type?: string
           id?: string
+          latest_successful_run?: Json | null
           metadata?: Json | null
           parent_document_id?: string | null
+          parser_version?: string | null
           project_id?: string | null
           role_confidence?: number | null
           series_id?: string | null
@@ -4052,8 +4056,10 @@ export type Database = {
           file_size_bytes?: number | null
           file_type?: string
           id?: string
+          latest_successful_run?: Json | null
           metadata?: Json | null
           parent_document_id?: string | null
+          parser_version?: string | null
           project_id?: string | null
           role_confidence?: number | null
           series_id?: string | null

@@ -2,7 +2,7 @@
 
 ## Vue d'ensemble
 
-Saga Studio est une plateforme SaaS de production de séries premium assistée par IA. L'architecture suit un pattern serverless avec Lovable Cloud comme backend.
+Saga Studio est une plateforme SaaS de production audiovisuelle multi-format (séries, films, clips musicaux, vidéo hybride) assistée par IA. L'architecture suit un pattern serverless avec Lovable Cloud comme backend.
 
 ## Couches
 
