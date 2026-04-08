@@ -2494,6 +2494,34 @@ async function reprocessLegacyDocuments(
 // DEBUG DOCUMENT — isolated diagnostic tool
 // ═══════════════════════════════════════════════════
 
+async function checkDocumentStatus(
+  supabase: any,
+  documentId: string
+): Promise<Response> {
+  const headers = { ...corsHeaders, "Content-Type": "application/json" };
+  const { data: doc, error } = await supabase
+    .from("source_documents")
+    .select("id, status, document_role, role_confidence, parser_version, metadata")
+    .eq("id", documentId)
+    .single();
+  if (error || !doc) {
+    return new Response(JSON.stringify({ error: "Document not found" }), { status: 404, headers });
+  }
+  const isDone = ["ready_for_review", "parsing_failed"].includes(doc.status);
+  const entitiesCount = isDone
+    ? (await supabase.from("source_document_entities").select("id", { count: "exact", head: true }).eq("document_id", documentId)).count || 0
+    : 0;
+  return new Response(JSON.stringify({
+    document_id: doc.id,
+    status: doc.status,
+    done: isDone,
+    document_role: doc.document_role,
+    role_confidence: doc.role_confidence,
+    entities_found: entitiesCount,
+    parser_version: doc.parser_version,
+  }), { headers });
+}
+
 async function debugDocument(
   supabase: any,
   documentId: string
