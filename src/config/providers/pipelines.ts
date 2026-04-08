@@ -321,7 +321,6 @@ export function resolveSteps(
   const route = getPipelineRoute(mode);
   return route.steps.filter((step) => {
     if (!step.condition) return true;
-    // Simple condition evaluator
     const cond = step.condition;
     if (cond === "photos_count >= 2") return (profile.photos_count ?? 0) >= 2;
     if (cond === "photos_count < 2") return (profile.photos_count ?? 0) < 2;
@@ -330,6 +329,7 @@ export function resolveSteps(
     if (cond === "has_failed_shots") return !!profile.has_failed_shots;
     if (cond === "has_driving_performance") return !!profile.has_driving_performance;
     if (cond === "has_existing_video") return !!profile.has_existing_video;
+    if (cond === "needs_hero_enhancement") return !!profile.needs_hero_enhancement;
     return true;
   });
 }
