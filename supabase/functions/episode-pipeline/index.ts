@@ -195,6 +195,54 @@ serve(async (req) => {
         continue;
       }
 
+      // ── Inject episode-specific corpus data from extracted entities ──
+      const episodeCorpus: Record<string, unknown> = {};
+      const projectId = episode.season?.series?.project_id;
+      if (projectId) {
+        const { data: projDocs } = await supabase
+          .from("source_documents").select("id").eq("project_id", projectId).neq("status", "parsing_failed");
+        const projDocIds = (projDocs || []).map((d: any) => d.id);
+        if (projDocIds.length) {
+          // Episode-specific entities (matching this episode number)
+          const { data: epEntities } = await supabase
+            .from("source_document_entities")
+            .select("entity_type, entity_key, entity_value")
+            .in("document_id", projDocIds)
+            .eq("entity_type", "episode")
+            .in("status", ["confirmed", "proposed"])
+            .gte("extraction_confidence", 0.4)
+            .limit(50);
+          const matchingEpData = (epEntities || []).filter((e: any) => {
+            const val = typeof e.entity_value === "string" ? JSON.parse(e.entity_value) : e.entity_value;
+            const num = Number(val.number || val.episode_number || e.entity_key?.match(/\d+/)?.[0]);
+            return num === episode.number;
+          });
+          if (matchingEpData.length) {
+            episodeCorpus.episode_data = matchingEpData.map((e: any) => ({
+              key: e.entity_key,
+              value: typeof e.entity_value === "string" ? JSON.parse(e.entity_value) : e.entity_value,
+            }));
+          }
+
+          // Scene entities for this episode
+          const { data: sceneEnts } = await supabase
+            .from("source_document_entities")
+            .select("entity_key, entity_value")
+            .in("document_id", projDocIds)
+            .eq("entity_type", "scene")
+            .in("status", ["confirmed", "proposed"])
+            .gte("extraction_confidence", 0.4)
+            .limit(100);
+          const epScenes = (sceneEnts || []).filter((e: any) => {
+            const val = typeof e.entity_value === "string" ? JSON.parse(e.entity_value) : e.entity_value;
+            return Number(val.episode_number || val.episode) === episode.number;
+          });
+          if (epScenes.length) {
+            episodeCorpus.extracted_scenes = epScenes.map((e: any) => typeof e.entity_value === "string" ? JSON.parse(e.entity_value) : e.entity_value);
+          }
+        }
+      }
+
       const { data: run, error: runErr } = await supabase
         .from("agent_runs")
         .insert({
@@ -207,6 +255,9 @@ serve(async (req) => {
           correlation_id: correlationId,
           input: {
             episode_id: episode.id,
+            episode_number: episode.number,
+            episode_title: episode.title,
+            episode_synopsis: episode.synopsis || null,
             trigger_status: currentStatus,
             workflow_run_id: workflowRun.id,
             workflow_step_id: wfStep.id,
@@ -214,6 +265,7 @@ serve(async (req) => {
             estimated_scenes: estimatedScenes,
             estimated_shots_per_scene: estimatedShotsPerScene,
             total_estimated_shots: estimatedScenes * estimatedShotsPerScene,
+            ...episodeCorpus,
           },
         })
         .select()

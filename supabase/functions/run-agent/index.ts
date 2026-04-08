@@ -698,6 +698,34 @@ async function maybeAdvanceEpisode(
   // All checks passed: advance episode
   await supabase.from("episodes").update({ status: nextStatus }).eq("id", episodeId);
 
+  // ── Governance state reconciliation ──
+  // Sync project governance_state with pipeline progress
+  const { data: epForGov } = await supabase
+    .from("episodes")
+    .select("season:seasons!episodes_season_id_fkey(series:series!seasons_series_id_fkey(project_id))")
+    .eq("id", episodeId)
+    .single();
+  const govProjectId = (epForGov as any)?.season?.series?.project_id;
+  if (govProjectId) {
+    const PIPELINE_TO_GOVERNANCE: Record<string, string> = {
+      story_development: "planning",
+      psychology_review: "planning",
+      legal_ethics_review: "planning",
+      visual_bible: "setup_in_progress",
+      continuity_check: "awaiting_scene_review",
+      shot_generation: "generating",
+      shot_review: "awaiting_clip_review",
+      assembly: "assembling",
+      edit_review: "awaiting_rough_cut_review",
+      delivery: "exporting",
+      completed: "delivered",
+    };
+    const govState = PIPELINE_TO_GOVERNANCE[nextStatus];
+    if (govState) {
+      await supabase.from("projects").update({ governance_state: govState }).eq("id", govProjectId);
+    }
+  }
+
   // Update workflow step as completed
   if (episode.workflow_run_id) {
     await supabase.from("workflow_steps")

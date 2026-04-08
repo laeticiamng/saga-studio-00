@@ -73,6 +73,8 @@ serve(async (req) => {
     if (action === "reprocess_legacy") return await reprocessLegacyDocuments(supabase, body, user.id);
     if (action === "wizard_extract") return await wizardExtract(supabase, body, user.id);
     if (action === "debug_document") return await debugDocument(supabase, body.document_id);
+    if (action === "apply_corpus") return await applyCorpus(supabase, body.project_id, user.id);
+    if (action === "project_brain_summary") return await projectBrainSummary(supabase, body.project_id, user.id);
 
     // Register + auto-extract a new document
     const { project_id, series_id, file_name, file_type, file_size_bytes, storage_path } = body;
@@ -2503,4 +2505,280 @@ function getTargetMappings(
     case "performance_cue": return [{ table: "bibles", field: "content.performance_cues", value: entityValue }];
     default: return [];
   }
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// apply_corpus — Propagate all confirmed/proposed entities to target tables
+// ──────────────────────────────────────────────────────────────────────
+
+async function applyCorpus(
+  supabase: ReturnType<typeof createClient>,
+  projectId: string,
+  userId: string
+): Promise<Response> {
+  const headers = { ...corsHeaders, "Content-Type": "application/json" };
+  if (!projectId) return new Response(JSON.stringify({ error: "project_id required" }), { status: 400, headers });
+
+  // Verify ownership
+  const { data: project } = await supabase.from("projects").select("id, user_id, type").eq("id", projectId).single();
+  if (!project || project.user_id !== userId) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 403, headers });
+  }
+
+  // Get series_id if project is a series
+  let seriesId: string | null = null;
+  if (project.type === "series") {
+    const { data: ser } = await supabase.from("series").select("id").eq("project_id", projectId).single();
+    seriesId = ser?.id || null;
+  }
+
+  // Load all project documents
+  const { data: docs } = await supabase
+    .from("source_documents").select("id").eq("project_id", projectId).neq("status", "parsing_failed");
+  const docIds = (docs || []).map((d: any) => d.id);
+  if (!docIds.length) return new Response(JSON.stringify({ applied: 0, message: "No documents found" }), { headers });
+
+  // Load all confirmed/proposed entities
+  const { data: entities } = await supabase
+    .from("source_document_entities")
+    .select("entity_type, entity_key, entity_value, extraction_confidence, document_id")
+    .in("document_id", docIds)
+    .in("status", ["confirmed", "proposed"])
+    .gte("extraction_confidence", 0.4)
+    .order("extraction_confidence", { ascending: false })
+    .limit(500);
+
+  if (!entities?.length) return new Response(JSON.stringify({ applied: 0, message: "No entities to apply" }), { headers });
+
+  const stats = { episodes_updated: 0, characters_upserted: 0, scenes_inserted: 0, bibles_updated: 0, continuity_nodes: 0 };
+
+  // ── Episodes: update matching episodes by number ──
+  if (seriesId) {
+    const { data: seasons } = await supabase.from("seasons").select("id").eq("series_id", seriesId);
+    const seasonIds = (seasons || []).map((s: any) => s.id);
+    if (seasonIds.length) {
+      const { data: existingEpisodes } = await supabase.from("episodes").select("id, number, season_id").in("season_id", seasonIds);
+      const epMap = new Map<number, string>();
+      for (const ep of existingEpisodes || []) epMap.set(ep.number, ep.id);
+
+      for (const ent of entities as any[]) {
+        if (ent.entity_type !== "episode") continue;
+        const val = typeof ent.entity_value === "string" ? JSON.parse(ent.entity_value) : ent.entity_value;
+        const epNum = Number(val.number || val.episode_number || ent.entity_key?.match(/\d+/)?.[0]);
+        const epId = epMap.get(epNum);
+        if (!epId) continue;
+
+        const update: Record<string, unknown> = {};
+        if (val.title) update.title = val.title;
+        if (val.synopsis) update.synopsis = val.synopsis;
+        if (val.duration) update.duration_target_min = Number(val.duration);
+        if (Object.keys(update).length) {
+          await supabase.from("episodes").update(update).eq("id", epId);
+          stats.episodes_updated++;
+        }
+      }
+    }
+
+    // ── Characters: upsert into character_profiles ──
+    const { data: existingChars } = await supabase.from("character_profiles").select("id, name").eq("series_id", seriesId);
+    const charMap = new Map<string, string>();
+    for (const c of existingChars || []) charMap.set((c.name || "").toLowerCase(), c.id);
+
+    for (const ent of entities as any[]) {
+      if (ent.entity_type !== "character") continue;
+      const val = typeof ent.entity_value === "string" ? JSON.parse(ent.entity_value) : ent.entity_value;
+      const name = (val.name || ent.entity_key || "").trim();
+      if (!name) continue;
+
+      const existingId = charMap.get(name.toLowerCase());
+      const fields: Record<string, unknown> = {};
+      if (val.visual_description) fields.visual_description = val.visual_description;
+      if (val.personality) fields.personality = val.personality;
+      if (val.backstory) fields.backstory = val.backstory;
+      if (val.arc) fields.arc = val.arc;
+      if (val.wardrobe) fields.wardrobe = val.wardrobe;
+      if (val.voice_notes) fields.voice_notes = val.voice_notes;
+      if (val.relationships) fields.relationships = val.relationships;
+
+      if (existingId) {
+        if (Object.keys(fields).length) await supabase.from("character_profiles").update(fields).eq("id", existingId);
+      } else {
+        await supabase.from("character_profiles").insert({ series_id: seriesId, name, ...fields });
+        charMap.set(name.toLowerCase(), "new");
+      }
+      stats.characters_upserted++;
+    }
+
+    // ── Scenes: insert into scenes table ──
+    for (const ent of entities as any[]) {
+      if (ent.entity_type !== "scene") continue;
+      const val = typeof ent.entity_value === "string" ? JSON.parse(ent.entity_value) : ent.entity_value;
+      const epNum = Number(val.episode_number || val.episode);
+      const { data: seasons2 } = await supabase.from("seasons").select("id").eq("series_id", seriesId).limit(1);
+      if (!seasons2?.length) continue;
+      const { data: ep } = await supabase.from("episodes").select("id").eq("season_id", seasons2[0].id).eq("number", epNum).single();
+      if (!ep) continue;
+
+      await supabase.from("scenes").insert({
+        episode_id: ep.id,
+        idx: Number(val.scene_number || val.idx || 1),
+        title: val.title || val.heading || ent.entity_key || "Scene",
+        description: val.description || "",
+        location: val.location || "",
+        time_of_day: val.time_of_day || "",
+        mood: val.mood || "",
+        characters: val.characters || [],
+        duration_target_sec: val.duration ? Number(val.duration) : null,
+      });
+      stats.scenes_inserted++;
+    }
+
+    // ── Continuity rules → continuity_memory_nodes ──
+    for (const ent of entities as any[]) {
+      if (ent.entity_type !== "continuity_rule") continue;
+      const val = typeof ent.entity_value === "string" ? JSON.parse(ent.entity_value) : ent.entity_value;
+      await supabase.from("continuity_memory_nodes").insert({
+        series_id: seriesId,
+        node_type: "rule",
+        label: val.rule || val.description || ent.entity_key || "Continuity rule",
+        properties: val,
+        is_active: true,
+      });
+      stats.continuity_nodes++;
+    }
+  }
+
+  // ── World data → bibles ──
+  const worldTypes = ["location", "visual_reference", "prop", "act_structure", "season_arc", "mood"];
+  const worldContent: Record<string, unknown[]> = {};
+  let hasWorld = false;
+  for (const ent of entities as any[]) {
+    if (!worldTypes.includes(ent.entity_type)) continue;
+    hasWorld = true;
+    const val = typeof ent.entity_value === "string" ? JSON.parse(ent.entity_value) : ent.entity_value;
+    const bucket = ent.entity_type === "visual_reference" || ent.entity_type === "mood" ? "visual_references" : ent.entity_type + "s";
+    if (!worldContent[bucket]) worldContent[bucket] = [];
+    worldContent[bucket].push({ key: ent.entity_key, ...val });
+  }
+
+  if (hasWorld && seriesId) {
+    // Check if a world bible already exists
+    const { data: existingBible } = await supabase.from("bibles").select("id, content").eq("series_id", seriesId).eq("type", "world").single();
+    if (existingBible) {
+      const merged = { ...(existingBible.content as Record<string, unknown>), ...worldContent };
+      await supabase.from("bibles").update({ content: merged, version: (existingBible as any).version + 1 }).eq("id", existingBible.id);
+    } else {
+      await supabase.from("bibles").insert({ series_id: seriesId, name: "Bible Monde (corpus)", type: "world", content: worldContent, version: 1 });
+    }
+    stats.bibles_updated++;
+  }
+
+  // Audit log
+  await supabase.from("audit_logs").insert({
+    action: "corpus_applied",
+    entity_type: "project",
+    entity_id: projectId,
+    user_id: userId,
+    details: stats,
+  }).catch(() => {});
+
+  return new Response(JSON.stringify({ applied: true, stats }), { headers });
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// project_brain_summary — Complete knowledge coverage report
+// ──────────────────────────────────────────────────────────────────────
+
+async function projectBrainSummary(
+  supabase: ReturnType<typeof createClient>,
+  projectId: string,
+  userId: string
+): Promise<Response> {
+  const headers = { ...corsHeaders, "Content-Type": "application/json" };
+  if (!projectId) return new Response(JSON.stringify({ error: "project_id required" }), { status: 400, headers });
+
+  const { data: project } = await supabase.from("projects").select("id, user_id, title, type, status, governance_state, quality_tier").eq("id", projectId).single();
+  if (!project || project.user_id !== userId) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 403, headers });
+  }
+
+  // Documents
+  const { data: docs, count: docCount } = await supabase.from("source_documents").select("id, status, document_role, file_name", { count: "exact" }).eq("project_id", projectId);
+  const docsByRole: Record<string, number> = {};
+  for (const d of docs || []) docsByRole[d.document_role || "unknown"] = (docsByRole[d.document_role || "unknown"] || 0) + 1;
+
+  // Entities
+  const docIds = (docs || []).map((d: any) => d.id);
+  let entityStats: Record<string, number> = {};
+  if (docIds.length) {
+    const { data: ents } = await supabase.from("source_document_entities").select("entity_type").in("document_id", docIds).in("status", ["confirmed", "proposed"]);
+    for (const e of ents || []) entityStats[e.entity_type] = (entityStats[e.entity_type] || 0) + 1;
+  }
+
+  // Canonical fields
+  const { count: canonCount } = await supabase.from("canonical_fields").select("id", { count: "exact", head: true }).eq("project_id", projectId);
+
+  // Series data
+  let seriesData: Record<string, unknown> | null = null;
+  if (project.type === "series") {
+    const { data: ser } = await supabase.from("series").select("id, logline, genre, tone, total_seasons, episode_duration_min, episodes_per_season").eq("project_id", projectId).single();
+    if (ser) {
+      const { data: seasons } = await supabase.from("seasons").select("id").eq("series_id", ser.id);
+      const seasonIds = (seasons || []).map((s: any) => s.id);
+
+      // Episodes
+      let episodesFilled = 0;
+      let episodesTotal = 0;
+      if (seasonIds.length) {
+        const { data: episodes } = await supabase.from("episodes").select("id, title, synopsis, status").in("season_id", seasonIds);
+        episodesTotal = episodes?.length || 0;
+        episodesFilled = (episodes || []).filter((e: any) => e.synopsis && e.synopsis.length > 5).length;
+      }
+
+      // Characters
+      const { count: charCount } = await supabase.from("character_profiles").select("id", { count: "exact", head: true }).eq("series_id", ser.id);
+
+      // Bibles
+      const { data: bibles } = await supabase.from("bibles").select("type, name").eq("series_id", ser.id);
+
+      // Continuity nodes
+      const { count: contNodes } = await supabase.from("continuity_memory_nodes").select("id", { count: "exact", head: true }).eq("series_id", ser.id);
+
+      seriesData = {
+        ...ser,
+        episodes_total: episodesTotal,
+        episodes_with_synopsis: episodesFilled,
+        episode_coverage_pct: episodesTotal > 0 ? Math.round((episodesFilled / episodesTotal) * 100) : 0,
+        character_count: charCount || 0,
+        bible_count: bibles?.length || 0,
+        bibles: bibles?.map((b: any) => ({ type: b.type, name: b.name })),
+        continuity_nodes: contNodes || 0,
+      };
+    }
+  }
+
+  // Conflicts
+  const { count: conflictCount } = await supabase.from("canonical_conflicts").select("id", { count: "exact", head: true }).eq("project_id", projectId).is("resolution", null);
+
+  // Compute overall coverage score
+  const checks = [
+    docCount && docCount > 0,
+    Object.keys(entityStats).length >= 3,
+    (canonCount || 0) > 0,
+    seriesData && (seriesData as any).episodes_with_synopsis > 0,
+    seriesData && (seriesData as any).character_count > 0,
+    seriesData && (seriesData as any).bible_count > 0,
+    (conflictCount || 0) === 0,
+  ];
+  const coveragePct = Math.round((checks.filter(Boolean).length / checks.length) * 100);
+
+  return new Response(JSON.stringify({
+    project: { id: project.id, title: project.title, type: project.type, status: project.status, governance_state: project.governance_state },
+    documents: { total: docCount || 0, by_role: docsByRole },
+    entities: entityStats,
+    canonical_fields: canonCount || 0,
+    unresolved_conflicts: conflictCount || 0,
+    series: seriesData,
+    coverage_score_pct: coveragePct,
+  }), { headers });
 }
