@@ -937,6 +937,65 @@ Types additionnels : lyric_section, music_section, performance_cue, beat_map, ic
 }
 
 // ═══════════════════════════════════════════════════
+// AI BATCH HELPER — parallel-safe
+// ═══════════════════════════════════════════════════
+
+async function callAIBatch(
+  apiKey: string,
+  fileName: string,
+  text: string,
+  batchIdx: number,
+  totalBatches: number,
+  projectType: string,
+  isContinuation: boolean,
+): Promise<{ entities: Array<Record<string, unknown>>; role?: string; roleConfidence?: number } | null> {
+  try {
+    const batchPrompt = isContinuation
+      ? `Ceci est la PARTIE ${batchIdx + 1}/${totalBatches} du même document "${fileName}".
+Continue l'extraction d'entités. N'inclus PAS les entités déjà extraites dans les parties précédentes.
+Ne re-classifie PAS le document (garde le même rôle).
+Extrais uniquement les NOUVELLES entités de cette section.`
+      : "";
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: getWorkflowPrompt(projectType) },
+          ...(batchPrompt ? [{ role: "system", content: batchPrompt }] : []),
+          { role: "user", content: text },
+        ],
+        temperature: 0.15,
+        response_format: { type: "json_object" },
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const rawContent = data.choices?.[0]?.message?.content || "{}";
+      const parsed = JSON.parse(rawContent);
+      return {
+        entities: parsed.entities || [],
+        role: parsed.document_role,
+        roleConfidence: Number(parsed.role_confidence) || 0,
+      };
+    } else {
+      const errBody = await response.text();
+      console.error(`AI extraction batch ${batchIdx + 1} error:`, response.status, errBody);
+      return null;
+    }
+  } catch (e: any) {
+    console.error(`AI extraction batch ${batchIdx + 1} error:`, e?.message || e);
+    return null;
+  }
+}
+
+// ═══════════════════════════════════════════════════
 // PROCESS DOCUMENT (core pipeline)
 // ═══════════════════════════════════════════════════
 
