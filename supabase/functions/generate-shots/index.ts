@@ -506,9 +506,20 @@ class Sora2Provider implements VideoProvider {
 const PROVIDER_PRIORITY = [
   "runway", "google_veo_31", "google_veo_31_lite", "luma",
   "runway_act_two", "runway_aleph",
-  "luma_photon", "google_nano_banana_pro", "google_nano_banana_2",
+  "luma_photon", "luma_photon_flash", "luma_reframe", "luma_modify",
+  "google_nano_banana_pro", "google_nano_banana_2",
   "openai_image",
 ] as const;
+
+// Credit cost per shot by provider
+const PROVIDER_CREDIT_COST: Record<string, number> = {
+  runway: 5, runway_act_two: 5, runway_aleph: 4,
+  google_veo_31: 4, google_veo_31_lite: 3,
+  luma: 3, luma_reframe: 2, luma_modify: 3,
+  luma_photon: 2, luma_photon_flash: 1,
+  google_nano_banana_pro: 1, google_nano_banana_2: 1,
+  openai_image: 2, sora2: 4, mock: 0,
+};
 
 function normalizeProviderName(provider?: string | null): string | undefined {
   if (!provider) return undefined;
@@ -548,6 +559,9 @@ function buildProviderChain(preferredProvider?: string): VideoProvider[] {
     runway_aleph: (k) => new RunwayAlephProvider(k),
     luma: (k) => new LumaProvider(k),
     luma_photon: (k) => new LumaPhotonProvider(k),
+    luma_photon_flash: (k) => new LumaPhotonFlashProvider(k),
+    luma_reframe: (k) => new LumaReframeProvider(k),
+    luma_modify: (k) => new LumaModifyProvider(k),
     google_veo_31: (k) => new Veo31Provider(k),
     google_veo_31_lite: (k) => new Veo31LiteProvider(k),
     google_nano_banana_2: (k) => new NanoBanana2Provider(k),
