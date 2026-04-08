@@ -75,6 +75,7 @@ serve(async (req) => {
     if (action === "debug_document") return await debugDocument(supabase, body.document_id);
     if (action === "apply_corpus") return await applyCorpus(supabase, body.project_id, user.id);
     if (action === "project_brain_summary") return await projectBrainSummary(supabase, body.project_id, user.id);
+    if (action === "check_status" && body.document_id) return await checkDocumentStatus(supabase, body.document_id);
 
     // Register + auto-extract a new document
     const { project_id, series_id, file_name, file_type, file_size_bytes, storage_path } = body;
@@ -102,6 +103,32 @@ serve(async (req) => {
       .select()
       .single();
     if (docErr) throw docErr;
+
+    // For large text-based files (>100KB), return immediately and process async
+    const isLargeFile = !isImage && (file_size_bytes || 0) > 100000;
+    if (isLargeFile) {
+      // Fire-and-forget: call processDocument without awaiting via self-invocation
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      fetch(`${supabaseUrl}/functions/v1/import-document`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authHeader.replace("Bearer ", "")}`,
+          apikey: serviceKey,
+        },
+        body: JSON.stringify({ action: "extract", document_id: doc.id }),
+      }).catch(e => console.error("Background extract fire-and-forget error:", e));
+
+      return new Response(JSON.stringify({
+        document_id: doc.id,
+        status: "processing_async",
+        async: true,
+        message: "Document volumineux — traitement en cours en arrière-plan",
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const extractResult = await processDocument(supabase, doc.id, user.id);
     const extractData = await extractResult.json();
