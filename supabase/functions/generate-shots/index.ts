@@ -747,7 +747,9 @@ serve(async (req) => {
 
   try {
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const { project_id, batch_size = 10 } = await req.json();
+    const { project_id, batch_size: requestedBatch = 10, action } = await req.json();
+    const MAX_BATCH = 5; // Deno edge function timeout protection
+    const batch_size = Math.min(requestedBatch, MAX_BATCH);
     if (!project_id) throw new Error("project_id required");
 
     const { data: project } = await supabase.from("projects").select("*").eq("id", project_id).single();
@@ -847,7 +849,8 @@ serve(async (req) => {
 
     const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: project.user_id, _role: "admin" });
 
-    const totalEstimatedCredits = pendingShots.length * 2;
+    const avgCreditPerShot = 3; // conservative estimate
+    const totalEstimatedCredits = pendingShots.length * avgCreditPerShot;
     if (!isAdmin) {
       const { data: wallet } = await supabase.from("credit_wallets").select("balance").eq("id", project.user_id).single();
       if (!wallet || wallet.balance < totalEstimatedCredits) {
@@ -895,8 +898,9 @@ serve(async (req) => {
               }
             }
 
-            await supabase.from("shots").update({ status: "completed", output_url: finalUrl, cost_credits: 2, error_message: null }).eq("id", shot.id);
-            creditsUsed += 2;
+            const shotCreditCost = PROVIDER_CREDIT_COST[usedProvider.name] || 2;
+            await supabase.from("shots").update({ status: "completed", output_url: finalUrl, cost_credits: shotCreditCost, error_message: null }).eq("id", shot.id);
+            creditsUsed += shotCreditCost;
             results.push({ shot_id: shot.id, provider: usedProvider.name, model: usedProvider.modelId, output_type: usedProvider.outputType, status: "completed" });
             continue;
           }
