@@ -584,6 +584,19 @@ function buildStyleConsistentPrompt(
   else if (position > 0.83 && position < 0.95) parts.push("[NARRATIVE] Climax");
   else if (position >= 0.95) parts.push("[NARRATIVE] Final image");
 
+  // Inject corpus production directives if available
+  if (styleBible?.corpus_production_directives) {
+    parts.push(`[CORPUS DIRECTIVES] ${styleBible.corpus_production_directives.slice(0, 500)}`);
+  }
+  if (styleBible?.corpus_characters) {
+    const corpusCharDescs = (styleBible.corpus_characters as any[])
+      .map((c: any) => `${c.name}: ${c.visual_description || c.role || JSON.stringify(c)}`)
+      .join("; ");
+    if (corpusCharDescs && !characterBible) {
+      parts.push(`[CORPUS CHARACTERS] ${corpusCharDescs}`);
+    }
+  }
+
   parts.push(`[CONSISTENCY] Style: ${stylePreset}. Maintain visual coherence.`);
   return parts.join(". ") + ".\n\n" + basePrompt;
 }
