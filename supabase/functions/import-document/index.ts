@@ -347,7 +347,7 @@ async function decompressDeflate(compressed: Uint8Array): Promise<{ data: Uint8A
 async function decompressWithStream(format: CompressionFormat | string, data: Uint8Array): Promise<Uint8Array> {
   const ds = new DecompressionStream(format as CompressionFormat);
   const writer = ds.writable.getWriter();
-  const writePromise = writer.write(data).then(() => writer.close());
+  const writePromise = writer.write(data as unknown as BufferSource).then(() => writer.close());
   const reader = ds.readable.getReader();
   const chunks: Uint8Array[] = [];
   while (true) {
