@@ -52,7 +52,7 @@ serve(async (req) => {
     const body = await req.json();
     const { type, title, mode, style_preset, duration_sec, synopsis, audio_url, aspect_ratio, face_urls, ref_photo_urls, quality_tier } = body;
 
-    if (!type || !["clip", "film", "series", "music_video"].includes(type)) throw new Error("Invalid project type");
+    if (!type || !["clip", "film", "series", "music_video", "hybrid_video"].includes(type)) throw new Error("Invalid project type");
     if (title && typeof title === "string" && title.length > 200) throw new Error("Title too long (max 200 chars)");
     if (synopsis && typeof synopsis === "string" && synopsis.length > 10000) throw new Error("Synopsis too long (max 10000 chars)");
 
