@@ -1027,12 +1027,41 @@ async function processDocument(
     timestamp: new Date().toISOString(),
   };
 
+  // Emit diagnostic event: parser result
+  try {
+    await supabase.from("diagnostic_events").insert({
+      project_id: doc.project_id || "00000000-0000-0000-0000-000000000000",
+      scope: "ingestion",
+      scope_id: documentId,
+      event_type: parserSuccess ? "parser_completed" : "parser_failed",
+      severity: parserSuccess ? "info" : "error",
+      title: parserSuccess
+        ? `Parser ${extractionMethod} réussi pour ${doc.file_name}`
+        : `Parser ${extractionMethod} échoué pour ${doc.file_name}`,
+      detail: parserSuccess
+        ? `${textContent.length} caractères extraits via ${extractionMethod} (v${PARSER_VERSION})`
+        : `Erreur: ${extractionDebug.error_message} | Parser: ${extractionMethod} | Version: ${PARSER_VERSION}`,
+      raw_data: {
+        parser_version: PARSER_VERSION,
+        extraction_method: extractionMethod,
+        text_length: textContent.length,
+        file_type: doc.file_type,
+        file_name: doc.file_name,
+        duration_ms: null,
+        fallback_used: false,
+      },
+    });
+  } catch (diagErr) {
+    console.warn("Failed to insert diagnostic event:", diagErr);
+  }
+
   // If extraction failed, mark document and return honest failure — do NOT proceed to AI
   if (!parserSuccess || textContent.length < 20) {
     const currentRun = { ...extractionDebug, completed_at: new Date().toISOString() };
     await supabase.from("source_documents").update({
       status: "parsing_failed",
       extraction_mode: extractionMethod,
+      parser_version: PARSER_VERSION,
       metadata: {
         ...(typeof doc.metadata === "object" && doc.metadata ? doc.metadata : {}),
         extraction_debug: extractionDebug,
