@@ -18,6 +18,7 @@ const SCOPE_LABELS: Record<string, string> = {
   export: "Export",
   clip: "Clip",
   provider: "Provider",
+  ingestion: "Ingestion",
 };
 
 interface DiagnosticsPanelProps {
@@ -27,7 +28,7 @@ interface DiagnosticsPanelProps {
 export function DiagnosticsPanel({ projectId }: DiagnosticsPanelProps) {
   const { data: events, isLoading } = useDiagnosticEvents(projectId);
 
-  const scopes = ["project", "scene", "job", "export", "clip", "provider"] as const;
+  const scopes = ["project", "scene", "job", "export", "clip", "provider", "ingestion"] as const;
 
   if (isLoading) {
     return (
