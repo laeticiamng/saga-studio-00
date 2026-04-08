@@ -387,6 +387,9 @@ Deno.serve(async (req) => {
       provider: a.source_provider,
       model: a.source_model,
       score: validationScores.get(a.id) ?? 70,
+      source_url: a.file_url || a.output_url || null,
+      shot_id: null as string | null,
+      episode_shot_id: null as string | null,
     }));
 
     // Combine: project assets first, then ranked episode shots
@@ -400,6 +403,9 @@ Deno.serve(async (req) => {
         provider: s.provider,
         model: null,
         score: s.score,
+        source_url: s.output_url,
+        shot_id: null as string | null,
+        episode_shot_id: s.id,
       })),
     ];
 
@@ -423,6 +429,8 @@ Deno.serve(async (req) => {
         scene_id: clip.scene_id,
         provider: clip.provider,
         model: clip.model,
+        source_url: clip.source_url,
+        episode_shot_id: clip.episode_shot_id,
         status: "placed",
         locked: false,
       });
