@@ -3,67 +3,111 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Coins, Loader2, ExternalLink, HelpCircle } from "lucide-react";
+import { Check, Coins, Loader2, ExternalLink, HelpCircle, ArrowRight, Sparkles } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { motion } from "framer-motion";
 
+/* ─── Stripe IDs ─── */
 const STRIPE_CONFIG = {
   plans: {
-    pro: { price_id: "price_1T8iuNDFa5Y9NR1IBeXG2743", product_id: "prod_U6wn2kBSJMfs2u" },
-    studio: { price_id: "price_1T8iuODFa5Y9NR1IfZhO5AgW", product_id: "prod_U6woFSbLwxv9a1" },
+    auteur:     { price_id: "price_1TJtJcDFa5Y9NR1IlTybGnC6", product_id: "prod_UIUIkXWSZqelFg" },
+    production: { price_id: "price_1TJtJdDFa5Y9NR1IYfvdo7U8", product_id: "prod_UIUIf9JBZRrVwr" },
+    studio:     { price_id: "price_1TJtJfDFa5Y9NR1IMwMS0gik", product_id: "prod_UIUIp76xgDjTPW" },
   },
   packs: {
-    50: { price_id: "price_1T8iuPDFa5Y9NR1IjHDoP66d" },
-    200: { price_id: "price_1T8iuQDFa5Y9NR1ICQoQPlsv" },
-    500: { price_id: "price_1T8iuQDFa5Y9NR1Idek0xWg0" },
+    500:  { price_id: "price_1TJtJgDFa5Y9NR1I1NtozFfX" },
+    2000: { price_id: "price_1TJtJhDFa5Y9NR1ILZR515f0" },
+    5000: { price_id: "price_1TJtJiDFa5Y9NR1IYw4X2CBt" },
   },
 };
 
-const PLANS = [
+/* ─── Feature categories per plan ─── */
+interface PlanFeature { label: string; category?: string }
+
+const PLANS: {
+  name: string; slug: string; price: string; period: string; credits: number;
+  subtitle: string; features: PlanFeature[]; cta: string; highlight: boolean;
+  stripe_key: keyof typeof STRIPE_CONFIG.plans | null; product_id: string | null;
+}[] = [
   {
-    name: "Gratuit",
-    price: "0 €",
+    name: "Auteur",
+    slug: "auteur",
+    price: "99 €",
     period: "/mois",
-    credits: 10,
-    features: ["10 crédits offerts", "Exports en 720p", "Génération standard", "Support communautaire"],
-    cta: "Plan actuel",
+    credits: 500,
+    subtitle: "Pour les créateurs indépendants et les premiers projets professionnels.",
+    features: [
+      { label: "2 projets actifs", category: "Capacité" },
+      { label: "Ingestion documentaire (DOCX, PDF)", category: "Ingestion" },
+      { label: "Extraction canonique", category: "Ingestion" },
+      { label: "Timeline + Rough Cut", category: "Production" },
+      { label: "Review Gates", category: "Production" },
+      { label: "Export Full HD (1080p)", category: "Export" },
+      { label: "Diagnostics standard", category: "Qualité" },
+      { label: "Support email", category: "Support" },
+    ],
+    cta: "Commencer avec Auteur",
     highlight: false,
-    stripe_key: null as string | null,
-    product_id: null as string | null,
+    stripe_key: "auteur",
+    product_id: STRIPE_CONFIG.plans.auteur.product_id,
   },
   {
-    name: "Pro",
-    price: "19 €",
+    name: "Production",
+    slug: "production",
+    price: "499 €",
     period: "/mois",
-    credits: 100,
-    features: ["100 crédits/mois", "Exports en Full HD (1080p)", "Génération plus rapide", "Tous les styles visuels", "Support par email"],
-    cta: "Passer en Pro",
+    credits: 3000,
+    subtitle: "Pour les équipes de production et les workflows multi-projets exigeants.",
+    features: [
+      { label: "10 projets actifs", category: "Capacité" },
+      { label: "Tout le plan Auteur, plus :", category: "Base" },
+      { label: "Fine Cut + Finishing", category: "Production" },
+      { label: "Export 4K", category: "Export" },
+      { label: "Multi-provider (Runway, Luma, Veo)", category: "Génération" },
+      { label: "Gouvernance projet complète", category: "Qualité" },
+      { label: "Diagnostics avancés", category: "Qualité" },
+      { label: "Priorité de génération", category: "Performance" },
+      { label: "Support prioritaire", category: "Support" },
+    ],
+    cta: "Passer en Production",
     highlight: true,
-    stripe_key: "pro" as const,
-    product_id: STRIPE_CONFIG.plans.pro.product_id,
+    stripe_key: "production",
+    product_id: STRIPE_CONFIG.plans.production.product_id,
   },
   {
     name: "Studio",
-    price: "49 €",
+    slug: "studio",
+    price: "999 €",
     period: "/mois",
-    credits: 500,
-    features: ["500 crédits/mois", "Exports en 4K", "Génération prioritaire", "Guide de style sur mesure", "Personnages cohérents entre les scènes", "Support dédié"],
+    credits: 10000,
+    subtitle: "Pour les studios et les productions à fort volume avec exigences maximales.",
+    features: [
+      { label: "Projets illimités", category: "Capacité" },
+      { label: "Tout le plan Production, plus :", category: "Base" },
+      { label: "File d'attente prioritaire maximale", category: "Performance" },
+      { label: "Export 4K HDR", category: "Export" },
+      { label: "Anti-aberration multi-pass", category: "Qualité" },
+      { label: "QC automatisé complet", category: "Qualité" },
+      { label: "Contrôle de continuité", category: "Qualité" },
+      { label: "Support dédié", category: "Support" },
+      { label: "Onboarding personnalisé", category: "Support" },
+    ],
     cta: "Passer en Studio",
     highlight: false,
-    stripe_key: "studio" as const,
+    stripe_key: "studio",
     product_id: STRIPE_CONFIG.plans.studio.product_id,
   },
 ];
 
 const PACKS = [
-  { credits: 50, price: "5 €", price_id: STRIPE_CONFIG.packs[50].price_id },
-  { credits: 200, price: "15 €", price_id: STRIPE_CONFIG.packs[200].price_id },
-  { credits: 500, price: "30 €", price_id: STRIPE_CONFIG.packs[500].price_id },
+  { credits: 500,  price: "49 €",  price_id: STRIPE_CONFIG.packs[500].price_id },
+  { credits: 2000, price: "149 €", price_id: STRIPE_CONFIG.packs[2000].price_id },
+  { credits: 5000, price: "299 €", price_id: STRIPE_CONFIG.packs[5000].price_id },
 ];
 
 export default function Pricing() {
@@ -130,113 +174,177 @@ export default function Pricing() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container mx-auto px-4 py-16 md:py-20">
-        <div className="page-header">
-          <h1>Des tarifs simples et transparents</h1>
-          <p>
-            Commencez gratuitement avec 10 crédits. Passez à un abonnement ou achetez des packs quand vous en avez besoin.
-          </p>
-        </div>
+      <main className="container mx-auto px-4 py-20 md:py-28">
+        {/* ─── Header ─── */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="max-w-3xl mx-auto text-center mb-6"
+        >
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight">
+            Une plateforme de production,
+            <br />
+            <span className="text-primary">pas un gadget IA.</span>
+          </h1>
+        </motion.div>
+        <motion.p
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.15 }}
+          className="text-center text-muted-foreground max-w-2xl mx-auto mb-16 text-base md:text-lg leading-relaxed"
+        >
+          Ingestion documentaire, extraction canonique, génération multi-provider,
+          timeline, montage, finishing, review gates, QC, export — le tout dans un pipeline
+          de production professionnel contrôlé de bout en bout.
+        </motion.p>
 
-        {/* Credit explainer */}
-        <div className="max-w-2xl mx-auto mb-12 rounded-xl border border-border/50 bg-card/40 p-5 text-center">
-          <p className="text-sm text-muted-foreground flex items-center justify-center gap-2 flex-wrap">
-            <Coins className="h-4 w-4 text-primary" />
-            <strong className="text-foreground">1 crédit ≈ 1 scène générée.</strong>
-            Un clip de 2 min ≈ 15-25 crédits selon le style.
-            <Tooltip>
-              <TooltipTrigger>
-                <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
-              </TooltipTrigger>
-              <TooltipContent className="max-w-[260px]">
-                <p className="text-xs">Le coût exact dépend de la durée de la vidéo et du moteur IA utilisé. Un estimateur de coût est affiché avant chaque génération.</p>
-              </TooltipContent>
-            </Tooltip>
+        {/* ─── Trial banner ─── */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="max-w-xl mx-auto mb-16 rounded-2xl border border-border/40 bg-card/30 backdrop-blur-sm p-5 text-center"
+        >
+          <p className="text-sm text-muted-foreground">
+            <Sparkles className="inline h-4 w-4 text-primary mr-1.5 -mt-0.5" />
+            <strong className="text-foreground">Essai Découverte</strong> — 10 crédits offerts, 1 projet, sans carte bancaire.
+            <Button variant="link" size="sm" className="ml-1 text-primary p-0 h-auto" onClick={() => navigate("/auth?signup")}>
+              Créer un compte <ArrowRight className="h-3 w-3 ml-0.5" />
+            </Button>
           </p>
-        </div>
+        </motion.div>
 
-        <div className="grid gap-5 sm:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 max-w-4xl mx-auto mb-14 sm:mb-20">
-          {PLANS.map((plan) => {
+        {/* ─── Plan cards ─── */}
+        <div className="grid gap-6 lg:gap-8 grid-cols-1 lg:grid-cols-3 max-w-6xl mx-auto mb-20">
+          {PLANS.map((plan, i) => {
             const current = isCurrentPlan(plan);
             return (
-              <Card key={plan.name} className={`border-border/50 bg-card/60 relative ${plan.highlight ? "border-primary ring-2 ring-primary/20" : ""} ${current ? "ring-2 ring-green-500/40" : ""}`}>
+              <motion.div
+                key={plan.slug}
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 * i }}
+                whileHover={{ y: -4 }}
+                className={`relative rounded-2xl border p-8 flex flex-col bg-card/60 backdrop-blur-sm transition-shadow ${
+                  plan.highlight
+                    ? "border-primary ring-2 ring-primary/20 shadow-lg shadow-primary/5"
+                    : "border-border/40"
+                } ${current ? "ring-2 ring-green-500/30" : ""}`}
+              >
                 {plan.highlight && !current && (
-                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground">
+                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-4 py-1 text-xs font-medium">
                     Recommandé
                   </Badge>
                 )}
                 {current && (
-                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-600 text-white">
+                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-1 text-xs font-medium">
                     Votre plan
                   </Badge>
                 )}
-                <CardHeader className="text-center pb-4">
-                  <CardTitle className="text-xl">{plan.name}</CardTitle>
-                  <div className="mt-3">
-                    <span className="text-4xl font-bold">{plan.price}</span>
+
+                {/* Plan header */}
+                <div className="mb-6">
+                  <h3 className="text-2xl font-bold tracking-tight">{plan.name}</h3>
+                  <div className="mt-3 flex items-baseline gap-1">
+                    <span className="text-5xl font-bold tracking-tight">{plan.price}</span>
                     <span className="text-muted-foreground text-sm">{plan.period}</span>
                   </div>
-                  <CardDescription className="flex items-center justify-center gap-1 mt-2">
-                    <Coins className="h-4 w-4 text-primary" /> {plan.credits} crédits{plan.stripe_key ? "/mois" : ""}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2.5 mb-6">
-                    {plan.features.map((f) => (
-                      <li key={f} className="flex items-start gap-2 text-sm">
-                        <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" /> <span>{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  {current && subscription.subscribed ? (
-                    <Button variant="glass" className="w-full" onClick={handleManageSubscription} disabled={portalLoading}>
-                      {portalLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                      Gérer l'abonnement <ExternalLink className="ml-2 h-4 w-4" />
-                    </Button>
-                  ) : plan.stripe_key ? (
-                    <Button
-                      variant={plan.highlight ? "hero" : "glass"}
-                      className="w-full"
-                      onClick={() => handleCheckout(STRIPE_CONFIG.plans[plan.stripe_key!].price_id, "subscription")}
-                      disabled={!!loadingPriceId}
-                    >
-                      {loadingPriceId === STRIPE_CONFIG.plans[plan.stripe_key!].price_id && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                      {plan.cta}
-                    </Button>
-                  ) : current ? (
-                    <Button variant="glass" className="w-full" disabled>
-                      Plan actuel
-                    </Button>
-                  ) : (
-                    <Button variant="glass" className="w-full" onClick={() => navigate("/auth?signup")}>
-                      Commencer gratuitement
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
+                  <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-2">
+                    <Coins className="h-4 w-4 text-primary" />
+                    {plan.credits.toLocaleString("fr-FR")} crédits / mois
+                  </p>
+                </div>
+
+                <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+                  {plan.subtitle}
+                </p>
+
+                {/* Features */}
+                <ul className="space-y-3 mb-8 flex-1">
+                  {plan.features.map((f) => (
+                    <li key={f.label} className="flex items-start gap-2.5 text-sm">
+                      <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                      <span>{f.label}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                {/* CTA */}
+                {current && subscription.subscribed ? (
+                  <Button variant="glass" className="w-full" onClick={handleManageSubscription} disabled={portalLoading}>
+                    {portalLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Gérer l'abonnement <ExternalLink className="ml-2 h-4 w-4" />
+                  </Button>
+                ) : plan.stripe_key ? (
+                  <Button
+                    variant={plan.highlight ? "hero" : "glass"}
+                    className="w-full"
+                    size="lg"
+                    onClick={() => handleCheckout(STRIPE_CONFIG.plans[plan.stripe_key!].price_id, "subscription")}
+                    disabled={!!loadingPriceId}
+                  >
+                    {loadingPriceId === STRIPE_CONFIG.plans[plan.stripe_key!].price_id && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                    {plan.cta}
+                  </Button>
+                ) : null}
+              </motion.div>
             );
           })}
         </div>
 
-        <div className="max-w-2xl mx-auto">
-          <h2 className="text-2xl font-bold text-center mb-3">Besoin de plus de crédits ?</h2>
-          <p className="text-center text-muted-foreground mb-8 text-sm">Achetez des packs ponctuels, sans abonnement. Les crédits n'expirent pas.</p>
-          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
-            {PACKS.map((pack) => (
-              <Card key={pack.credits} className="border-border/50 bg-card/40">
-                <CardContent className="flex items-center justify-between p-4">
-                  <div className="flex items-center gap-2">
-                    <Coins className="h-5 w-5 text-primary" />
-                    <span className="font-medium">{pack.credits} crédits</span>
-                  </div>
-                  <Button variant="glass" size="sm" onClick={() => handleCheckout(pack.price_id, "payment")} disabled={!!loadingPriceId}>
-                    {loadingPriceId === pack.price_id && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                    {pack.price}
-                  </Button>
-                </CardContent>
-              </Card>
+        {/* ─── Usage model explainer ─── */}
+        <div className="max-w-3xl mx-auto mb-20">
+          <h2 className="text-2xl font-bold text-center mb-3">Comment fonctionnent les crédits</h2>
+          <div className="grid gap-4 sm:grid-cols-2 mt-8">
+            {[
+              { q: "Que couvre un crédit ?", a: "1 crédit ≈ 1 scène générée. Un clip de 2 min ≈ 15–25 crédits selon le moteur et la durée." },
+              { q: "Les crédits se cumulent-ils ?", a: "Non. Chaque mois, votre solde est réinitialisé à l'allocation de votre plan." },
+              { q: "Puis-je dépasser mon allocation ?", a: "Oui. Achetez des packs de crédits supplémentaires à tout moment, sans engagement." },
+              { q: "Les packs expirent-ils ?", a: "Non. Les crédits achetés en pack restent dans votre solde jusqu'à utilisation." },
+            ].map((item) => (
+              <div key={item.q} className="rounded-xl border border-border/30 bg-card/30 p-5">
+                <p className="text-sm font-semibold mb-1.5">{item.q}</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">{item.a}</p>
+              </div>
             ))}
           </div>
+        </div>
+
+        {/* ─── Credit packs ─── */}
+        <div className="max-w-3xl mx-auto mb-20">
+          <h2 className="text-2xl font-bold text-center mb-2">Packs de crédits supplémentaires</h2>
+          <p className="text-center text-muted-foreground mb-8 text-sm">Achat unique, sans abonnement. S'ajoutent à votre solde existant.</p>
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+            {PACKS.map((pack) => (
+              <div key={pack.credits} className="rounded-xl border border-border/30 bg-card/30 p-5 flex flex-col items-center text-center">
+                <Coins className="h-6 w-6 text-primary mb-2" />
+                <span className="text-2xl font-bold">{pack.credits.toLocaleString("fr-FR")}</span>
+                <span className="text-xs text-muted-foreground mb-4">crédits</span>
+                <Button
+                  variant="glass"
+                  className="w-full"
+                  onClick={() => handleCheckout(pack.price_id, "payment")}
+                  disabled={!!loadingPriceId}
+                >
+                  {loadingPriceId === pack.price_id && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  {pack.price}
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ─── Enterprise CTA ─── */}
+        <div className="max-w-2xl mx-auto text-center rounded-2xl border border-border/30 bg-card/20 backdrop-blur-sm p-10">
+          <h2 className="text-2xl font-bold mb-3">Besoin d'un setup sur mesure ?</h2>
+          <p className="text-muted-foreground text-sm mb-6 leading-relaxed max-w-lg mx-auto">
+            Volumes de production élevés, onboarding personnalisé, intégrations sur mesure,
+            SLA dédié — contactez notre équipe pour un devis adapté à votre studio.
+          </p>
+          <Button variant="glass" size="lg" onClick={() => navigate("/contact")}>
+            Contactez-nous <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
         </div>
       </main>
       <Footer />

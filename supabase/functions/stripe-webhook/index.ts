@@ -11,16 +11,23 @@ const log = (step: string, details?: any) => {
   console.log(`[STRIPE-WEBHOOK] ${step}${details ? ` - ${JSON.stringify(details)}` : ""}`);
 };
 
-// Credit pack tiers by price_id (must match STRIPE_CONFIG in Pricing.tsx)
+/* ─── Credit packs (one-time purchases) mapped by amount in cents ─── */
 const CREDIT_PACKS_BY_CENTS: { maxCents: number; credits: number }[] = [
-  { maxCents: 500, credits: 50 },    // 5€ = 50 credits
-  { maxCents: 1500, credits: 200 },   // 15€ = 200 credits
-  { maxCents: 3000, credits: 500 },   // 30€ = 500 credits
-  { maxCents: Infinity, credits: 500 },
+  { maxCents: 4900,   credits: 500 },    // 49 € = 500 credits
+  { maxCents: 14900,  credits: 2000 },   // 149 € = 2 000 credits
+  { maxCents: 29900,  credits: 5000 },   // 299 € = 5 000 credits
+  { maxCents: Infinity, credits: 5000 },
 ];
 
-function creditsForAmount(cents: number): number {
-  return CREDIT_PACKS_BY_CENTS.find(p => cents <= p.maxCents)?.credits || 50;
+function creditsForPackAmount(cents: number): number {
+  return CREDIT_PACKS_BY_CENTS.find(p => cents <= p.maxCents)?.credits || 500;
+}
+
+/* ─── Subscription credits mapped by amount in cents ─── */
+function creditsForSubscription(cents: number): number {
+  if (cents <= 9900)  return 500;    // Auteur  99 €
+  if (cents <= 49900) return 3000;   // Production 499 €
+  return 10000;                       // Studio 999 €
 }
 
 serve(async (req) => {
@@ -80,7 +87,7 @@ serve(async (req) => {
       }
 
       if (mode === "payment") {
-        const credits = creditsForAmount(session.amount_total || 0);
+        const credits = creditsForPackAmount(session.amount_total || 0);
         log(`One-time purchase`, { userId, cents: session.amount_total, credits });
 
         const { data: success } = await supabase.rpc("topup_credits", {
@@ -96,9 +103,8 @@ serve(async (req) => {
       }
 
       if (mode === "subscription") {
-        // Pro = 100 credits, Studio = 500 credits — determine from amount
         const amount = session.amount_total || 0;
-        const credits = amount <= 2000 ? 100 : 500; // Pro ≤ 20€, Studio > 20€
+        const credits = creditsForSubscription(amount);
         log(`New subscription`, { userId, credits, amount });
 
         const { data: success } = await supabase.rpc("topup_credits", {
@@ -130,7 +136,6 @@ serve(async (req) => {
         : null;
 
       if (!customerEmail) {
-        // Try to get email from customer object
         const customer = await stripe.customers.retrieve(invoice.customer as string);
         if (!customer || (customer as any).deleted) {
           log("Cannot find customer for invoice", { invoiceId: invoice.id });
@@ -141,7 +146,6 @@ serve(async (req) => {
       const email = customerEmail || (await stripe.customers.retrieve(invoice.customer as string) as Stripe.Customer).email;
       if (!email) { log("No email for customer"); return ok(); }
 
-      // Look up user by email in auth
       const { data: users } = await supabase.auth.admin.listUsers();
       const user = users?.users?.find(u => u.email === email);
 
@@ -150,9 +154,8 @@ serve(async (req) => {
         return ok();
       }
 
-      // Determine credits based on invoice amount
       const invoiceAmount = invoice.amount_paid || 0;
-      const credits = invoiceAmount <= 2000 ? 100 : 500;
+      const credits = creditsForSubscription(invoiceAmount);
       log(`Subscription renewal`, { userId: user.id, invoiceId: invoice.id, credits, invoiceAmount });
 
       const { data: success } = await supabase.rpc("topup_credits", {
@@ -171,7 +174,6 @@ serve(async (req) => {
     if (event.type === "customer.subscription.deleted") {
       const subscription = event.data.object as Stripe.Subscription;
       log("Subscription cancelled", { subscriptionId: subscription.id, customerId: subscription.customer });
-      // No credits to remove — user keeps what they have until next cycle
     }
 
     return ok();
