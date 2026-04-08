@@ -129,6 +129,114 @@ serve(async (req) => {
       }
     }
 
+    // ── Corpus context injection: canonical fields + extracted entities ──
+    // Resolve project_id from series → project chain
+    let corpusProjectId: string | null = null;
+    if (run.series_id) {
+      const { data: series } = await supabase
+        .from("series")
+        .select("project_id")
+        .eq("id", run.series_id)
+        .single();
+      corpusProjectId = series?.project_id || null;
+    }
+
+    if (corpusProjectId) {
+      // Load canonical fields (governance-approved data)
+      const { data: canonicalFields } = await supabase
+        .from("canonical_fields")
+        .select("entity_type, field_key, canonical_value, confidence, entity_name")
+        .eq("project_id", corpusProjectId)
+        .gte("confidence", 0.5)
+        .order("confidence", { ascending: false })
+        .limit(200);
+      if (canonicalFields?.length) {
+        const canon: Record<string, Record<string, unknown>> = {};
+        for (const f of canonicalFields) {
+          const key = f.entity_name || f.entity_type;
+          if (!canon[key]) canon[key] = {};
+          canon[key][f.field_key] = f.canonical_value;
+        }
+        episodeContext.corpus_canon = canon;
+      }
+
+      // Load key extracted entities for rich context
+      const { data: docs } = await supabase
+        .from("source_documents")
+        .select("id, document_role, source_priority")
+        .eq("project_id", corpusProjectId)
+        .neq("status", "parsing_failed");
+      const docIds = (docs || []).map((d: any) => d.id);
+
+      if (docIds.length > 0) {
+        // Determine which entity types to load based on agent
+        const agentEntityMap: Record<string, string[]> = {
+          story_architect: ["character", "location", "episode", "synopsis", "logline", "theme", "relationship", "character_arc", "chronology"],
+          scriptwriter: ["character", "location", "scene", "dialogue_sample", "mood", "prop", "continuity_rule", "emotional_arc"],
+          visual_director: ["visual_reference", "cinematic_reference", "color_palette", "lighting", "camera_direction", "mood", "ambiance", "sensory_note"],
+          scene_designer: ["scene", "location", "prop", "mood", "lighting", "color_palette", "camera_direction", "sensory_note", "production_directive"],
+          shot_planner: ["scene", "camera_direction", "lighting", "transition", "production_directive", "character", "location"],
+          continuity_checker: ["continuity_rule", "character", "wardrobe", "prop", "location", "chronology"],
+          psychology_reviewer: ["character", "character_arc", "relationship", "emotional_arc", "dialogue_sample"],
+          legal_ethics_reviewer: ["legal_note", "character", "location", "continuity_rule"],
+          qa_reviewer: ["continuity_rule", "character", "scene", "production_directive"],
+          editor: ["scene", "transition", "sound_design", "music", "camera_direction"],
+          delivery_manager: ["format", "duration", "production_directive"],
+        };
+        const entityTypes = agentEntityMap[run.agent_slug] || ["character", "location", "scene", "continuity_rule", "mood"];
+
+        // Prioritize governance docs
+        const govDocIds = (docs || [])
+          .filter((d: any) => d.document_role === "governance_doc" || d.source_priority === "source_of_truth")
+          .map((d: any) => d.id);
+
+        const { data: entities } = await supabase
+          .from("source_document_entities")
+          .select("entity_type, entity_key, entity_value, extraction_confidence, document_id")
+          .in("document_id", docIds)
+          .in("entity_type", entityTypes)
+          .gte("extraction_confidence", 0.5)
+          .in("status", ["confirmed", "proposed"])
+          .order("extraction_confidence", { ascending: false })
+          .limit(150);
+
+        if (entities?.length) {
+          // Sort: governance entities first, then by confidence
+          const govSet = new Set(govDocIds);
+          entities.sort((a: any, b: any) => {
+            const aGov = govSet.has(a.document_id) ? 1 : 0;
+            const bGov = govSet.has(b.document_id) ? 1 : 0;
+            if (aGov !== bGov) return bGov - aGov;
+            return b.extraction_confidence - a.extraction_confidence;
+          });
+
+          episodeContext.corpus_entities = entities.slice(0, 100).map((e: any) => ({
+            type: e.entity_type,
+            key: e.entity_key,
+            value: e.entity_value,
+            confidence: e.extraction_confidence,
+            is_governance: govSet.has(e.document_id),
+          }));
+        }
+
+        // Load production directives specifically
+        const { data: prodDirectives } = await supabase
+          .from("source_document_entities")
+          .select("entity_type, entity_key, entity_value")
+          .in("document_id", docIds)
+          .in("entity_type", ["production_directive", "camera_direction", "lighting", "sound_design", "color_palette", "transition"])
+          .gte("extraction_confidence", 0.6)
+          .limit(50);
+        if (prodDirectives?.length) {
+          episodeContext.production_directives = prodDirectives.map((e: any) => ({
+            type: e.entity_type,
+            key: e.entity_key,
+            value: e.entity_value,
+          }));
+        }
+      }
+    }
+
     const startTime = Date.now();
 
     try {

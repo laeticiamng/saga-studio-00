@@ -57,6 +57,48 @@ serve(async (req) => {
       const apiKey = Deno.env.get("LOVABLE_API_KEY");
       if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
+      // ── Load corpus context for enrichment ──
+      let corpusSection = "";
+      const { data: canonicalFields } = await supabase
+        .from("canonical_fields")
+        .select("entity_type, field_key, canonical_value, entity_name")
+        .eq("project_id", project_id)
+        .gte("confidence", 0.6)
+        .limit(100);
+      const { data: docs } = await supabase
+        .from("source_documents")
+        .select("id")
+        .eq("project_id", project_id)
+        .neq("status", "parsing_failed");
+      const docIds = (docs || []).map((d: any) => d.id);
+      if (docIds.length > 0) {
+        const { data: entities } = await supabase
+          .from("source_document_entities")
+          .select("entity_type, entity_key, entity_value")
+          .in("document_id", docIds)
+          .in("entity_type", ["character", "location", "scene", "mood", "logline", "synopsis", "theme", "tone", "camera_direction", "lighting", "sensory_note"])
+          .gte("extraction_confidence", 0.6)
+          .in("status", ["confirmed", "proposed"])
+          .limit(80);
+        if (entities?.length) {
+          const byType: Record<string, unknown[]> = {};
+          for (const e of entities) {
+            if (!byType[e.entity_type]) byType[e.entity_type] = [];
+            byType[e.entity_type].push({ key: e.entity_key, ...e.entity_value as Record<string, unknown> });
+          }
+          corpusSection = `\n\nCONTEXTE CORPUS (données extraites des documents source — utilise-les pour enrichir) :\n${JSON.stringify(byType, null, 1)}`;
+        }
+      }
+      if (canonicalFields?.length) {
+        const grouped: Record<string, Record<string, unknown>> = {};
+        for (const f of canonicalFields) {
+          const key = f.entity_name || f.entity_type;
+          if (!grouped[key]) grouped[key] = {};
+          grouped[key][f.field_key] = f.canonical_value;
+        }
+        corpusSection += `\n\nDONNÉES CANONIQUES :\n${JSON.stringify(grouped, null, 1)}`;
+      }
+
       const durationLabel = project.duration_sec ? `${Math.round(project.duration_sec / 60)} minute(s)` : "2 minutes";
       const styleLabel = project.style_preset || "cinématique";
 
@@ -71,6 +113,7 @@ TITRE : ${project.title}
 TYPE : ${project.type === "clip" ? "Clip vidéo musical" : "Court-métrage"}
 DURÉE : ${durationLabel}
 STYLE : ${styleLabel}
+${corpusSection}
 
 CONSIGNES D'ENRICHISSEMENT :
 1. **Tonalité** : Renforce le ton émotionnel (tension, mélancolie, euphorie, mystère…)
@@ -78,6 +121,7 @@ CONSIGNES D'ENRICHISSEMENT :
 3. **Clarté visuelle** : Ajoute des détails visuels concrets exploitables par un générateur vidéo IA
 4. **Mots-clés cinématographiques** : Intègre des termes de mise en scène (travelling, gros plan, contre-plongée…)
 5. **Cohérence** : Vérifie que le synopsis est cohérent et fluide
+6. **Données corpus** : Si des personnages, lieux ou ambiances sont fournis dans le contexte corpus, INTÈGRE-LES naturellement dans l'enrichissement
 
 IMPORTANT : Garde l'essence et l'histoire originale. Ne change pas radicalement le sujet. Enrichis, ne réécris pas.
 

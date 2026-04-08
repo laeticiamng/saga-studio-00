@@ -39,6 +39,60 @@ serve(async (req) => {
 
     const { data: analysis } = await supabase.from("audio_analysis").select("*").eq("project_id", project_id).maybeSingle();
 
+    // ── Load corpus context: canonical fields + extracted entities ──
+    let corpusSection = "";
+    const { data: canonicalFields } = await supabase
+      .from("canonical_fields")
+      .select("entity_type, field_key, canonical_value, confidence, entity_name")
+      .eq("project_id", project_id)
+      .gte("confidence", 0.5)
+      .order("confidence", { ascending: false })
+      .limit(200);
+
+    const { data: docs } = await supabase
+      .from("source_documents")
+      .select("id, document_role, source_priority")
+      .eq("project_id", project_id)
+      .neq("status", "parsing_failed");
+    const docIds = (docs || []).map((d: any) => d.id);
+
+    if (canonicalFields?.length || docIds.length > 0) {
+      const canonParts: string[] = [];
+      if (canonicalFields?.length) {
+        const grouped: Record<string, Record<string, unknown>> = {};
+        for (const f of canonicalFields) {
+          const key = f.entity_name || f.entity_type;
+          if (!grouped[key]) grouped[key] = {};
+          grouped[key][f.field_key] = f.canonical_value;
+        }
+        canonParts.push("### Données canoniques du corpus\n" + JSON.stringify(grouped, null, 1));
+      }
+
+      if (docIds.length > 0) {
+        const { data: entities } = await supabase
+          .from("source_document_entities")
+          .select("entity_type, entity_key, entity_value, extraction_confidence")
+          .in("document_id", docIds)
+          .in("entity_type", ["character", "location", "scene", "mood", "camera_direction", "lighting", "color_palette", "sound_design", "visual_reference", "cinematic_reference", "production_directive", "sensory_note"])
+          .gte("extraction_confidence", 0.6)
+          .in("status", ["confirmed", "proposed"])
+          .order("extraction_confidence", { ascending: false })
+          .limit(100);
+        if (entities?.length) {
+          const byType: Record<string, unknown[]> = {};
+          for (const e of entities) {
+            if (!byType[e.entity_type]) byType[e.entity_type] = [];
+            byType[e.entity_type].push({ key: e.entity_key, ...e.entity_value as Record<string, unknown> });
+          }
+          canonParts.push("### Entités extraites du corpus\n" + JSON.stringify(byType, null, 1));
+        }
+      }
+
+      if (canonParts.length > 0) {
+        corpusSection = `\n\n## CONTEXTE CORPUS (données extraites des documents source — UTILISE-LES pour enrichir les plans)\n${canonParts.join("\n\n")}`;
+      }
+    }
+
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -66,6 +120,7 @@ Chaque prompt de plan DOIT suivre cette structure :
 - Style visuel : ${project.style_preset || "cinematic"}
 - Durée : ${durationSec} secondes
 - Synopsis : ${project.synopsis || "Aucun synopsis fourni"}
+${corpusSection}
 - BPM audio : ${analysis?.bpm || 120}
 - Sections audio : ${JSON.stringify(sections)}
 - Courbe d'énergie : ${JSON.stringify(energyData)}
