@@ -290,5 +290,3 @@ function RenderStatusCard({ projectId }: { projectId: string }) {
   );
 }
 
-// Need this import for sub-component
-import { useQuery } from "@tanstack/react-query";
