@@ -755,6 +755,24 @@ serve(async (req) => {
     const { data: project } = await supabase.from("projects").select("*").eq("id", project_id).single();
     if (!project) throw new Error("Project not found");
 
+    // ── Action: retry_failed_shots — selectively re-queue failed shots ──
+    if (action === "retry_failed_shots") {
+      const { data: failedShots } = await supabase
+        .from("shots")
+        .select("id")
+        .eq("project_id", project_id)
+        .eq("status", "failed");
+      if (!failedShots || failedShots.length === 0) {
+        return jsonResponse({ success: true, message: "No failed shots to retry", retried: 0 });
+      }
+      for (const shot of failedShots) {
+        await supabase.from("shots").update({ status: "pending", error_message: null }).eq("id", shot.id);
+      }
+      // Update project status back to generating
+      await supabase.from("projects").update({ status: "generating" }).eq("id", project_id);
+      return jsonResponse({ success: true, message: `Retrying ${failedShots.length} failed shots`, retried: failedShots.length });
+    }
+
     const { data: plan } = await supabase
       .from("plans")
       .select("style_bible_json, character_bible_json, shotlist_json")
@@ -937,7 +955,22 @@ serve(async (req) => {
       });
     }
 
-    return jsonResponse({ success: true, results, credits_used: creditsUsed, provider_chain: providerChain.map(p => ({ name: p.name, model: p.modelId, type: p.outputType })) });
+    // Self-invoke for remaining pending shots (batch continuation)
+    const { count: remainingCount } = await supabase
+      .from("shots")
+      .select("*", { count: "exact", head: true })
+      .eq("project_id", project_id)
+      .eq("status", "pending");
+    if (remainingCount && remainingCount > 0) {
+      console.log(`[generate-shots] ${remainingCount} shots remaining, self-invoking continuation...`);
+      supabase.functions.invoke("generate-shots", {
+        body: { project_id, batch_size: MAX_BATCH },
+      }).catch((err: unknown) => {
+        console.error(`[generate-shots] Self-invoke failed:`, err);
+      });
+    }
+
+    return jsonResponse({ success: true, results, credits_used: creditsUsed, remaining_pending: remainingCount || 0, provider_chain: providerChain.map(p => ({ name: p.name, model: p.modelId, type: p.outputType })) });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[generate-shots] Fatal error:", message);
