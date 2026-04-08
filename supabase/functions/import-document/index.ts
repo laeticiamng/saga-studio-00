@@ -1264,7 +1264,7 @@ async function retrieveContext(
     .select("id, document_role, source_priority")
     .eq("project_id", project_id)
     .neq("source_priority", "deprecated");
-  const docIds = (docs || []).map(d => d.id);
+  const docIds = (docs || []).map((d: any) => d.id);
 
   let entQuery = supabase
     .from("source_document_entities")
@@ -1289,7 +1289,7 @@ async function retrieveContext(
   }
   context.project_canon = canon;
 
-  const relevantEntities = (entities || []).filter(e => {
+  const relevantEntities = (entities || []).filter((e: any) => {
     if (scope === "project") return true;
     if (scope === "character" && ["character", "relationship", "wardrobe", "costume"].includes(e.entity_type)) return true;
     if (scope === "scene" && ["scene", "location", "prop", "mood", "ambiance", "visual_reference", "continuity_rule"].includes(e.entity_type)) return true;
@@ -1303,7 +1303,7 @@ async function retrieveContext(
   for (const d of docs || []) {
     docPriorityMap[d.id] = PRIORITY_ORDER[d.source_priority || "supporting_reference"] || 3;
   }
-  relevantEntities.sort((a, b) => {
+  relevantEntities.sort((a: any, b: any) => {
     const pa = docPriorityMap[a.document_id] || 3;
     const pb = docPriorityMap[b.document_id] || 3;
     if (pa !== pb) return pb - pa;
@@ -1327,14 +1327,14 @@ async function retrieveContext(
   context.entities = trimmedEntities;
 
   const continuityRules = (entities || [])
-    .filter(e => e.entity_type === "continuity_rule")
-    .map(e => ({ rule: e.entity_value, key: e.entity_key, confidence: e.extraction_confidence }));
+    .filter((e: any) => e.entity_type === "continuity_rule")
+    .map((e: any) => ({ rule: e.entity_value, key: e.entity_key, confidence: e.extraction_confidence }));
   context.continuity_rules = continuityRules;
 
   const styleEntities = (entities || [])
-    .filter(e => ["visual_reference", "mood", "ambiance", "cinematic_reference"].includes(e.entity_type))
+    .filter((e: any) => ["visual_reference", "mood", "ambiance", "cinematic_reference"].includes(e.entity_type))
     .slice(0, 10)
-    .map(e => ({ type: e.entity_type, key: e.entity_key, value: e.entity_value }));
+    .map((e: any) => ({ type: e.entity_type, key: e.entity_key, value: e.entity_value }));
   context.style_references = styleEntities;
 
   return new Response(JSON.stringify({
@@ -1436,7 +1436,7 @@ async function detectConflicts(
     return new Response(JSON.stringify({ conflicts_found: 0 }), { headers });
   }
 
-  const docIds = docs.map(d => d.id);
+  const docIds = docs.map((d: any) => d.id);
   const { data: allEntities } = await supabase
     .from("source_document_entities")
     .select("*")
@@ -1455,15 +1455,15 @@ async function detectConflicts(
   let conflictsFound = 0;
   for (const [groupKey, groupEntities] of Object.entries(groups)) {
     if (groupEntities.length < 2) continue;
-    const uniqueDocs = [...new Set(groupEntities.map(e => e.document_id))];
+    const uniqueDocs = [...new Set(groupEntities.map((e: any) => e.document_id))];
     if (uniqueDocs.length < 2) continue;
-    const valueStrings = groupEntities.map(e => JSON.stringify(e.entity_value));
+    const valueStrings = groupEntities.map((e: any) => JSON.stringify(e.entity_value));
     const uniqueValues = [...new Set(valueStrings)];
     if (uniqueValues.length < 2) continue;
 
     const [entityType, entityKey] = groupKey.split("::");
     const first = groupEntities[0];
-    const second = groupEntities.find(e => JSON.stringify(e.entity_value) !== JSON.stringify(first.entity_value));
+    const second = groupEntities.find((e: any) => JSON.stringify(e.entity_value) !== JSON.stringify(first.entity_value));
     if (!second) continue;
 
     const { data: existing } = await supabase
@@ -1516,18 +1516,18 @@ async function detectMissingInfo(
     .from("canonical_fields")
     .select("field_key, entity_type")
     .eq("project_id", projectId);
-  const existingKeys = new Set((canonicalFields || []).map(f => `${f.entity_type}::${f.field_key}`));
+  const existingKeys = new Set((canonicalFields || []).map((f: any) => `${f.entity_type}::${f.field_key}`));
 
   const { data: docs } = await supabase
     .from("source_documents")
     .select("id")
     .eq("project_id", projectId);
-  const docIds = (docs || []).map(d => d.id);
+  const docIds = (docs || []).map((d: any) => d.id);
   const { data: entities } = await supabase
     .from("source_document_entities")
     .select("entity_type")
     .in("document_id", docIds.length > 0 ? docIds : ["none"]);
-  const extractedTypes = new Set((entities || []).map(e => e.entity_type));
+  const extractedTypes = new Set((entities || []).map((e: any) => e.entity_type));
 
   const baseRequired = ["title", "synopsis", "character", "scene", "location", "mood"];
   const typeSpecific: Record<string, string[]> = {
@@ -1846,7 +1846,7 @@ async function wizardExtract(
     hybrid_video: [],
   };
   const required = [...baseRequired, ...(typeSpecific[project_type] || [])];
-  const extractedTypes = new Set((allEntities || []).map(e => e.entity_type));
+  const extractedTypes = new Set((allEntities || []).map((e: any) => e.entity_type));
   const missingLabels: Record<string, string> = {
     title: "Titre du projet",
     synopsis: "Synopsis / Brief",
@@ -1857,7 +1857,7 @@ async function wizardExtract(
   };
 
   // Only declare missing if extraction actually ran successfully on at least one doc
-  const anyDocProcessed = (docMeta || []).some(d =>
+  const anyDocProcessed = (docMeta || []).some((d: any) =>
     d.status === "ready_for_review" || d.status === "reviewed" || d.status === "applied"
   );
   if (anyDocProcessed) {
@@ -1869,7 +1869,7 @@ async function wizardExtract(
   }
 
   // Include parser diagnostics per document — with text length and debug info
-  const documentDiagnostics = (docMeta || []).map(d => {
+  const documentDiagnostics = (docMeta || []).map((d: any) => {
     const meta = d.metadata as Record<string, unknown> | null;
     const debug = meta?.extraction_debug as Record<string, unknown> | undefined;
     return {
@@ -1880,7 +1880,7 @@ async function wizardExtract(
       fileType: d.file_type,
       extractionMode: d.extraction_mode,
       status: d.status,
-      entitiesCount: (allEntities || []).filter(e => e.document_id === d.id).length,
+      entitiesCount: (allEntities || []).filter((e: any) => e.document_id === d.id).length,
       textLength: debug?.extracted_text_length ?? 0,
       textPreview: debug?.text_preview ?? "",
       parserError: debug?.error_message ?? null,
@@ -2246,7 +2246,7 @@ async function reprocessLegacyDocuments(
   if (error) throw error;
 
   // Filter to only legacy documents (skip already-current ones)
-  const legacyDocs = (docs || []).filter(d => isLegacyDocument(d as Record<string, unknown>));
+  const legacyDocs = (docs || []).filter((d: any) => isLegacyDocument(d as Record<string, unknown>));
 
   if (legacyDocs.length === 0) {
     return new Response(JSON.stringify({
