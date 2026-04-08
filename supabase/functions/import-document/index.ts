@@ -870,15 +870,23 @@ Retourne un JSON avec :
   ]
 }
 
-Types d'entités : title, logline, synopsis, genre, tone, target_audience, format, duration, character, location, prop, costume, wardrobe, music, lyric, visual_reference, scene, dialogue_sample, theme, continuity_rule, legal_note, vfx_overlay, aspect_ratio, chronology, relationship, mood, cinematic_reference, cliffhanger, ambiance.
+Types d'entités : title, logline, synopsis, genre, tone, target_audience, format, duration, character, location, prop, costume, wardrobe, music, lyric, visual_reference, scene, dialogue_sample, theme, continuity_rule, legal_note, vfx_overlay, aspect_ratio, chronology, relationship, mood, cinematic_reference, cliffhanger, ambiance, camera_direction, lighting, color_palette, sound_design, transition, production_directive, sensory_note, emotional_arc.
 
-Pour les personnages: name, age, role, personality, visual_description, relationships, backstory, arc, wardrobe, gender.
-Pour les scènes: title, description, location, characters, mood, props, time_of_day, int_ext.
-Pour les lieux: name, description, mood, time_period.
+Pour les personnages: name, age, role, personality, visual_description, relationships, backstory, arc, wardrobe, gender, recurring.
+Pour les scènes: title, description, location, characters, mood, props, time_of_day, int_ext, camera_notes, lighting_notes.
+Pour les lieux: name, description, mood, time_period, visual_atmosphere.
 Pour la continuité: rule, scope, severity.
 Pour les relations: character_a, character_b, type, evolution.
+Pour camera_direction: shot_type, movement, framing, lens, description.
+Pour lighting: type, mood, color_temperature, description.
+Pour color_palette: colors, mood, reference.
+Pour sound_design: type, description, mood, source.
+Pour transition: type, from_scene, to_scene, description.
+Pour production_directive: directive, priority, scope.
+Pour sensory_note: sense, description, scene.
 
-IMPORTANT: Si le document contient clairement des personnages, lieux, scènes — extrais-les TOUS. Ne retourne JAMAIS un tableau vide si le contenu est riche.`;
+IMPORTANT: Si le document contient clairement des personnages, lieux, scènes — extrais-les TOUS. Ne retourne JAMAIS un tableau vide si le contenu est riche.
+Si le document contient des directives de réalisation (caméra, lumière, couleur, son), extrais-les aussi — elles sont ESSENTIELLES pour le rendu final.`;
 
   if (projectType === "series") {
     return base + `
@@ -890,8 +898,12 @@ EXTRACTION SPÉCIFIQUE SÉRIES :
 - Extrais les RÈGLES DE CONTINUITÉ entre épisodes.
 - Si "MINI-ÉPISODE" est utilisé, traite-le comme entity_type="episode".
 - Identifie les dépendances de continuité entre épisodes.
+- Extrais les DIRECTIVES DE RÉALISATION : cadrage, mouvements de caméra, style visuel, palette de couleurs, ambiances lumineuses.
+- Extrais les indications SENSORIELLES : textures, odeurs, sons d'ambiance décrits dans le texte.
+- Extrais le SOUND DESIGN mentionné : musique, bruitages, silences dramatiques.
+- Identifie les TRANSITIONS entre scènes si décrites.
 
-Types additionnels : episode, season_arc, continuity_dependency, recurring_element, episode_callback.`;
+Types additionnels : episode, season_arc, continuity_dependency, recurring_element, episode_callback, camera_direction, lighting, color_palette, sound_design, transition, sensory_note, production_directive.`;
   }
 
   if (projectType === "film") {
@@ -1090,44 +1102,83 @@ async function processDocument(
 
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (LOVABLE_API_KEY && textContent.length > 20) {
-    try {
-      // Send up to 60k chars for better extraction on large docs
-      const textForAI = textContent.slice(0, 60000);
-      
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            { role: "system", content: getWorkflowPrompt(projectType) },
-            { role: "user", content: textForAI },
-          ],
-          temperature: 0.15,
-          response_format: { type: "json_object" },
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const rawContent = data.choices?.[0]?.message?.content || "{}";
-        const parsed = JSON.parse(rawContent);
-        entities = parsed.entities || [];
-        detectedRole = parsed.document_role || "unknown";
-        roleConfidence = Number(parsed.role_confidence) || 0;
-        aiParserStatus = "success";
-        console.log(`AI extraction for ${doc.file_name}: role=${detectedRole} entities=${entities.length}`);
-      } else {
-        const errBody = await response.text();
-        console.error("AI extraction API error:", response.status, errBody);
-        aiParserStatus = `api_error_${response.status}`;
+    const BATCH_SIZE = 40000; // chars per AI call
+    const MAX_BATCHES = 4;
+    const textBatches: string[] = [];
+    
+    // Split text into manageable batches for large documents
+    if (textContent.length <= 60000) {
+      textBatches.push(textContent);
+    } else {
+      for (let i = 0; i < Math.min(MAX_BATCHES, Math.ceil(textContent.length / BATCH_SIZE)); i++) {
+        textBatches.push(textContent.slice(i * BATCH_SIZE, (i + 1) * BATCH_SIZE));
       }
-    } catch (e) {
-      console.error("AI extraction error:", e);
-      aiParserStatus = "exception";
+    }
+
+    console.log(`AI extraction: ${textBatches.length} batch(es) for ${doc.file_name} (${textContent.length} chars)`);
+
+    for (let batchIdx = 0; batchIdx < textBatches.length; batchIdx++) {
+      try {
+        const textForAI = textBatches[batchIdx];
+        const isContinuation = batchIdx > 0;
+        const batchPrompt = isContinuation
+          ? `Ceci est la PARTIE ${batchIdx + 1}/${textBatches.length} du même document "${doc.file_name}".
+Continue l'extraction d'entités. N'inclus PAS les entités déjà extraites dans les parties précédentes.
+Ne re-classifie PAS le document (garde le même rôle).
+Extrais uniquement les NOUVELLES entités de cette section.`
+          : "";
+
+        const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages: [
+              { role: "system", content: getWorkflowPrompt(projectType) },
+              ...(batchPrompt ? [{ role: "system", content: batchPrompt }] : []),
+              { role: "user", content: textForAI },
+            ],
+            temperature: 0.15,
+            response_format: { type: "json_object" },
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const rawContent = data.choices?.[0]?.message?.content || "{}";
+          const parsed = JSON.parse(rawContent);
+          const batchEntities = parsed.entities || [];
+          entities.push(...batchEntities);
+          
+          // Use role from first batch only
+          if (batchIdx === 0) {
+            detectedRole = parsed.document_role || "unknown";
+            roleConfidence = Number(parsed.role_confidence) || 0;
+          }
+          aiParserStatus = "success";
+          console.log(`AI batch ${batchIdx + 1}/${textBatches.length} for ${doc.file_name}: entities=${batchEntities.length} (total=${entities.length})`);
+        } else {
+          const errBody = await response.text();
+          console.error(`AI extraction batch ${batchIdx + 1} error:`, response.status, errBody);
+          if (batchIdx === 0) aiParserStatus = `api_error_${response.status}`;
+        }
+      } catch (e: any) {
+        console.error(`AI extraction batch ${batchIdx + 1} error:`, e?.message || e);
+        if (batchIdx === 0) aiParserStatus = "exception";
+      }
+    }
+
+    // For script documents: ensure proper role classification
+    if (detectedRole === "unknown" && roleConfidence === 0) {
+      const hasSceneMarkers = /SC[ÈE]NE\s*\d|INT\.|EXT\./i.test(textContent.slice(0, 10000));
+      const hasEpisodeMarkers = /[ÉE]PISODE\s*\d|MINI-[ÉE]PISODE/i.test(textContent.slice(0, 10000));
+      if (hasSceneMarkers) {
+        detectedRole = hasEpisodeMarkers ? "episode_script" : "script_master";
+        roleConfidence = 0.85;
+      }
     }
   }
 
@@ -1136,6 +1187,18 @@ async function processDocument(
     document_role: detectedRole,
     role_confidence: roleConfidence,
   }).eq("id", documentId);
+
+  // Deduplicate entities by entity_type + entity_key
+  const entityKeySet = new Set<string>();
+  const dedupedEntities: Array<Record<string, unknown>> = [];
+  for (const entity of entities) {
+    const key = `${entity.entity_type}::${entity.entity_key}`;
+    if (!entityKeySet.has(key)) {
+      entityKeySet.add(key);
+      dedupedEntities.push(entity);
+    }
+  }
+  entities = dedupedEntities;
 
   // Store entities
   for (const entity of entities) {
@@ -1291,11 +1354,11 @@ async function retrieveContext(
 
   const relevantEntities = (entities || []).filter((e: any) => {
     if (scope === "project") return true;
-    if (scope === "character" && ["character", "relationship", "wardrobe", "costume"].includes(e.entity_type)) return true;
-    if (scope === "scene" && ["scene", "location", "prop", "mood", "ambiance", "visual_reference", "continuity_rule"].includes(e.entity_type)) return true;
-    if (scope === "episode" && ["episode", "scene", "character", "continuity_rule", "cliffhanger", "season_arc"].includes(e.entity_type)) return true;
-    if (scope === "timeline" && ["chronology", "scene", "episode", "music", "montage_note"].includes(e.entity_type)) return true;
-    if (scope === "continuity" && ["continuity_rule", "character", "wardrobe", "prop", "location", "recurring_element"].includes(e.entity_type)) return true;
+    if (scope === "character" && ["character", "relationship", "wardrobe", "costume", "character_arc", "emotional_arc"].includes(e.entity_type)) return true;
+    if (scope === "scene" && ["scene", "location", "prop", "mood", "ambiance", "visual_reference", "continuity_rule", "camera_direction", "lighting", "color_palette", "sound_design", "transition", "sensory_note", "production_directive"].includes(e.entity_type)) return true;
+    if (scope === "episode" && ["episode", "scene", "character", "continuity_rule", "cliffhanger", "season_arc", "camera_direction", "lighting", "sound_design", "transition", "production_directive"].includes(e.entity_type)) return true;
+    if (scope === "timeline" && ["chronology", "scene", "episode", "music", "montage_note", "transition", "sound_design"].includes(e.entity_type)) return true;
+    if (scope === "continuity" && ["continuity_rule", "character", "wardrobe", "prop", "location", "recurring_element", "color_palette", "sensory_note"].includes(e.entity_type)) return true;
     return false;
   });
 
@@ -1332,10 +1395,17 @@ async function retrieveContext(
   context.continuity_rules = continuityRules;
 
   const styleEntities = (entities || [])
-    .filter((e: any) => ["visual_reference", "mood", "ambiance", "cinematic_reference"].includes(e.entity_type))
-    .slice(0, 10)
+    .filter((e: any) => ["visual_reference", "mood", "ambiance", "cinematic_reference", "camera_direction", "lighting", "color_palette", "sensory_note"].includes(e.entity_type))
+    .slice(0, 20)
     .map((e: any) => ({ type: e.entity_type, key: e.entity_key, value: e.entity_value }));
   context.style_references = styleEntities;
+
+  // Production directives for render pipeline
+  const productionDirectives = (entities || [])
+    .filter((e: any) => ["production_directive", "camera_direction", "sound_design", "transition"].includes(e.entity_type))
+    .slice(0, 15)
+    .map((e: any) => ({ type: e.entity_type, key: e.entity_key, value: e.entity_value }));
+  context.production_directives = productionDirectives;
 
   return new Response(JSON.stringify({
     scope,
