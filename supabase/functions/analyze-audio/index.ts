@@ -39,7 +39,7 @@ serve(async (req) => {
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (apiKey && project.audio_url) {
       try {
-        const aiRes = await fetch("https://ai.lovable.dev/api/generate", {
+        const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

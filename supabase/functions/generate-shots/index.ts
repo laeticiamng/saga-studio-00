@@ -236,6 +236,91 @@ class LumaPhotonProvider implements VideoProvider {
   }
 }
 
+// ── Luma Photon Flash (fast identity) ───────────────────────────────────────
+class LumaPhotonFlashProvider implements VideoProvider {
+  name = "luma_photon_flash";
+  outputType = "image" as const;
+  modelId = "photon-flash-1";
+  private apiKey: string;
+  constructor(apiKey: string) { this.apiKey = apiKey; }
+  async generateVideo(prompt: string) {
+    const res = await fetch("https://api.lumalabs.ai/dream-machine/v1/generations/image", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${this.apiKey}`, "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({ prompt: prompt.slice(0, 2000), model: "photon-flash-1", aspect_ratio: "16:9" }),
+    });
+    const data = await res.json();
+    console.log("[luma_photon_flash] response:", res.status);
+    if (!res.ok) throw new Error(data.detail || data.message || JSON.stringify(data));
+    return { job_id: data.id };
+  }
+  async checkStatus(job_id: string) {
+    const res = await fetch(`https://api.lumalabs.ai/dream-machine/v1/generations/${job_id}`, {
+      headers: { "Authorization": `Bearer ${Deno.env.get("LUMA_API_KEY")}`, "Accept": "application/json" },
+    });
+    const data = await res.json();
+    const status = data.state === "completed" ? "completed" : data.state === "failed" ? "failed" : "pending";
+    return { status: status as any, url: data.assets?.image, error: data.failure_reason };
+  }
+}
+
+// ── Luma Reframe (aspect ratio conversion) ──────────────────────────────────
+class LumaReframeProvider implements VideoProvider {
+  name = "luma_reframe";
+  outputType = "video" as const;
+  modelId = "reframe";
+  private apiKey: string;
+  constructor(apiKey: string) { this.apiKey = apiKey; }
+  async generateVideo(prompt: string, duration: number) {
+    // Reframe uses the modify endpoint with aspect ratio change
+    const res = await fetch("https://api.lumalabs.ai/dream-machine/v1/generations", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${this.apiKey}`, "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({ prompt: `[REFRAME] ${prompt}`.slice(0, 2000), model: "ray-2", resolution: "720p", duration: duration <= 5 ? "5s" : "9s", generation_type: "video" }),
+    });
+    const data = await res.json();
+    console.log("[luma_reframe] response:", res.status);
+    if (!res.ok) throw new Error(data.detail || data.message || JSON.stringify(data));
+    return { job_id: data.id };
+  }
+  async checkStatus(job_id: string) {
+    const res = await fetch(`https://api.lumalabs.ai/dream-machine/v1/generations/${job_id}`, {
+      headers: { "Authorization": `Bearer ${Deno.env.get("LUMA_API_KEY")}`, "Accept": "application/json" },
+    });
+    const data = await res.json();
+    const status = data.state === "completed" ? "completed" : data.state === "failed" ? "failed" : "pending";
+    return { status: status as any, url: data.assets?.video, error: data.failure_reason };
+  }
+}
+
+// ── Luma Modify (video-to-video transformation) ─────────────────────────────
+class LumaModifyProvider implements VideoProvider {
+  name = "luma_modify";
+  outputType = "video" as const;
+  modelId = "modify";
+  private apiKey: string;
+  constructor(apiKey: string) { this.apiKey = apiKey; }
+  async generateVideo(prompt: string, duration: number) {
+    const res = await fetch("https://api.lumalabs.ai/dream-machine/v1/generations", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${this.apiKey}`, "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({ prompt: `[MODIFY/STYLIZE] ${prompt}`.slice(0, 2000), model: "ray-2", resolution: "720p", duration: duration <= 5 ? "5s" : "9s", generation_type: "video" }),
+    });
+    const data = await res.json();
+    console.log("[luma_modify] response:", res.status);
+    if (!res.ok) throw new Error(data.detail || data.message || JSON.stringify(data));
+    return { job_id: data.id };
+  }
+  async checkStatus(job_id: string) {
+    const res = await fetch(`https://api.lumalabs.ai/dream-machine/v1/generations/${job_id}`, {
+      headers: { "Authorization": `Bearer ${Deno.env.get("LUMA_API_KEY")}`, "Accept": "application/json" },
+    });
+    const data = await res.json();
+    const status = data.state === "completed" ? "completed" : data.state === "failed" ? "failed" : "pending";
+    return { status: status as any, url: data.assets?.video, error: data.failure_reason };
+  }
+}
+
 // ── Google Nano Banana 2 (fast image via Gemini) ────────────────────────────
 class NanoBanana2Provider implements VideoProvider {
   name = "google_nano_banana_2";
@@ -421,9 +506,20 @@ class Sora2Provider implements VideoProvider {
 const PROVIDER_PRIORITY = [
   "runway", "google_veo_31", "google_veo_31_lite", "luma",
   "runway_act_two", "runway_aleph",
-  "luma_photon", "google_nano_banana_pro", "google_nano_banana_2",
+  "luma_photon", "luma_photon_flash", "luma_reframe", "luma_modify",
+  "google_nano_banana_pro", "google_nano_banana_2",
   "openai_image",
 ] as const;
+
+// Credit cost per shot by provider
+const PROVIDER_CREDIT_COST: Record<string, number> = {
+  runway: 5, runway_act_two: 5, runway_aleph: 4,
+  google_veo_31: 4, google_veo_31_lite: 3,
+  luma: 3, luma_reframe: 2, luma_modify: 3,
+  luma_photon: 2, luma_photon_flash: 1,
+  google_nano_banana_pro: 1, google_nano_banana_2: 1,
+  openai_image: 2, sora2: 4, mock: 0,
+};
 
 function normalizeProviderName(provider?: string | null): string | undefined {
   if (!provider) return undefined;
@@ -450,6 +546,9 @@ function buildProviderChain(preferredProvider?: string): VideoProvider[] {
     runway_aleph: Deno.env.get("RUNWAY_API_KEY"),
     luma: Deno.env.get("LUMA_API_KEY"),
     luma_photon: Deno.env.get("LUMA_API_KEY"),
+    luma_photon_flash: Deno.env.get("LUMA_API_KEY"),
+    luma_reframe: Deno.env.get("LUMA_API_KEY"),
+    luma_modify: Deno.env.get("LUMA_API_KEY"),
     google_veo_31: Deno.env.get("GOOGLE_VEO_API_KEY"),
     google_veo_31_lite: Deno.env.get("GOOGLE_VEO_API_KEY"),
     google_nano_banana_2: Deno.env.get("GOOGLE_VEO_API_KEY"),
@@ -463,6 +562,9 @@ function buildProviderChain(preferredProvider?: string): VideoProvider[] {
     runway_aleph: (k) => new RunwayAlephProvider(k),
     luma: (k) => new LumaProvider(k),
     luma_photon: (k) => new LumaPhotonProvider(k),
+    luma_photon_flash: (k) => new LumaPhotonFlashProvider(k),
+    luma_reframe: (k) => new LumaReframeProvider(k),
+    luma_modify: (k) => new LumaModifyProvider(k),
     google_veo_31: (k) => new Veo31Provider(k),
     google_veo_31_lite: (k) => new Veo31LiteProvider(k),
     google_nano_banana_2: (k) => new NanoBanana2Provider(k),
@@ -645,11 +747,31 @@ serve(async (req) => {
 
   try {
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const { project_id, batch_size = 10 } = await req.json();
+    const { project_id, batch_size: requestedBatch = 10, action } = await req.json();
+    const MAX_BATCH = 5; // Deno edge function timeout protection
+    const batch_size = Math.min(requestedBatch, MAX_BATCH);
     if (!project_id) throw new Error("project_id required");
 
     const { data: project } = await supabase.from("projects").select("*").eq("id", project_id).single();
     if (!project) throw new Error("Project not found");
+
+    // ── Action: retry_failed_shots — selectively re-queue failed shots ──
+    if (action === "retry_failed_shots") {
+      const { data: failedShots } = await supabase
+        .from("shots")
+        .select("id")
+        .eq("project_id", project_id)
+        .eq("status", "failed");
+      if (!failedShots || failedShots.length === 0) {
+        return jsonResponse({ success: true, message: "No failed shots to retry", retried: 0 });
+      }
+      for (const shot of failedShots) {
+        await supabase.from("shots").update({ status: "pending", error_message: null }).eq("id", shot.id);
+      }
+      // Update project status back to generating
+      await supabase.from("projects").update({ status: "generating" }).eq("id", project_id);
+      return jsonResponse({ success: true, message: `Retrying ${failedShots.length} failed shots`, retried: failedShots.length });
+    }
 
     const { data: plan } = await supabase
       .from("plans")
@@ -745,7 +867,8 @@ serve(async (req) => {
 
     const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: project.user_id, _role: "admin" });
 
-    const totalEstimatedCredits = pendingShots.length * 2;
+    const avgCreditPerShot = 3; // conservative estimate
+    const totalEstimatedCredits = pendingShots.length * avgCreditPerShot;
     if (!isAdmin) {
       const { data: wallet } = await supabase.from("credit_wallets").select("balance").eq("id", project.user_id).single();
       if (!wallet || wallet.balance < totalEstimatedCredits) {
@@ -793,8 +916,9 @@ serve(async (req) => {
               }
             }
 
-            await supabase.from("shots").update({ status: "completed", output_url: finalUrl, cost_credits: 2, error_message: null }).eq("id", shot.id);
-            creditsUsed += 2;
+            const shotCreditCost = PROVIDER_CREDIT_COST[usedProvider.name] || 2;
+            await supabase.from("shots").update({ status: "completed", output_url: finalUrl, cost_credits: shotCreditCost, error_message: null }).eq("id", shot.id);
+            creditsUsed += shotCreditCost;
             results.push({ shot_id: shot.id, provider: usedProvider.name, model: usedProvider.modelId, output_type: usedProvider.outputType, status: "completed" });
             continue;
           }
@@ -831,7 +955,22 @@ serve(async (req) => {
       });
     }
 
-    return jsonResponse({ success: true, results, credits_used: creditsUsed, provider_chain: providerChain.map(p => ({ name: p.name, model: p.modelId, type: p.outputType })) });
+    // Self-invoke for remaining pending shots (batch continuation)
+    const { count: remainingCount } = await supabase
+      .from("shots")
+      .select("*", { count: "exact", head: true })
+      .eq("project_id", project_id)
+      .eq("status", "pending");
+    if (remainingCount && remainingCount > 0) {
+      console.log(`[generate-shots] ${remainingCount} shots remaining, self-invoking continuation...`);
+      supabase.functions.invoke("generate-shots", {
+        body: { project_id, batch_size: MAX_BATCH },
+      }).catch((err: unknown) => {
+        console.error(`[generate-shots] Self-invoke failed:`, err);
+      });
+    }
+
+    return jsonResponse({ success: true, results, credits_used: creditsUsed, remaining_pending: remainingCount || 0, provider_chain: providerChain.map(p => ({ name: p.name, model: p.modelId, type: p.outputType })) });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[generate-shots] Fatal error:", message);

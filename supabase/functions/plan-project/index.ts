@@ -31,11 +31,24 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Auth check
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) throw new Error("No authorization header");
+    const { data: { user }, error: authErr } = await supabase.auth.getUser(
+      authHeader.replace("Bearer ", "")
+    );
+    if (authErr || !user) throw new Error("Unauthorized");
+
     const { project_id } = await req.json();
     if (!project_id) throw new Error("project_id required");
 
+    // Verify ownership
     const { data: project } = await supabase.from("projects").select("*").eq("id", project_id).single();
     if (!project) throw new Error("Project not found");
+    if (project.user_id !== user.id) {
+      const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
+      if (!isAdmin) throw new Error("Forbidden: not your project");
+    }
 
     const { data: analysis } = await supabase.from("audio_analysis").select("*").eq("project_id", project_id).maybeSingle();
 

@@ -105,4 +105,27 @@ export const PROVIDER_MATRIX: Record<ProjectMode, Record<QualityTier, ProviderRu
       description: "Clip économique — tous modes acceptés",
     },
   },
+  hybrid_video: {
+    premium: {
+      allowedProviders: ["runway_aleph", "runway", "google_veo_31", "luma_modify"],
+      acceptableOutputs: ["native_video"],
+      allowSilentImageFallback: false,
+      renderTarget: "server_required",
+      description: "Vidéo hybride premium — Aleph transform + Veo enhancement, vidéo native uniquement",
+    },
+    standard: {
+      allowedProviders: ["runway_aleph", "luma_modify", "luma", "google_veo_31_lite"],
+      acceptableOutputs: ["native_video", "image_sequence"],
+      allowSilentImageFallback: false,
+      renderTarget: "server_preferred",
+      description: "Vidéo hybride standard — transformation + fallback visible",
+    },
+    economy: {
+      allowedProviders: ["luma_modify", "luma", "google_nano_banana_2", "openai_image"],
+      acceptableOutputs: ["native_video", "image_sequence", "browser_assembly_only"],
+      allowSilentImageFallback: true,
+      renderTarget: "browser_allowed",
+      description: "Vidéo hybride économique — tous modes acceptés",
+    },
+  },
 };

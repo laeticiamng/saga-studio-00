@@ -146,6 +146,15 @@ serve(async (req) => {
             await supabase.from("shots").update({ status: "failed", error_message: providerResult.error || `${jobRef.provider} generation failed` }).eq("id", shot.id);
             continue;
           }
+        } else if (shot.output_url && (shot.output_url.startsWith("http") || shot.output_url.startsWith("data:"))) {
+          // Synchronous provider (Nano Banana, Photon, OpenAI Image) — output_url is already the final URL
+          if (!isPlaceholderUrl(shot.output_url)) {
+            await supabase.from("shots").update({ status: "completed", cost_credits: shot.cost_credits || 2, error_message: null }).eq("id", shot.id);
+            continue;
+          } else {
+            await supabase.from("shots").update({ status: "failed", error_message: "Output URL is a placeholder" }).eq("id", shot.id);
+            continue;
+          }
         }
 
         // Stale timeout

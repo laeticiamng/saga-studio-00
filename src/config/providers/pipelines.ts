@@ -236,6 +236,57 @@ const CLIP_PIPELINE: PipelineStep[] = [
   },
 ];
 
+// ── Hybrid Video Pipeline (upload + transform) ──────────────────────────────
+// User uploads source video → segmented → styled/enhanced via Aleph/Modify → assembled
+const HYBRID_VIDEO_PIPELINE: PipelineStep[] = [
+  {
+    step: "identity_pack",
+    provider: "luma_photon",
+    model: "photon-1",
+    outputKey: "style_reference_pack",
+    userGate: "approve_style_reference",
+    condition: "photos_count >= 2",
+    fallback: { provider: "google_nano_banana_pro", model: "gemini-3-pro-image-preview" },
+  },
+  {
+    step: "lookdev",
+    provider: "google_nano_banana_pro",
+    model: "gemini-3-pro-image-preview",
+    outputKey: "transform_style_lock",
+    userGate: "approve_transform_style",
+  },
+  {
+    step: "repair",
+    provider: "runway_aleph",
+    model: "gen4_aleph",
+    outputKey: "transformed_segments",
+    userGate: "approve_transformation",
+  },
+  {
+    step: "hero_shots",
+    provider: "google_veo_31",
+    model: "veo-3.1-generate-preview",
+    outputKey: "enhanced_hero_shots",
+    userGate: "approve_enhanced_shots",
+    condition: "needs_hero_enhancement",
+  },
+  {
+    step: "social_exports",
+    provider: "luma_reframe",
+    model: "reframe",
+    outputKey: "social_cuts",
+    userGate: "approve_social_cuts",
+    condition: "needs_social_vertical",
+  },
+  {
+    step: "poster",
+    provider: "openai_image",
+    model: "gpt-image-1.5",
+    outputKey: "thumbnail_assets",
+    userGate: "approve_thumbnail",
+  },
+];
+
 // ── Export ───────────────────────────────────────────────────────────────────
 
 export const PIPELINE_ROUTES: Record<ProjectMode, PipelineRoute> = {
@@ -243,6 +294,7 @@ export const PIPELINE_ROUTES: Record<ProjectMode, PipelineRoute> = {
   film: { workflowType: "film", steps: FILM_PIPELINE },
   music_video: { workflowType: "music_video", steps: MUSIC_VIDEO_PIPELINE },
   clip: { workflowType: "clip", steps: CLIP_PIPELINE },
+  hybrid_video: { workflowType: "hybrid_video", steps: HYBRID_VIDEO_PIPELINE },
 };
 
 /**
@@ -250,6 +302,13 @@ export const PIPELINE_ROUTES: Record<ProjectMode, PipelineRoute> = {
  */
 export function getPipelineRoute(mode: ProjectMode): PipelineRoute {
   return PIPELINE_ROUTES[mode] || PIPELINE_ROUTES.clip;
+}
+
+/**
+ * Check if a given mode has a dedicated pipeline.
+ */
+export function hasDedicatedPipeline(mode: string): boolean {
+  return mode in PIPELINE_ROUTES;
 }
 
 /**
@@ -262,7 +321,6 @@ export function resolveSteps(
   const route = getPipelineRoute(mode);
   return route.steps.filter((step) => {
     if (!step.condition) return true;
-    // Simple condition evaluator
     const cond = step.condition;
     if (cond === "photos_count >= 2") return (profile.photos_count ?? 0) >= 2;
     if (cond === "photos_count < 2") return (profile.photos_count ?? 0) < 2;
@@ -271,6 +329,7 @@ export function resolveSteps(
     if (cond === "has_failed_shots") return !!profile.has_failed_shots;
     if (cond === "has_driving_performance") return !!profile.has_driving_performance;
     if (cond === "has_existing_video") return !!profile.has_existing_video;
+    if (cond === "needs_hero_enhancement") return !!profile.needs_hero_enhancement;
     return true;
   });
 }

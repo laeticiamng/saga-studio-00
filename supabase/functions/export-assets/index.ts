@@ -56,7 +56,7 @@ serve(async (req) => {
       }
     }
 
-    const { data: renders } = await renderQuery;
+    const { data: renders } = await renderQuery.eq("status", "completed");
 
     // Build asset manifest
     const manifest = {

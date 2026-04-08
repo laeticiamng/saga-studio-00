@@ -382,7 +382,7 @@ export default function CreateProject() {
         return;
       }
 
-      const dbType = projectType === "hybrid_video" ? "film" : projectType === "music_video" ? "music_video" : "film";
+      const dbType = projectType;
       const { data, error } = await supabase.functions.invoke("create-project", {
         body: {
           type: dbType,
