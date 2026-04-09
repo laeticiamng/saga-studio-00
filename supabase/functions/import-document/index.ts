@@ -104,30 +104,93 @@ serve(async (req) => {
       .single();
     if (docErr) throw docErr;
 
-    // For large text-based files (>100KB), return immediately and process async
+    // For large text-based files (>100KB), extract text inline (fast) 
+    // but SKIP AI entity extraction — defer it to wizard_extract
     const isLargeFile = !isImage && (file_size_bytes || 0) > 100000;
     if (isLargeFile) {
-      // Fire-and-forget: call processDocument without awaiting via self-invocation
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      fetch(`${supabaseUrl}/functions/v1/import-document`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${authHeader.replace("Bearer ", "")}`,
-          apikey: serviceKey,
-        },
-        body: JSON.stringify({ action: "extract", document_id: doc.id }),
-      }).catch(e => console.error("Background extract fire-and-forget error:", e));
+      try {
+        // Text extraction is fast (<2s for DOCX ZIP parsing, <5s for PDF Vision)
+        const { data: fileData, error: dlErr } = await supabase.storage
+          .from("source-documents")
+          .download(storagePath);
+        if (dlErr || !fileData) throw new Error("Download failed: " + (dlErr?.message || "no data"));
 
-      return new Response(JSON.stringify({
-        document_id: doc.id,
-        status: "processing_async",
-        async: true,
-        message: "Document volumineux — traitement en cours en arrière-plan",
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+        const extraction = await extractTextFromFile(fileData, detectedType, file_name);
+        const extractionMethod = extraction.method;
+        const parserSuccess = extraction.success;
+
+        if (parserSuccess && extraction.text.length >= 20) {
+          // Store text chunks for later AI processing
+          const chunks = splitIntoStructuredChunks(extraction.text, 3000);
+          for (let i = 0; i < chunks.length; i++) {
+            await supabase.from("source_document_chunks").insert({
+              document_id: doc.id,
+              chunk_index: i,
+              content: chunks[i].content,
+              section_type: chunks[i].sectionType,
+            });
+          }
+
+          // Mark as text_extracted — ready for AI in wizard_extract
+          await supabase.from("source_documents").update({
+            status: "text_extracted",
+            extraction_mode: extractionMethod,
+            parser_version: PARSER_VERSION,
+            metadata: {
+              extraction_debug: {
+                parser_version: PARSER_VERSION,
+                parser_chosen: extractionMethod,
+                parser_success: true,
+                extracted_text_length: extraction.text.length,
+                chunk_count: chunks.length,
+                timestamp: new Date().toISOString(),
+              },
+            },
+          }).eq("id", doc.id);
+
+          return new Response(JSON.stringify({
+            document_id: doc.id,
+            status: "text_extracted",
+            document_role: "unknown",
+            role_confidence: 0,
+            entities_found: 0,
+            text_length: extraction.text.length,
+            parser_version: PARSER_VERSION,
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        } else {
+          // Text extraction failed
+          await supabase.from("source_documents").update({
+            status: "parsing_failed",
+            extraction_mode: extractionMethod,
+            parser_version: PARSER_VERSION,
+          }).eq("id", doc.id);
+
+          return new Response(JSON.stringify({
+            document_id: doc.id,
+            status: "parsing_failed",
+            parser_error: `Text extraction failed (${extractionMethod})`,
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      } catch (e) {
+        const errMsg = e instanceof Error ? e.message : "Unknown error";
+        console.error("Large file inline extraction failed:", errMsg);
+        await supabase.from("source_documents").update({
+          status: "parsing_failed",
+          parser_version: PARSER_VERSION,
+        }).eq("id", doc.id);
+
+        return new Response(JSON.stringify({
+          document_id: doc.id,
+          status: "parsing_failed",
+          parser_error: errMsg,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     const extractResult = await processDocument(supabase, doc.id, user.id);
@@ -2507,7 +2570,7 @@ async function checkDocumentStatus(
   if (error || !doc) {
     return new Response(JSON.stringify({ error: "Document not found" }), { status: 404, headers });
   }
-  const isDone = ["ready_for_review", "parsing_failed"].includes(doc.status);
+  const isDone = ["ready_for_review", "parsing_failed", "text_extracted", "reviewed", "applied"].includes(doc.status);
   const entitiesCount = isDone
     ? (await supabase.from("source_document_entities").select("id", { count: "exact", head: true }).eq("document_id", documentId)).count || 0
     : 0;
