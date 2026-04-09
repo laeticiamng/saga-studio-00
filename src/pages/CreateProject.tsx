@@ -220,45 +220,22 @@ export default function CreateProject() {
               f.id === cf.id ? { ...f, status: "error", errorMessage: "Erreur d'analyse" } : f
             )
           );
-        } else if (data?.async && data?.document_id) {
-          // Large file: async processing — poll for completion
-          const docId = data.document_id;
-          documentIds.push(docId);
-          let pollDone = false;
-          for (let attempt = 0; attempt < 60 && !pollDone; attempt++) {
-            await new Promise(r => setTimeout(r, 3000));
-            try {
-              const { data: statusData } = await supabase.functions.invoke("import-document", {
-                body: { action: "check_status", document_id: docId },
-              });
-              if (statusData?.done) {
-                pollDone = true;
-                setCorpusFiles((prev) =>
-                  prev.map((f) =>
-                    f.id === cf.id
-                      ? {
-                          ...f,
-                          status: "done",
-                          role: statusData.document_role,
-                          roleConfidence: statusData.role_confidence,
-                          entitiesFound: statusData.entities_found,
-                        }
-                      : f
-                  )
-                );
-              }
-            } catch {
-              // polling error — continue
-            }
-          }
-          if (!pollDone) {
-            setCorpusFiles((prev) =>
-              prev.map((f) =>
-                f.id === cf.id ? { ...f, status: "error", errorMessage: "Timeout — document trop volumineux" } : f
-              )
-            );
-          }
         } else {
+          // Synchronous result (small file or large file with inline text extraction)
+          setCorpusFiles((prev) =>
+            prev.map((f) =>
+              f.id === cf.id
+                ? {
+                    ...f,
+                    status: "done",
+                    role: data?.document_role,
+                    roleConfidence: data?.role_confidence,
+                    entitiesFound: data?.entities_found,
+                  }
+                : f
+            )
+          );
+          if (data?.document_id) documentIds.push(data.document_id);
           setCorpusFiles((prev) =>
             prev.map((f) =>
               f.id === cf.id

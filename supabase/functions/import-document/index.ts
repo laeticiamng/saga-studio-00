@@ -2570,7 +2570,7 @@ async function checkDocumentStatus(
   if (error || !doc) {
     return new Response(JSON.stringify({ error: "Document not found" }), { status: 404, headers });
   }
-  const isDone = ["ready_for_review", "parsing_failed"].includes(doc.status);
+  const isDone = ["ready_for_review", "parsing_failed", "text_extracted", "reviewed", "applied"].includes(doc.status);
   const entitiesCount = isDone
     ? (await supabase.from("source_document_entities").select("id", { count: "exact", head: true }).eq("document_id", documentId)).count || 0
     : 0;
