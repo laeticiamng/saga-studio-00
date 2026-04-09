@@ -115,7 +115,7 @@ serve(async (req) => {
           .download(storagePath);
         if (dlErr || !fileData) throw new Error("Download failed: " + (dlErr?.message || "no data"));
 
-        const extraction = await extractTextFromFile(fileData, detectedType, cf.file.name);
+        const extraction = await extractTextFromFile(fileData, detectedType, file_name);
         const extractionMethod = extraction.method;
         const parserSuccess = extraction.success;
 
