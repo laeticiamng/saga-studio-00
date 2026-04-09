@@ -236,20 +236,6 @@ export default function CreateProject() {
             )
           );
           if (data?.document_id) documentIds.push(data.document_id);
-          setCorpusFiles((prev) =>
-            prev.map((f) =>
-              f.id === cf.id
-                ? {
-                    ...f,
-                    status: "done",
-                    role: data?.document_role,
-                    roleConfidence: data?.role_confidence,
-                    entitiesFound: data?.entities_found,
-                  }
-                : f
-            )
-          );
-          if (data?.document_id) documentIds.push(data.document_id);
         }
 
         setCorpusProgress({ done: i + 1, total: corpusFiles.length });
