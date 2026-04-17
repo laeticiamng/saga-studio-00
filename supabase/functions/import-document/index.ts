@@ -1,11 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import pako from "https://esm.sh/pako@2.1.0";
+import { validateAgainstSchema } from "../_shared/json-schema.ts";
+import { getOrCreateCorrelationId } from "../_shared/correlation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version, x-correlation-id",
 };
 
 // Parser version — increment when extraction pipeline changes materially
@@ -1919,9 +1921,37 @@ async function buildCanonicalFields(
     .gte("extraction_confidence", 0.6);
   if (!entities) return;
 
+  // P3.7: load active JSON schemas for validation
+  const { data: schemas } = await supabase
+    .from("canonical_field_schemas")
+    .select("entity_type, field_key, json_schema")
+    .eq("is_active", true);
+  const schemaMap = new Map<string, Record<string, unknown>>();
+  for (const s of schemas ?? []) {
+    schemaMap.set(`${s.entity_type}:${s.field_key}`, s.json_schema as Record<string, unknown>);
+  }
+
   for (const entity of entities) {
     const fieldKey = entity.entity_key;
     const entityType = entity.entity_type;
+
+    // P3.7: validate against JSON Schema if defined
+    const schema = schemaMap.get(`${entityType}:${fieldKey}`);
+    if (schema) {
+      const result = validateAgainstSchema(entity.entity_value, schema);
+      if (!result.valid) {
+        await supabase.from("diagnostic_events").insert({
+          project_id: projectId,
+          severity: "warning",
+          scope: "ingestion",
+          event_type: "schema_drift_detected",
+          title: `Schema drift: ${entityType}.${fieldKey}`,
+          detail: result.errors.join("; ").slice(0, 500),
+          raw_data: { document_id: documentId, errors: result.errors, value: entity.entity_value },
+        });
+        continue; // reject the field
+      }
+    }
 
     const { data: existing } = await supabase
       .from("canonical_fields")
