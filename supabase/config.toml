@@ -113,3 +113,9 @@ verify_jwt = false
 
 [functions.process-email-queue]
 verify_jwt = true
+
+[functions.sign-render-url]
+verify_jwt = false
+
+[functions.sign-share-url]
+verify_jwt = false
