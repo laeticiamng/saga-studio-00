@@ -278,6 +278,7 @@ serve(async (req) => {
           status: "queued",
           idempotency_key: agentIdempotencyKey,
           correlation_id: correlationId,
+          chain_depth: chainDepth,
           input: {
             episode_id: episode.id,
             episode_number: episode.number,
@@ -290,6 +291,7 @@ serve(async (req) => {
             estimated_scenes: estimatedScenes,
             estimated_shots_per_scene: estimatedShotsPerScene,
             total_estimated_shots: estimatedScenes * estimatedShotsPerScene,
+            chain_depth: chainDepth,
             ...episodeCorpus,
           },
         })
