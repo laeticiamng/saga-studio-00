@@ -217,12 +217,58 @@ export default function ArchitectureHealth() {
 
         {/* Detail tabs */}
         <Tabs defaultValue="stuck" className="w-full">
-          <TabsList>
+          <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="stuck">Jobs bloqués ({stuckTotal})</TabsTrigger>
-            <TabsTrigger value="reaper">Historique Reaper</TabsTrigger>
-            <TabsTrigger value="budgets">Violations budget</TabsTrigger>
-            <TabsTrigger value="rules">Règles de transitions</TabsTrigger>
+            <TabsTrigger value="dlq">DLQ ({data.dlq_jobs?.length ?? 0})</TabsTrigger>
+            <TabsTrigger value="policies">Policies ({data.policies?.length ?? 0})</TabsTrigger>
+            <TabsTrigger value="chains">Deep chains ({data.deep_chain_agents?.length ?? 0})</TabsTrigger>
+            <TabsTrigger value="reaper">Reaper</TabsTrigger>
+            <TabsTrigger value="budgets">Budget</TabsTrigger>
+            <TabsTrigger value="rules">Transitions</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="dlq">
+            <DLQPanel jobs={data.dlq_jobs ?? []} onActionComplete={() => refetch()} />
+          </TabsContent>
+
+          <TabsContent value="policies">
+            <PolicyModeSwitch policies={data.policies ?? []} onChange={() => refetch()} />
+          </TabsContent>
+
+          <TabsContent value="chains">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <GitBranch className="h-4 w-4" /> Auto-chaînages profonds (&gt;10)
+                </CardTitle>
+                <CardDescription>
+                  Circuit breaker à 20 — au-delà, episode-pipeline refuse 422 + incident.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {(data.deep_chain_agents ?? []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-6 text-center">Aucun chaînage profond ✨</p>
+                ) : (
+                  <ul className="divide-y divide-border">
+                    {data.deep_chain_agents.map((a) => (
+                      <li key={a.id} className="py-3 flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium">{a.agent_slug}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(a.created_at).toLocaleString()} · épisode {a.episode_id?.slice(0, 8) ?? "—"}
+                          </p>
+                        </div>
+                        <Badge variant={a.chain_depth >= 18 ? "destructive" : "outline"}>
+                          depth {a.chain_depth}
+                        </Badge>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
 
           <TabsContent value="stuck">
             <Card>
