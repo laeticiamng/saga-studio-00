@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -24,6 +25,12 @@ serve(async (req) => {
       .eq("id", project_id)
       .single();
     if (pErr || !project) throw new Error("Project not found");
+
+    // Rate limit per project owner — 10/min (audio analysis is AI-heavy)
+    const rl = await checkRateLimit(supabase, project.user_id, {
+      endpoint: "analyze-audio", cost: 1, capacity: 10, refillPerMinute: 10,
+    });
+    if (!rl.allowed) return rateLimitResponse(rl, corsHeaders);
 
     // Update status to analyzing
     await supabase.from("projects").update({ status: "analyzing" }).eq("id", project_id);

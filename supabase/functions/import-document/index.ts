@@ -3,6 +3,16 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import pako from "https://esm.sh/pako@2.1.0";
 import { validateAgainstSchema } from "../_shared/json-schema.ts";
 import { getOrCreateCorrelationId } from "../_shared/correlation.ts";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limit.ts";
+
+// Endpoints "lecture seule" exemptés du rate-limit strict
+const READONLY_ACTIONS = new Set([
+  "check_status", "debug_document", "project_brain_summary", "retrieve_context",
+]);
+// Coût élevé (parsing IA, batch)
+const HEAVY_ACTIONS = new Set([
+  "extract", "reprocess", "reprocess_legacy", "batch_process", "wizard_extract", "apply_corpus",
+]);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -65,6 +75,18 @@ serve(async (req) => {
 
     const body = await req.json();
     const { action } = body;
+
+    // Rate limit basé sur le coût réel de l'action
+    if (!READONLY_ACTIONS.has(action)) {
+      const isHeavy = HEAVY_ACTIONS.has(action);
+      const rl = await checkRateLimit(supabase, user.id, {
+        endpoint: `import-document:${isHeavy ? "heavy" : "light"}`,
+        cost: 1,
+        capacity: isHeavy ? 15 : 60,
+        refillPerMinute: isHeavy ? 10 : 30,
+      });
+      if (!rl.allowed) return rateLimitResponse(rl, corsHeaders);
+    }
 
     if (action === "batch_process") return await batchProcess(supabase, body, user.id);
     if (action === "detect_conflicts") return await detectConflicts(supabase, body.project_id, user.id);
