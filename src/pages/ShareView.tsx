@@ -190,7 +190,6 @@ export default function ShareView() {
     </div>
   );
 }
-  const { id } = useParams<{ id: string }>();
   usePageTitle("Partage vidéo");
 
   const { data: render, isLoading } = useQuery({
