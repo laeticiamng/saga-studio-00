@@ -198,3 +198,38 @@ WHERE parser_version = 'legacy' OR parser_version IS NULL;
 - Si timeout → le projet est peut-être trop long, découper
 
 **Résolu quand** : `export_versions.status = 'completed'` avec `output_url` non null
+
+## 15. Schema drift à l'ingestion (Phase 3)
+
+**Symptôme** : `diagnostic_event` `schema_drift_detected`, canonical field rejeté.
+
+**Diagnostic** : `diagnostic_events.raw_data` contient `field_key`, `entity_type`, `errors[]`. Vérifier `canonical_field_schemas WHERE is_active`.
+
+**Résolution** : si schéma trop strict → bumper `version`. Si extraction mauvaise → fix prompt + `reprocess`.
+
+## 16. Chain depth excédée (Phase 2)
+
+**Symptôme** : `episode-pipeline` répond 422 `chain_depth_exceeded`.
+
+**Diagnostic** : onglet "Deep chains" dans `/admin/architecture-health`. Suivre via `/admin/trace/:correlation_id`.
+
+**Résolution** : identifier l'agent qui boucle, patcher la condition d'arrêt. Si isolé : reset `chain_depth = 0` et relancer.
+
+## 17. Audit log chain broken (Phase 4)
+
+**Symptôme** : `verify-audit-chain` retourne `intact = false`.
+
+**Diagnostic** : quelqu'un a modifié `audit_logs` directement (bypass triggers via superuser). Toutes entrées **après** la cassure sont suspectes.
+
+**Résolution** : investigation immédiate (compromission ou erreur opérationnelle). Restaurer depuis backup si nécessaire. Re-sceller la chaîne **n'est pas supporté volontairement** — la cassure doit rester visible.
+
+## 18. Budget projet bloqué (Phase 4)
+
+**Symptôme** : `generate-shots` répond 402 `Project budget ceiling exceeded`.
+
+**Diagnostic** : `SELECT credit_ceiling, credit_spent, guardrail_mode FROM projects WHERE id = '...'`. Onglet "Budget" dans `/admin/architecture-health`.
+
+**Résolution** :
+- Augmenter ceiling : `UPDATE projects SET credit_ceiling = X WHERE id = '...'`
+- Désactiver : `UPDATE projects SET guardrail_mode = 'shadow' WHERE id = '...'`
+- Reset compteur (rare) : `UPDATE projects SET credit_spent = 0 WHERE id = '...'`
