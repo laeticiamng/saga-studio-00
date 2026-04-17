@@ -10,11 +10,14 @@ const Footer = () => {
   const footerLinks = {
     Produit: [
       { label: "Fonctionnalités", href: "#features" },
+      { label: "Workflow", href: "#how-it-works" },
+      { label: "Cas d'usage", href: "#use-cases" },
       { label: "Galerie", href: "#gallery" },
       { label: "Tarifs", href: "/pricing" },
       { label: "Changelog", href: "/changelog" },
     ],
     Ressources: [
+      { label: "FAQ", href: "#faq" },
       { label: "Aide & Support", href: "/help" },
       { label: "À propos", href: "/about" },
       { label: "Nous contacter", href: "/contact" },

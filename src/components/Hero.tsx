@@ -79,18 +79,14 @@ const Hero = () => {
             initial={{ opacity: 0, y: 40, filter: "blur(10px)" }}
             animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
             transition={{ duration: 0.8, delay: 0.15 }}
-            className="text-4xl sm:text-5xl md:text-6xl lg:text-8xl font-bold mb-6 sm:mb-8 leading-[0.95] tracking-tight"
+            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6 sm:mb-8 leading-[1.02] tracking-tight"
           >
             <span className="bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
-              Produisez des
+              Produisez des vidéos, clips et formats narratifs
             </span>
             <br />
             <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
-              œuvres cinématiques
-            </span>
-            <br />
-            <span className="bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
-              avec l'IA
+              avec un workflow IA de bout en bout
             </span>
           </motion.h1>
 
@@ -101,11 +97,7 @@ const Hero = () => {
             transition={{ duration: 0.7, delay: 0.35 }}
             className="text-lg sm:text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-10 sm:mb-14 leading-relaxed"
           >
-            Films, séries multi-épisodes, clips musicaux — du script brut au master final exporté.
-            <br className="hidden md:block" />
-            <span className="text-foreground/70">
-              Ingestion de documents, génération, validation qualité, montage, finishing.
-            </span>
+            Saga Studio aide les équipes créatives à transformer scripts, documents et idées en productions audiovisuelles structurées : génération, validation, montage et export dans un même workflow.
           </motion.p>
 
           {/* CTA */}
@@ -125,10 +117,10 @@ const Hero = () => {
               size="lg"
               className="text-base px-8 py-6"
               onClick={() => {
-                document.getElementById("pipeline")?.scrollIntoView({ behavior: "smooth" });
+                document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" });
               }}
             >
-              Voir comment ça marche
+              Découvrir le workflow
             </Button>
           </motion.div>
 
@@ -143,7 +135,7 @@ const Hero = () => {
               { value: "4", label: "types de projets" },
               { value: "13+", label: "styles visuels" },
               { value: "6", label: "review gates" },
-              { value: "∞", label: "possibilités" },
+              { value: "1", label: "workflow unifié" },
             ].map((stat) => (
               <div key={stat.label} className="flex flex-col items-center">
                 <span className="text-2xl sm:text-3xl font-bold text-primary">{stat.value}</span>
