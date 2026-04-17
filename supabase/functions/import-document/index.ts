@@ -112,7 +112,7 @@ serve(async (req) => {
         // Text extraction is fast (<2s for DOCX ZIP parsing, <5s for PDF Vision)
         const { data: fileData, error: dlErr } = await supabase.storage
           .from("source-documents")
-          .download(storagePath);
+          .download(storage_path);
         if (dlErr || !fileData) throw new Error("Download failed: " + (dlErr?.message || "no data"));
 
         const extraction = await extractTextFromFile(fileData, detectedType, file_name);
