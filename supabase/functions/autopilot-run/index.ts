@@ -1,9 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limit.ts";
+import { getOrCreateCorrelationId } from "../_shared/correlation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version, x-correlation-id",
 };
 
 /**
@@ -28,6 +30,12 @@ serve(async (req) => {
     const { data: { user }, error: authErr } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
     if (authErr || !user) throw new Error("Unauthorized");
 
+    // P3.6: rate limit — 10/min/user (autopilot is expensive)
+    const rl = await checkRateLimit(supabase, user.id, {
+      endpoint: "autopilot-run", cost: 1, capacity: 10, refillPerMinute: 10,
+    });
+    if (!rl.allowed) return rateLimitResponse(rl, corsHeaders);
+
     const body = await req.json();
     const { episode_id, auto_approve_threshold } = body;
     if (!episode_id) throw new Error("episode_id required");
@@ -46,7 +54,7 @@ serve(async (req) => {
     }
 
     const seriesId = episode.season?.series?.id;
-    const correlationId = crypto.randomUUID();
+    const correlationId = getOrCreateCorrelationId(req);
     const idempotencyKey = `autopilot_${episode_id}_${Date.now()}`;
 
     // Set episode to first pipeline step
@@ -57,7 +65,9 @@ serve(async (req) => {
       body: {
         episode_id,
         idempotency_key: idempotencyKey,
+        correlation_id: correlationId,
       },
+      headers: { "x-correlation-id": correlationId },
     });
 
     if (pipelineErr) throw new Error(`Pipeline dispatch failed: ${pipelineErr.message}`);
@@ -70,9 +80,9 @@ serve(async (req) => {
       action: "autopilot_started",
       entity_type: "episode",
       entity_id: episode_id,
+      correlation_id: correlationId,
       details: {
         series_id: seriesId,
-        correlation_id: correlationId,
         auto_approve_threshold: auto_approve_threshold || 0.85,
         workflow_run_id: workflowRunId,
         pipeline_result: pipelineResult,
