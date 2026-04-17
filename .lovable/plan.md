@@ -1,62 +1,65 @@
 
 
-# Remaining Adjustments: Frontend Contract Hardening & Doc Updates
+Phase 1 et 2 livrées. Voici Phase 3 (P2 long terme) cadrée.
 
-## What remains from the execution master plan
+# Phase 3 — Maturité opérationnelle
 
-The database migration, edge function updates, regression tests, runbooks, and new docs were implemented. What's still missing:
+## Objectifs
+Atteindre un niveau "production-grade" sur 6 axes : traçabilité distribuée, validation stricte des données, automatisation des conflits, scalabilité ingestion, robustesse edge functions, observabilité boot-time.
 
-1. **ExtractionSummary** still uses string-matching for legacy detection instead of the `parser_version` column
-2. **DiagnosticsPanel** doesn't show `ingestion` scope events
-3. **ProjectBrainCard** is created but never wired into any page
-4. **document-ingestion.md** lacks parser versioning, active/history model, and diagnostic events sections
+## Lots de travail
 
----
+### Lot A — Tracing distribué (P3.1)
+- Colonne `correlation_id uuid` propagée sur `agent_runs`, `workflow_steps`, `audit_logs`, `diagnostic_events`, `incidents`
+- Helper `getOrCreateCorrelationId(req)` dans `_shared/`
+- Page `/admin/trace/:correlationId` : timeline chronologique d'un run end-to-end (agents → workflows → diagnostics → audit)
 
-## Changes
+### Lot B — Validation JSON Schema à l'ingestion (P3.7)
+- `import-document` valide chaque canonical field extrait contre `canonical_field_schemas` (déjà créée Phase 2)
+- Drift bloqué → incident `schema_drift_detected` + champ rejeté
+- UI : badge "schema_valid" sur les champs ingérés
 
-### 1. Update ExtractionSummary to use `parser_version`
+### Lot C — Réconciliation auto conflits canoniques (P3.3)
+- Table `conflict_resolution_rules` (per-field : `most_recent` | `highest_confidence` | `source_priority`)
+- Edge function `resolve-canonical-conflicts` cron (15 min)
+- UI admin : éditeur de règles + log des résolutions auto
 
-**File**: `src/components/create/ExtractionSummary.tsx`
+### Lot D — Câblage rate-limit (P3.6)
+- `autopilot-run` : 10/min/user
+- `generate-shots` : 30/min/user
+- `batch-render` : 5/min/user
+- Réponse 429 avec `Retry-After` header
 
-- Add `parserVersion?: string` to `DocumentDiagnostic` interface
-- Replace the `isLegacyDoc` function (lines 71-75) to check `d.parserVersion === 'legacy'` instead of string-matching on `extractionMode`
-- Add parser version badge per document in the diagnostics list
-- Fix success state: show green only when `parserVersion` is not `'legacy'` AND entities > 0
+### Lot E — Boot-time secrets validator (P3.5)
+- `system-health` enrichi : check présence des 13 secrets requis (LOVABLE_API_KEY, STRIPE_*, RUNWAY_*, etc.)
+- Endpoint `/admin/architecture-health` : nouveau bloc "Secrets readiness"
+- Alerte rouge si secret manquant en production
 
-### 2. Add `ingestion` scope to DiagnosticsPanel
+### Lot F — QC archivé requêtable (P3.2)
+- Colonne `delivery_manifests.qc_summary jsonb` (dénormalisation)
+- Trigger `denormalize_qc_on_completion` qui agrège les checks au moment du `completed`
+- Vue `qc_pass_rate_by_week` pour reporting
 
-**File**: `src/components/studio/DiagnosticsPanel.tsx`
+### Lot G — Chunked upload >20 Mo (P3.4)
+- Multipart Supabase Storage côté frontend
+- `import-document` accepte un `upload_session_id` et reconstitue le fichier
+- Progression UI granulaire (chunk-level)
 
-- Add `ingestion` to `SCOPE_LABELS` map and `scopes` array
-- This enables viewing parser diagnostics (parser_selected, parser_completed, parser_failed, extraction_completed events)
+## Livrables
+- 1 migration DB (colonnes correlation_id, table conflict_resolution_rules, qc_summary, triggers)
+- 4 nouvelles edge functions : `resolve-canonical-conflicts`, modifications `system-health`, modifications `import-document`, modifications `autopilot-run`/`generate-shots`/`batch-render`
+- 2 nouvelles pages : `/admin/trace/:id`, ajouts au dashboard `/admin/architecture-health`
+- `mem://infrastructure/distributed-tracing` (nouveau memory)
+- Mise à jour `docs/architecture-roadmap.md` (Phase 3 → ✅)
 
-### 3. Wire ProjectBrainCard into ProjectView
+## Critères de succès
+- 100% des runs ont un correlation_id propagé
+- 0 drift schema toléré silencieusement
+- ≥ 70% des conflits canoniques résolus automatiquement
+- Aucun edge function critique sans rate-limit
+- Health score ≥ 90 maintenu 30 jours
 
-**File**: `src/pages/ProjectView.tsx`
-
-- Import `ProjectBrainCard` from `@/components/studio/ProjectBrainCard`
-- Add a brain data query (call `import-document` with `project_brain_summary` action)
-- Add a legacy doc count query (count documents where `parser_version = 'legacy'`)
-- Render `ProjectBrainCard` in the project overview tab
-
-### 4. Update document-ingestion.md
-
-**File**: `docs/document-ingestion.md`
-
-Add three new sections:
-- **Parser Versioning**: reference to `parser_version` column, version values, link to `docs/parser-versioning.md`
-- **Active Result vs History**: explain `latest_successful_run`, `run_history`, how reprocess works
-- **Diagnostic Events**: list ingestion-scope events emitted by `import-document`
-
----
-
-## Files Modified
-
-| File | Change |
-|------|--------|
-| `src/components/create/ExtractionSummary.tsx` | Use `parserVersion` field, fix legacy detection, add version badge |
-| `src/components/studio/DiagnosticsPanel.tsx` | Add `ingestion` scope |
-| `src/pages/ProjectView.tsx` | Wire in ProjectBrainCard with brain data + legacy count queries |
-| `docs/document-ingestion.md` | Add parser versioning, active/history, diagnostics sections |
+## Hors-scope (reporté)
+- Marketplace agents (P3.8) : nécessite un sandboxing runtime trop coûteux à court terme
+- Multi-tenant strict : nécessite refonte RLS globale, sujet dédié
 
