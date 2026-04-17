@@ -11,20 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { motion } from "framer-motion";
-
-/* ─── Stripe IDs ─── */
-const STRIPE_CONFIG = {
-  plans: {
-    auteur:     { price_id: "price_1TJtJcDFa5Y9NR1IlTybGnC6", product_id: "prod_UIUIkXWSZqelFg" },
-    production: { price_id: "price_1TJtJdDFa5Y9NR1IYfvdo7U8", product_id: "prod_UIUIf9JBZRrVwr" },
-    studio:     { price_id: "price_1TJtJfDFa5Y9NR1IMwMS0gik", product_id: "prod_UIUIp76xgDjTPW" },
-  },
-  packs: {
-    500:  { price_id: "price_1TJtJgDFa5Y9NR1I1NtozFfX" },
-    2000: { price_id: "price_1TJtJhDFa5Y9NR1ILZR515f0" },
-    5000: { price_id: "price_1TJtJiDFa5Y9NR1IYw4X2CBt" },
-  },
-};
+import { STRIPE_CONFIG, STRIPE_MODE } from "@/config/stripe";
 
 /* ─── Feature categories per plan ─── */
 interface PlanFeature { label: string; category?: string }
@@ -174,6 +161,11 @@ export default function Pricing() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+      {STRIPE_MODE === "test" && (
+        <div className="bg-accent/20 border-b border-accent/40 text-accent-foreground text-center text-xs py-2 px-4 font-medium">
+          ⚠️ Mode Stripe TEST — aucun paiement réel ne sera effectué.
+        </div>
+      )}
       <main className="container mx-auto px-4 py-20 md:py-28">
         {/* ─── Header ─── */}
         <motion.div
