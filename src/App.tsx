@@ -43,6 +43,7 @@ const AdminAgentManager = lazy(() => import("./pages/AdminAgentManager"));
 const AdminProviderDashboard = lazy(() => import("./pages/AdminProviderDashboard"));
 const AdminAuditLog = lazy(() => import("./pages/AdminAuditLog"));
 const ArchitectureHealth = lazy(() => import("./pages/admin/ArchitectureHealth"));
+const TraceTimeline = lazy(() => import("./pages/admin/TraceTimeline"));
 
 // Autopilot & Workflow pages
 const AutopilotDashboard = lazy(() => import("./pages/AutopilotDashboard"));
@@ -129,6 +130,7 @@ const App = () => (
                 <Route path="/admin/providers" element={<AdminRoute><AdminProviderDashboard /></AdminRoute>} />
                 <Route path="/admin/audit" element={<AdminRoute><AdminAuditLog /></AdminRoute>} />
                 <Route path="/admin/architecture-health" element={<AdminRoute><ArchitectureHealth /></AdminRoute>} />
+                <Route path="/admin/trace/:correlationId" element={<AdminRoute><TraceTimeline /></AdminRoute>} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/legal" element={<Legal />} />

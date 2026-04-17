@@ -1,9 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version, x-correlation-id",
 };
 
 const BATCH_CHUNK_SIZE = 20; // Process shots in chunks of 20
@@ -24,6 +25,12 @@ serve(async (req) => {
       authHeader.replace("Bearer ", "")
     );
     if (authErr || !user) throw new Error("Unauthorized");
+
+    // P3.6: rate limit — 5/min/user (renders are very expensive)
+    const rl = await checkRateLimit(supabase, user.id, {
+      endpoint: "batch-render", cost: 1, capacity: 5, refillPerMinute: 5,
+    });
+    if (!rl.allowed) return rateLimitResponse(rl, corsHeaders);
 
     const body = await req.json();
     const { series_id, season_id, episode_ids } = body;

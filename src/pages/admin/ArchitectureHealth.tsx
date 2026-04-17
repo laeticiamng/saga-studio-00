@@ -7,19 +7,22 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Activity, AlertTriangle, FileWarning, Database, Clock, CheckCircle2,
-  Loader2, RefreshCw, Skull, Shield, Wallet, ListChecks, GitBranch,
+  Loader2, RefreshCw, Skull, Shield, Wallet, ListChecks, GitBranch, GitMerge, KeyRound,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Link } from "react-router-dom";
 import InvariantCard from "@/components/admin/InvariantCard";
 import LegacyDocsAlert from "@/components/admin/LegacyDocsAlert";
 import DLQPanel from "@/components/admin/DLQPanel";
 import PolicyModeSwitch from "@/components/admin/PolicyModeSwitch";
+import SecretsReadinessCard, { type SecretCheck } from "@/components/admin/SecretsReadinessCard";
+import ConflictRulesPanel from "@/components/admin/ConflictRulesPanel";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface HealthData {
   snapshot: Record<string, number | string | null>;
   health_score: number;
-  stuck_agents: Array<{ id: string; agent_slug: string; status: string; started_at: string; chain_depth?: number }>;
+  stuck_agents: Array<{ id: string; agent_slug: string; status: string; started_at: string; chain_depth?: number; correlation_id?: string | null }>;
   reaper_runs: Array<{
     id: string; started_at: string; completed_at: string | null;
     agent_runs_reaped: number; workflow_runs_reaped: number; exports_reaped: number;
@@ -32,7 +35,10 @@ interface HealthData {
     created_at: string; completed_at: string | null;
   }>;
   policies: Array<{ id: string; policy_key: string; domain: string; description: string | null; enforcement_mode: string }>;
-  deep_chain_agents: Array<{ id: string; agent_slug: string; chain_depth: number; episode_id: string | null; created_at: string }>;
+  deep_chain_agents: Array<{ id: string; agent_slug: string; chain_depth: number; episode_id: string | null; created_at: string; correlation_id?: string | null }>;
+  secrets: SecretCheck[];
+  secrets_missing_required: number;
+  conflict_stats: { auto_resolved_7d: number; pending: number };
 }
 
 function ageMinutes(iso: string): number {
@@ -213,7 +219,23 @@ export default function ArchitectureHealth() {
             icon={CheckCircle2}
             status={!s.last_reaper_run || ageMinutes(String(s.last_reaper_run)) > 60 ? "warn" : "ok"}
           />
+          <InvariantCard
+            label="Secrets manquants"
+            value={data.secrets_missing_required}
+            icon={KeyRound}
+            status={data.secrets_missing_required > 0 ? "error" : "ok"}
+            hint="parmi les requis"
+          />
+          <InvariantCard
+            label="Conflits auto 7j"
+            value={data.conflict_stats?.auto_resolved_7d ?? 0}
+            icon={GitMerge}
+            status="ok"
+            hint={`${data.conflict_stats?.pending ?? 0} en attente`}
+          />
         </section>
+
+        {data.secrets?.length > 0 && <SecretsReadinessCard secrets={data.secrets} />}
 
         {/* Detail tabs */}
         <Tabs defaultValue="stuck" className="w-full">
@@ -221,11 +243,16 @@ export default function ArchitectureHealth() {
             <TabsTrigger value="stuck">Jobs bloqués ({stuckTotal})</TabsTrigger>
             <TabsTrigger value="dlq">DLQ ({data.dlq_jobs?.length ?? 0})</TabsTrigger>
             <TabsTrigger value="policies">Policies ({data.policies?.length ?? 0})</TabsTrigger>
+            <TabsTrigger value="conflicts">Conflits canonical</TabsTrigger>
             <TabsTrigger value="chains">Deep chains ({data.deep_chain_agents?.length ?? 0})</TabsTrigger>
             <TabsTrigger value="reaper">Reaper</TabsTrigger>
             <TabsTrigger value="budgets">Budget</TabsTrigger>
             <TabsTrigger value="rules">Transitions</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="conflicts">
+            <ConflictRulesPanel />
+          </TabsContent>
 
           <TabsContent value="dlq">
             <DLQPanel jobs={data.dlq_jobs ?? []} onActionComplete={() => refetch()} />
@@ -258,9 +285,16 @@ export default function ArchitectureHealth() {
                             {new Date(a.created_at).toLocaleString()} · épisode {a.episode_id?.slice(0, 8) ?? "—"}
                           </p>
                         </div>
-                        <Badge variant={a.chain_depth >= 18 ? "destructive" : "outline"}>
-                          depth {a.chain_depth}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          {a.correlation_id && (
+                            <Button asChild variant="ghost" size="sm" className="h-7 text-xs">
+                              <Link to={`/admin/trace/${a.correlation_id}`}>Trace</Link>
+                            </Button>
+                          )}
+                          <Badge variant={a.chain_depth >= 18 ? "destructive" : "outline"}>
+                            depth {a.chain_depth}
+                          </Badge>
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -294,7 +328,14 @@ export default function ArchitectureHealth() {
                             {a.status} depuis {ageMinutes(a.started_at)} min
                           </p>
                         </div>
-                        <code className="text-xs text-muted-foreground">{a.id.slice(0, 8)}</code>
+                        <div className="flex items-center gap-2">
+                          {a.correlation_id && (
+                            <Button asChild variant="ghost" size="sm" className="h-7 text-xs">
+                              <Link to={`/admin/trace/${a.correlation_id}`}>Trace</Link>
+                            </Button>
+                          )}
+                          <code className="text-xs text-muted-foreground">{a.id.slice(0, 8)}</code>
+                        </div>
                       </li>
                     ))}
                   </ul>
