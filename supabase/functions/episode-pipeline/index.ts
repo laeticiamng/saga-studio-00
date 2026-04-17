@@ -47,8 +47,33 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { episode_id, force_step, idempotency_key } = body;
+    const { episode_id, force_step, idempotency_key, chain_depth: incomingDepth } = body;
     if (!episode_id) throw new Error("episode_id required");
+
+    // ── Phase 2 — Circuit breaker (A2) ───────────────────
+    // Cap recursive auto-chaining to avoid runaway loops + cost explosion.
+    const chainDepth = Number(incomingDepth ?? 0);
+    const MAX_CHAIN_DEPTH = 20;
+    if (chainDepth > MAX_CHAIN_DEPTH) {
+      // Log structured incident, then refuse.
+      await supabase.from("diagnostic_events").insert({
+        project_id: null,
+        severity: "critical",
+        scope: "incident",
+        event_type: "chain_depth_exceeded",
+        title: `episode-pipeline chain_depth ${chainDepth} > ${MAX_CHAIN_DEPTH}`,
+        detail: `Episode ${episode_id} aborted to prevent runaway chain.`,
+        raw_data: { episode_id, chain_depth: chainDepth, max: MAX_CHAIN_DEPTH },
+      });
+      return new Response(
+        JSON.stringify({
+          error: "chain_depth_exceeded",
+          chain_depth: chainDepth,
+          max: MAX_CHAIN_DEPTH,
+        }),
+        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     // Idempotency check: if we already processed this exact request, return cached result
     if (idempotency_key) {
