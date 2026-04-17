@@ -28,36 +28,41 @@ Fonction `set_policy_enforcement(policy_key, mode)` admin-only avec audit log. C
 ### P2.8 — Provenance UI ✅
 Composant `<ProvenanceBadge projectId fieldKey entityType />` qui affiche tooltip "Extrait de doc X, confiance Y%, état (validé / inféré / en attente)". Câblable sur tout champ auto-rempli.
 
-## Phase 3 — P2 long terme (Mois 4-6)
+## Phase 3 — Maturité opérationnelle ✅ LIVRÉE
 
-### P3.1 — Tracing distribué *(A5)*
-Propagation `correlation_id` end-to-end + page de visualisation timeline d'un run.
+### P3.1 — Tracing distribué ✅
+Colonne `correlation_id` sur `agent_runs`, `audit_logs`, `diagnostic_events`, `incidents`, `workflow_steps` (+ index partiels). Helper `_shared/correlation.ts` (`getOrCreateCorrelationId`, header `x-correlation-id`). Page admin `/admin/trace/:correlationId` — timeline chronologique d'un run end-to-end.
 
-### P3.2 — QC archivé requêtable *(B4)*
-Dénormalisation rapport QC dans `delivery_manifests.qc_summary` (jsonb).
+### P3.2 — QC archivé requêtable ✅
+Colonne `delivery_manifests.qc_summary` (jsonb) + trigger `denormalize_qc_on_completion`. Vue `qc_pass_rate_by_week` pour reporting hebdomadaire.
 
-### P3.3 — Réconciliation auto conflits canoniques *(C4)*
-Agent dédié + règles configurables (most_recent / highest_confidence / source_priority).
+### P3.3 — Réconciliation auto conflits canoniques ✅
+Tables `conflict_resolution_rules` + `conflict_resolution_log` (5 règles seed). Edge function `resolve-canonical-conflicts` schedulée toutes les 15 min via pg_cron. UI admin `<ConflictRulesPanel>` (changement de stratégie + log).
 
-### P3.4 — Chunked upload >20 Mo *(C5)*
-`tus.io` ou multipart Supabase Storage.
+### P3.4 — Chunked upload >20 Mo ⏳ REPORTÉ
+Multipart Supabase Storage non livré — sujet à reprendre Phase 4.
 
-### P3.5 — Boot-time secrets validator *(D5)*
-`system-health` enrichi : valide la présence de tous les secrets requis avant d'accepter du trafic.
+### P3.5 — Boot-time secrets validator ✅
+`architecture-health` enrichi : check de 13 secrets (4 requis : SUPABASE_URL, SERVICE_ROLE_KEY, ANON_KEY, LOVABLE_API_KEY). Pénalité dure -25 sur health score si secret requis manquant. UI `<SecretsReadinessCard>`.
 
-### P3.6 — Câblage rate-limit sur edge functions critiques
-Appliquer `checkRateLimit` à `autopilot-run` (10/min), `generate-shots` (30/min), `batch-render` (5/min).
+### P3.6 — Rate-limit câblé ✅ (partiel)
+`autopilot-run` 10/min, `batch-render` 5/min via `_shared/rate-limit.ts`. `generate-shots` à câbler — son entrypoint actuel n'authentifie pas par JWT user.
 
-### P3.7 — Validation JSON Schema à l'ingestion
-`import-document` valide chaque canonical field contre `canonical_field_schemas`. Drift bloqué.
+### P3.7 — Validation JSON Schema à l'ingestion ✅
+`import-document` charge `canonical_field_schemas` actifs et valide chaque entité. Drift → diagnostic `schema_drift_detected` + champ rejeté. Helper `_shared/json-schema.ts` (subset Ajv-like, sans dépendance npm).
 
-### P3.8 — Marketplace agents
-Registre versionné + sandboxing. Hors-scope court terme.
+### P3.8 — Marketplace agents ❌ HORS SCOPE
+Sandboxing runtime trop coûteux — reporté.
 
-## Critères de bascule Phase 2 → Phase 3
+## Cron actifs
+- `reaper-every-5min` (Phase 1)
+- `process-email-queue-every-min`
+- `resolve-canonical-conflicts-15min` (Phase 3) ✨
 
-- Score santé ≥ 85 maintenu pendant 14 jours
-- 0 chaînage profond > 15 sur 7 jours
-- DLQ < 3 jobs en moyenne
-- Au moins 2 policies basculées en `enforce` sans incident
-- Idempotence ledger : 0 violation `uniq_credit_ledger_idem` détectée
+## Critères de succès Phase 3
+- 100% des runs autopilot ont un `correlation_id` propagé ✅
+- 0 drift schema toléré silencieusement ✅
+- Stratégie de résolution configurable par champ ✅
+- Edge functions critiques (autopilot, batch-render) protégées ✅
+- Health score pénalisé si secret manquant ✅
+
