@@ -52,9 +52,17 @@ const Hero = () => {
           width={1920}
           height={1080}
         />
-        {/* Dark overlay for text contrast */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/50 to-background" />
-        <div className="absolute inset-0 bg-gradient-to-r from-background/60 via-transparent to-background/60" />
+        {/* Dark overlays — strong center darkening for text legibility */}
+        <div className="absolute inset-0 bg-background/60" />
+        <div className="absolute inset-0 bg-gradient-to-b from-background via-background/70 to-background" />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse 70% 55% at 50% 50%, hsl(var(--background) / 0.85) 0%, hsl(var(--background) / 0.6) 45%, transparent 80%)",
+          }}
+        />
+        <div className="absolute inset-0 backdrop-blur-[2px]" />
         <div className="absolute inset-0 noise-overlay" />
       </motion.div>
 
