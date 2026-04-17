@@ -63,6 +63,25 @@ Sandboxing runtime trop coûteux — reporté.
 - 100% des runs autopilot ont un `correlation_id` propagé ✅
 - 0 drift schema toléré silencieusement ✅
 - Stratégie de résolution configurable par champ ✅
-- Edge functions critiques (autopilot, batch-render) protégées ✅
+- Edge functions critiques (autopilot, batch-render, generate-shots) protégées ✅
 - Health score pénalisé si secret manquant ✅
+
+## Phase 4 — Sécurité & coûts ✅ LIVRÉE
+
+### P4.1 — Audit log immuable (WORM + hash chain) ✅
+`audit_logs` scellé par trigger `seal_audit_log` (SHA-256 chaîné `prev_hash → row_hash`). UPDATE/DELETE bloqués en base via triggers. Vérification `verify_audit_chain()` admin-only + edge function `verify-audit-chain` + UI `<AuditChainCard>`.
+
+### P4.2 — Cost guardrails par projet ✅
+`projects.credit_ceiling` + `credit_spent` (auto-tracké via trigger sur `credit_ledger`) + `guardrail_mode` (`off`/`shadow`/`enforce`). RPC `check_project_budget()` câblé en pré-flight dans `generate-shots`. En `enforce` → 402 + `budget_violations.blocked = true`. Helper `_shared/budget.ts`.
+
+### P4.3 — Renderer fallback observability ✅
+Table singleton `renderer_fallback_state` (RLS admin-read). UI `<RendererFallbackCard>` dans onglet "Intégrité". Auto-update côté `stitch-render` à compléter (P4.5).
+
+### P4.4 — Rate-limit `generate-shots` ✅
+Câblé via `_shared/rate-limit.ts` sur `project.user_id` (capacity 60, refill 30/min). Closes le gap P3.6.
+
+## Hors scope (assumé)
+- Chunked upload >20Mo (Supabase JS gère TUS nativement)
+- Multi-tenant strict (refonte RLS globale)
+- Marketplace agents (sandboxing runtime)
 
