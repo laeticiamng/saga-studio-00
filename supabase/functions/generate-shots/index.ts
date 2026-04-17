@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limit.ts";
+import { checkProjectBudget, budgetBlockedResponse } from "../_shared/budget.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -755,6 +757,18 @@ serve(async (req) => {
     const { data: project } = await supabase.from("projects").select("*").eq("id", project_id).single();
     if (!project) throw new Error("Project not found");
 
+    // ── Phase 4: rate-limit per project owner (30 calls/min, capacity 60) ──
+    const rl = await checkRateLimit(supabase, project.user_id, {
+      endpoint: "generate-shots",
+      cost: 1,
+      capacity: 60,
+      refillPerMinute: 30,
+    });
+    if (!rl.allowed) {
+      console.warn(`[generate-shots] rate-limited user=${project.user_id} remaining=${rl.remaining}`);
+      return rateLimitResponse(rl, corsHeaders);
+    }
+
     // ── Action: retry_failed_shots — selectively re-queue failed shots ──
     if (action === "retry_failed_shots") {
       const { data: failedShots } = await supabase
@@ -874,6 +888,12 @@ serve(async (req) => {
       if (!wallet || wallet.balance < totalEstimatedCredits) {
         await supabase.from("projects").update({ status: "failed" }).eq("id", project_id);
         return jsonResponse({ success: false, error: "Insufficient credits", required: totalEstimatedCredits, available: wallet?.balance || 0 });
+      }
+      // Phase 4: per-project budget guardrail (auto-blocking)
+      const budget = await checkProjectBudget(supabase, project_id, totalEstimatedCredits);
+      if (!budget.allowed) {
+        await supabase.from("projects").update({ status: "failed" }).eq("id", project_id);
+        return budgetBlockedResponse(budget, corsHeaders);
       }
     }
 
