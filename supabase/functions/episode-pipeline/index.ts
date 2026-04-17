@@ -321,13 +321,14 @@ serve(async (req) => {
       });
     }
 
-    // Invoke run-agent for each queued agent
+    // Invoke run-agent for each queued agent (propagating chain_depth + 1 for any downstream pipeline call)
     for (const run of agentRuns) {
       if (run.status === "queued") {
         supabase.functions.invoke("run-agent", {
           body: {
             agent_run_id: run.id,
             correlation_id: correlationId,
+            chain_depth: chainDepth + 1,
           },
         }).catch((err: unknown) => {
           // Log failure but don't block — dead letter handling via job_queue
