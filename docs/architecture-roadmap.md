@@ -75,10 +75,13 @@ Sandboxing runtime trop coûteux — reporté.
 `projects.credit_ceiling` + `credit_spent` (auto-tracké via trigger sur `credit_ledger`) + `guardrail_mode` (`off`/`shadow`/`enforce`). RPC `check_project_budget()` câblé en pré-flight dans `generate-shots`. En `enforce` → 402 + `budget_violations.blocked = true`. Helper `_shared/budget.ts`.
 
 ### P4.3 — Renderer fallback observability ✅
-Table singleton `renderer_fallback_state` (RLS admin-read). UI `<RendererFallbackCard>` dans onglet "Intégrité". Auto-update côté `stitch-render` à compléter (P4.5).
+Table singleton `renderer_fallback_state` (RLS admin-read). UI `<RendererFallbackCard>` dans onglet "Intégrité".
 
 ### P4.4 — Rate-limit `generate-shots` ✅
 Câblé via `_shared/rate-limit.ts` sur `project.user_id` (capacity 60, refill 30/min). Closes le gap P3.6.
+
+### P4.5 — Auto-bascule renderer ✅
+RPC `report_renderer_health(success, notes)` mise à jour atomique du compteur. RPC `get_renderer_fallback_state()` consulté en début de `stitch-render` : si `fallback_active`, court-circuit du service externe → bascule directe en `client_assembly` + event diagnostic `renderer_fallback_engaged`. Reset au premier succès. Seuil = 3 échecs consécutifs. Runbook #19.
 
 ## Hors scope (assumé)
 - Chunked upload >20Mo (Supabase JS gère TUS nativement)
