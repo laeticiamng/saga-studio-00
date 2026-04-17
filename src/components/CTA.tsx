@@ -64,7 +64,7 @@ const CTA = () => {
               transition={{ delay: 0.4 }}
               className="text-sm text-muted-foreground mt-8"
             >
-              1 projet complet offert · Sans carte bancaire · Premier livrable en ~10 min
+              Sans carte bancaire · Premier livrable en ~10 min
             </motion.p>
           </div>
         </AnimatedSection>
