@@ -12,6 +12,7 @@ import { RenderExportPanel } from "@/components/RenderExportPanel";
 import { ProjectDiagnostics } from "@/components/ProjectDiagnostics";
 import { InsufficientCreditsAlert, isInsufficientCreditsError } from "@/components/InsufficientCreditsAlert";
 import { ProjectBrainCard } from "@/components/studio/ProjectBrainCard";
+import { FinalMasterPlayer } from "@/components/FinalMasterPlayer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
