@@ -1,4 +1,4 @@
-import { Building2, Users, Video, Megaphone, Layers, Workflow } from "lucide-react";
+import { Building2, Video, Megaphone, Layers } from "lucide-react";
 import { motion } from "framer-motion";
 import AnimatedSection from "./AnimatedSection";
 
