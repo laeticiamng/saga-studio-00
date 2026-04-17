@@ -34,8 +34,22 @@ const faqs = [
 ];
 
 export default function FAQ() {
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
+  };
+
   return (
     <section id="faq" className="page-section">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       <div className="container mx-auto max-w-3xl">
         <AnimatedSection>
           <div className="page-header">

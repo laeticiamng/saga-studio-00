@@ -1,4 +1,6 @@
 import Hero from "@/components/Hero";
+import InBrief from "@/components/InBrief";
+import Audience from "@/components/Audience";
 import ClientLogos from "@/components/ClientLogos";
 import UseCases from "@/components/UseCases";
 import PipelineShowcase from "@/components/PipelineShowcase";
@@ -15,20 +17,22 @@ import Navbar from "@/components/Navbar";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 const Index = () => {
-  usePageTitle("Saga Studio — Studio de production audiovisuelle IA");
+  usePageTitle("Studio de production audiovisuelle avec IA");
   return (
     <div className="min-h-screen">
       <Navbar />
       <main id="main-content">
         <Hero />
+        <InBrief />
         <ClientLogos />
+        <Audience />
         <UseCases />
+        <HowItWorks />
         <PipelineShowcase />
         <Differentiators />
         <Features />
         <Gallery />
         <SocialProof />
-        <HowItWorks />
         <PricingSummary />
         <FAQ />
         <CTA />
