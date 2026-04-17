@@ -233,3 +233,17 @@ WHERE parser_version = 'legacy' OR parser_version IS NULL;
 - Augmenter ceiling : `UPDATE projects SET credit_ceiling = X WHERE id = '...'`
 - Désactiver : `UPDATE projects SET guardrail_mode = 'shadow' WHERE id = '...'`
 - Reset compteur (rare) : `UPDATE projects SET credit_spent = 0 WHERE id = '...'`
+
+## 19. Renderer externe en fallback (Phase 4)
+
+**Symptôme** : tous les nouveaux rendus partent en `client_assembly` sans même tenter le service externe. Card "Renderer externe" affiche "Dégradé" + "Fallback actif: Oui".
+
+**Diagnostic** :
+1. `SELECT * FROM renderer_fallback_state` → `consecutive_failures >= 3` ⇒ bascule auto déclenchée.
+2. `notes` contient le dernier message d'erreur (HTTP 5xx, timeout, DNS…).
+3. Logs `stitch-render` → recherche de `report_renderer_health` `success=false`.
+
+**Résolution** :
+- Vérifier la santé du service `FFMPEG_RENDER_SERVICE_URL` (ping, certificats, quotas).
+- Une fois le service réparé : forcer un rendu réel — au premier succès `report_renderer_health(true)` reset le compteur et désactive le fallback.
+- Reset manuel d'urgence : `UPDATE renderer_fallback_state SET consecutive_failures=0, fallback_active=false, external_healthy=true WHERE id=1;`

@@ -220,28 +220,49 @@ serve(async (req) => {
 
     const thumbs = shots.slice(0, 6).map(s => s.output_url).filter(Boolean);
 
-    // ─── Try external FFmpeg render service first ──
+    // ─── Try external FFmpeg render service (with auto-fallback observability) ──
     const renderServiceUrl = Deno.env.get("FFMPEG_RENDER_SERVICE_URL");
     let renderResult: any = null;
+    let fallbackForced = false;
 
+    // Check current renderer health state — if fallback is active, skip external call
     if (renderServiceUrl) {
+      const { data: stateData } = await supabase.rpc("get_renderer_fallback_state");
+      if (stateData?.fallback_active) {
+        fallbackForced = true;
+        console.log("[stitch-render] Fallback active (consecutive_failures=" + stateData.consecutive_failures + ") — skipping external render");
+      }
+    }
+
+    if (renderServiceUrl && !fallbackForced) {
       try {
         console.log("[stitch-render] Attempting external render service:", renderServiceUrl);
         const res = await fetch(renderServiceUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(manifest),
+          signal: AbortSignal.timeout(120_000),
         });
         if (res.ok) {
           renderResult = await res.json();
           console.log("[stitch-render] External render result:", JSON.stringify(renderResult));
+          // Report success — resets the failure counter
+          await supabase.rpc("report_renderer_health", { p_success: true, p_notes: null });
         } else {
           const errText = await res.text();
           console.warn("[stitch-render] External render service returned", res.status, errText);
+          await supabase.rpc("report_renderer_health", {
+            p_success: false,
+            p_notes: `HTTP ${res.status}: ${errText.slice(0, 200)}`,
+          });
         }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "Unknown error";
         console.warn("[stitch-render] External render service failed:", message);
+        await supabase.rpc("report_renderer_health", {
+          p_success: false,
+          p_notes: message.slice(0, 200),
+        });
       }
     }
 
@@ -281,7 +302,21 @@ serve(async (req) => {
       });
     } else {
       // ─── PATH B: Client assembly required — upload manifest, NO fake master URL ──
-      console.log("[stitch-render] PATH B: Client assembly mode (no external render service)");
+      console.log("[stitch-render] PATH B: Client assembly mode" + (fallbackForced ? " (FORCED by renderer fallback)" : ""));
+
+      // Diagnostic event when fallback was forced (for admin visibility)
+      if (fallbackForced) {
+        await supabase.from("diagnostic_events").insert({
+          project_id,
+          severity: "warning",
+          scope: "infrastructure",
+          event_type: "renderer_fallback_engaged",
+          title: "Bascule renderer activée",
+          detail: "Le service FFmpeg externe est dégradé — assemblage client utilisé.",
+          raw_data: { project_id, render_mode: "client_assembly_forced" },
+        });
+      }
+
       const manifestPath = `${project_id}/manifest.json`;
       const manifestJson = JSON.stringify(manifest);
       const encoder = new TextEncoder();
@@ -321,10 +356,13 @@ serve(async (req) => {
           cuts_count: beatAlignedCuts.length,
           bpm,
           render_mode: "client_assembly",
+          fallback_forced: fallbackForced,
           manifest_url: manifestUrl,
           stitched_at: new Date().toISOString(),
           shot_types: manifest.shot_types,
-          note: "No external render service configured. Client-side FFmpeg assembly required.",
+          note: fallbackForced
+            ? "Renderer externe dégradé — bascule auto vers client-assembly."
+            : "No external render service configured. Client-side FFmpeg assembly required.",
         }),
       }, { onConflict: "project_id" });
 
@@ -334,10 +372,13 @@ serve(async (req) => {
       return jsonResponse({
         success: true,
         render_mode: "client_assembly",
+        fallback_forced: fallbackForced,
         shots_stitched: shots.length,
         beat_sync: { enabled: true, cuts: beatAlignedCuts.length, bpm },
         manifest_url: manifestUrl,
-        note: "No external render service. Use browser FFmpeg to assemble the final video.",
+        note: fallbackForced
+          ? "External renderer degraded — auto-switched to client assembly."
+          : "No external render service. Use browser FFmpeg to assemble the final video.",
       });
     }
   } catch (err: unknown) {
