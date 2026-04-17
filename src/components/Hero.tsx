@@ -32,12 +32,23 @@ const Hero = () => {
         style={{ y: bgY, scale: bgScale }}
         className="absolute inset-0"
       >
+        <video
+          src="/saga-hero-demo.mp4"
+          poster={heroImage}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover motion-reduce:hidden"
+        />
         <img
           src={heroImage}
           alt=""
           loading="eager"
           decoding="async"
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover motion-safe:hidden"
           width={1920}
           height={1080}
         />
