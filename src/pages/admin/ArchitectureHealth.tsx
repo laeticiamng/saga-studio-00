@@ -7,23 +7,32 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Activity, AlertTriangle, FileWarning, Database, Clock, CheckCircle2,
-  Loader2, RefreshCw, Skull, Shield, Wallet, ListChecks,
+  Loader2, RefreshCw, Skull, Shield, Wallet, ListChecks, GitBranch,
 } from "lucide-react";
 import { toast } from "sonner";
 import InvariantCard from "@/components/admin/InvariantCard";
 import LegacyDocsAlert from "@/components/admin/LegacyDocsAlert";
+import DLQPanel from "@/components/admin/DLQPanel";
+import PolicyModeSwitch from "@/components/admin/PolicyModeSwitch";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface HealthData {
   snapshot: Record<string, number | string | null>;
   health_score: number;
-  stuck_agents: Array<{ id: string; agent_slug: string; status: string; started_at: string }>;
+  stuck_agents: Array<{ id: string; agent_slug: string; status: string; started_at: string; chain_depth?: number }>;
   reaper_runs: Array<{
     id: string; started_at: string; completed_at: string | null;
     agent_runs_reaped: number; workflow_runs_reaped: number; exports_reaped: number;
   }>;
   budget_violations: Array<{ id: string; project_id: string | null; attempted_credits: number; blocked: boolean; created_at: string }>;
   transition_rules: Array<{ id: string; domain: string; to_state: string; required_predecessor: string | null; enforcement_mode: string }>;
+  dlq_jobs: Array<{
+    id: string; job_type: string; slug: string | null; episode_id: string | null;
+    error_message: string | null; retry_count: number; max_retries: number;
+    created_at: string; completed_at: string | null;
+  }>;
+  policies: Array<{ id: string; policy_key: string; domain: string; description: string | null; enforcement_mode: string }>;
+  deep_chain_agents: Array<{ id: string; agent_slug: string; chain_depth: number; episode_id: string | null; created_at: string }>;
 }
 
 function ageMinutes(iso: string): number {
