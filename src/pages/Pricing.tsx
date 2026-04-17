@@ -161,6 +161,11 @@ export default function Pricing() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+      {STRIPE_MODE === "test" && (
+        <div className="bg-yellow-500/10 border-b border-yellow-500/30 text-yellow-700 dark:text-yellow-400 text-center text-xs py-2 px-4">
+          ⚠️ Mode Stripe TEST — aucun paiement réel ne sera effectué.
+        </div>
+      )}
       <main className="container mx-auto px-4 py-20 md:py-28">
         {/* ─── Header ─── */}
         <motion.div
