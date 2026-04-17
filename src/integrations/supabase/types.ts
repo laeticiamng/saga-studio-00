@@ -3480,12 +3480,16 @@ export type Database = {
           created_at: string
           id: string
           logs: string | null
+          manifest_path: string | null
           manifest_url: string | null
+          master_path_16_9: string | null
+          master_path_9_16: string | null
           master_url_16_9: string | null
           master_url_9_16: string | null
           project_id: string
           render_mode: string | null
           status: Database["public"]["Enums"]["render_status"]
+          teaser_path: string | null
           teaser_url: string | null
           thumbs_json: Json | null
           updated_at: string
@@ -3494,12 +3498,16 @@ export type Database = {
           created_at?: string
           id?: string
           logs?: string | null
+          manifest_path?: string | null
           manifest_url?: string | null
+          master_path_16_9?: string | null
+          master_path_9_16?: string | null
           master_url_16_9?: string | null
           master_url_9_16?: string | null
           project_id: string
           render_mode?: string | null
           status?: Database["public"]["Enums"]["render_status"]
+          teaser_path?: string | null
           teaser_url?: string | null
           thumbs_json?: Json | null
           updated_at?: string
@@ -3508,12 +3516,16 @@ export type Database = {
           created_at?: string
           id?: string
           logs?: string | null
+          manifest_path?: string | null
           manifest_url?: string | null
+          master_path_16_9?: string | null
+          master_path_9_16?: string | null
           master_url_16_9?: string | null
           master_url_9_16?: string | null
           project_id?: string
           render_mode?: string | null
           status?: Database["public"]["Enums"]["render_status"]
+          teaser_path?: string | null
           teaser_url?: string | null
           thumbs_json?: Json | null
           updated_at?: string

@@ -271,6 +271,11 @@ serve(async (req) => {
     if (hasExternalRender) {
       // ─── PATH A: Server render completed — real MP4 exists ──
       console.log("[stitch-render] PATH A: Server render with real MP4");
+      // Extract internal storage paths from public URLs (for signed URL flow on private bucket)
+      const extractPath = (u: string | null | undefined) =>
+        u && u.includes("/storage/v1/object/public/renders/")
+          ? u.replace(/^.*\/storage\/v1\/object\/public\/renders\//, "")
+          : null;
       await supabase.from("renders").upsert({
         project_id,
         status: "completed",
@@ -278,7 +283,11 @@ serve(async (req) => {
         master_url_16_9: renderResult.master_url_16_9,
         master_url_9_16: renderResult.master_url_9_16 || null,
         teaser_url: renderResult.teaser_url || null,
+        master_path_16_9: extractPath(renderResult.master_url_16_9),
+        master_path_9_16: extractPath(renderResult.master_url_9_16),
+        teaser_path: extractPath(renderResult.teaser_url),
         manifest_url: null,
+        manifest_path: null,
         thumbs_json: thumbs,
         logs: JSON.stringify({
           manifest_version: 4,
@@ -331,24 +340,31 @@ serve(async (req) => {
         console.error("[stitch-render] Manifest upload error:", uploadError.message);
       }
 
-      const { data: manifestUrlData } = supabase.storage.from("renders").getPublicUrl(manifestPath);
-      const manifestUrl = manifestUrlData?.publicUrl;
+      // Bucket is now private — generate a 24h signed URL for the manifest
+      const { data: signed } = await supabase.storage
+        .from("renders")
+        .createSignedUrl(manifestPath, 60 * 60 * 24);
+      const manifestUrl = signed?.signedUrl;
 
       if (!manifestUrl) {
-        throw new Error("Failed to upload manifest");
+        throw new Error("Failed to sign manifest URL");
       }
 
-      console.log("[stitch-render] Manifest uploaded:", manifestUrl);
+      console.log("[stitch-render] Manifest uploaded (signed):", manifestPath);
 
-      // Store manifest separately — DO NOT write it as master_url
+      // Store both legacy URL (signed, ephemeral) and the canonical path
       await supabase.from("renders").upsert({
         project_id,
         status: "completed",
         render_mode: "client_assembly",
         manifest_url: manifestUrl,
+        manifest_path: manifestPath,
         master_url_16_9: null,  // No real server MP4
         master_url_9_16: null,
+        master_path_16_9: null,
+        master_path_9_16: null,
         teaser_url: null,
+        teaser_path: null,
         thumbs_json: thumbs,
         logs: JSON.stringify({
           manifest_version: 4,

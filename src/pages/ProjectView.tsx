@@ -12,6 +12,7 @@ import { RenderExportPanel } from "@/components/RenderExportPanel";
 import { ProjectDiagnostics } from "@/components/ProjectDiagnostics";
 import { InsufficientCreditsAlert, isInsufficientCreditsError } from "@/components/InsufficientCreditsAlert";
 import { ProjectBrainCard } from "@/components/studio/ProjectBrainCard";
+import { FinalMasterPlayer } from "@/components/FinalMasterPlayer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -446,42 +447,16 @@ export default function ProjectView() {
         </div>
 
         {/* Final Master Video Player */}
-        {render?.master_url_16_9 && render.status === "completed" && !render.master_url_16_9.includes("manifest.json") && (
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-            <Card className="border-primary/20 bg-card/80 overflow-hidden">
-              <div className="rounded-t-lg overflow-hidden bg-black">
-                <video
-                  src={render.master_url_16_9}
-                  controls
-                  className="w-full aspect-video"
-                  poster={render.teaser_url || undefined}
-                />
-              </div>
-              <CardContent className="flex items-center justify-between py-3 px-4">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Film className="h-4 w-4 text-primary" />
-                  <span className="font-medium text-foreground">Master final</span>
-                  {render.master_url_9_16 && render.master_url_9_16 !== render.master_url_16_9 && (
-                    <Badge variant="outline" className="text-[10px]">+ Vertical 9:16</Badge>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <a href={render.master_url_16_9} target="_blank" rel="noopener noreferrer">
-                    <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
-                      <Download className="h-3.5 w-3.5" /> Télécharger 16:9
-                    </Button>
-                  </a>
-                  {render.master_url_9_16 && render.master_url_9_16 !== render.master_url_16_9 && (
-                    <a href={render.master_url_9_16} target="_blank" rel="noopener noreferrer">
-                      <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
-                        <Download className="h-3.5 w-3.5" /> 9:16
-                      </Button>
-                    </a>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+        {(render?.master_path_16_9 || render?.master_url_16_9) && render.status === "completed" && !(render.master_url_16_9 || "").includes("manifest.json") && (
+          <FinalMasterPlayer
+            projectId={project.id}
+            master16Path={render.master_path_16_9}
+            master9Path={render.master_path_9_16}
+            teaserPath={render.teaser_path}
+            legacyMaster16={render.master_url_16_9}
+            legacyMaster9={render.master_url_9_16}
+            legacyTeaser={render.teaser_url}
+          />
         )}
 
         {/* Content Tabs */}

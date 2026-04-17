@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Film, Download, Loader2, Play } from "lucide-react";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { ShotPreviewPlayer } from "@/components/ShotPreviewPlayer";
+import { useSignedRenderUrl } from "@/hooks/useSignedRenderUrl";
 
 import { typeLabels, styleLabels } from "@/lib/labels";
 
@@ -30,15 +31,40 @@ export default function ShareView() {
   const { data: project } = useQuery({
     queryKey: ["share-project", id],
     queryFn: async () => {
-      // Try projects_public view first, fall back to projects
-      const { data } = await supabase.from("projects").select("title, type, style_preset, status").eq("id", id!).single();
+      const { data } = await supabase.from("projects_public").select("title, type, style_preset, status").eq("id", id!).maybeSingle();
       return data as { title: string; type: string; style_preset: string | null; status: string } | null;
     },
     enabled: !!id,
   });
 
+  // Resolve signed URLs for the new private bucket (paths) — fallback to legacy public URLs
+  const master16 = useSignedRenderUrl({
+    path: render?.master_path_16_9 ?? null,
+    projectId: id,
+    fallbackUrl: render?.master_url_16_9 ?? null,
+    mode: "public",
+  });
+  const master9 = useSignedRenderUrl({
+    path: render?.master_path_9_16 ?? null,
+    projectId: id,
+    fallbackUrl: render?.master_url_9_16 ?? null,
+    mode: "public",
+  });
+  const teaser = useSignedRenderUrl({
+    path: render?.teaser_path ?? null,
+    projectId: id,
+    fallbackUrl: render?.teaser_url ?? null,
+    mode: "public",
+  });
+  const manifest = useSignedRenderUrl({
+    path: render?.manifest_path ?? null,
+    projectId: id,
+    fallbackUrl: render?.manifest_url ?? null,
+    mode: "public",
+  });
+
   // For manifest-based renders, load shots for the player
-  const isManifest = isManifestUrl(render?.master_url_16_9 ?? null);
+  const isManifest = render?.render_mode === "client_assembly" || isManifestUrl(render?.master_url_16_9 ?? null);
 
   const { data: shots } = useQuery({
     queryKey: ["share-shots", id],
@@ -58,14 +84,14 @@ export default function ShareView() {
     enabled: !!id && isManifest,
   });
 
-  // Get manifest data for audio URL
+  // Fetch manifest contents (uses signed URL if available)
   const { data: manifestData } = useQuery({
-    queryKey: ["share-manifest", render?.master_url_16_9],
+    queryKey: ["share-manifest-data", manifest.url],
     queryFn: async () => {
-      const res = await fetch(render!.master_url_16_9!);
+      const res = await fetch(manifest.url!);
       return res.json();
     },
-    enabled: !!render?.master_url_16_9 && isManifest,
+    enabled: !!manifest.url && isManifest,
   });
 
   if (isLoading) {
@@ -118,10 +144,12 @@ export default function ShareView() {
               </Badge>
             </div>
           </div>
-        ) : render.master_url_16_9 && !isManifest ? (
+        ) : master16.url && !isManifest ? (
           <div className="rounded-xl overflow-hidden bg-secondary/30 mb-6">
-            <video src={render.master_url_16_9} controls className="w-full aspect-video" />
+            <video src={master16.url} controls className="w-full aspect-video" />
           </div>
+        ) : master16.isLoading ? (
+          <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
         ) : null}
 
         {/* Download section - only for non-manifest renders */}
@@ -131,34 +159,30 @@ export default function ShareView() {
               <CardTitle className="text-lg">Télécharger</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {render.master_url_16_9 && (
-                <a href={render.master_url_16_9} target="_blank" rel="noopener noreferrer">
+              {master16.url && (
+                <a href={master16.url} target="_blank" rel="noopener noreferrer">
                   <Button variant="glass" className="w-full justify-start gap-2">
                     <Download className="h-4 w-4" /> Master 16:9
                   </Button>
                 </a>
               )}
-              {render.master_url_9_16 && render.master_url_9_16 !== render.master_url_16_9 && (
-                <a href={render.master_url_9_16} target="_blank" rel="noopener noreferrer">
+              {master9.url && master9.url !== master16.url && (
+                <a href={master9.url} target="_blank" rel="noopener noreferrer">
                   <Button variant="glass" className="w-full justify-start gap-2 mt-2">
                     <Download className="h-4 w-4" /> Vertical 9:16
                   </Button>
                 </a>
               )}
-              {render.teaser_url && (
-                <a href={render.teaser_url} target="_blank" rel="noopener noreferrer">
+              {teaser.url && (
+                <a href={teaser.url} target="_blank" rel="noopener noreferrer">
                   <Button variant="glass" className="w-full justify-start gap-2 mt-2">
-                    <Download className="h-4 w-4" /> Teaser 15s
+                    <Download className="h-4 w-4" /> Teaser
                   </Button>
                 </a>
               )}
             </CardContent>
           </Card>
         )}
-
-        <p className="text-center text-xs text-muted-foreground mt-8">
-          Créé avec <Link to="/" className="text-primary hover:underline">Saga Studio</Link>
-        </p>
       </div>
       <footer className="border-t border-border/50 py-6 text-center text-xs text-muted-foreground mt-12">
         © {new Date().getFullYear()} EMOTIONSCARE SASU — Saga Studio. Tous droits réservés.
