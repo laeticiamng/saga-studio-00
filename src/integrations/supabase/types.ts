@@ -750,6 +750,57 @@ export type Database = {
           },
         ]
       }
+      budget_violations: {
+        Row: {
+          agent_slug: string | null
+          attempted_credits: number | null
+          blocked: boolean
+          ceiling: number | null
+          created_at: string
+          current_spend: number | null
+          enforcement_mode: string
+          id: string
+          project_id: string | null
+        }
+        Insert: {
+          agent_slug?: string | null
+          attempted_credits?: number | null
+          blocked?: boolean
+          ceiling?: number | null
+          created_at?: string
+          current_spend?: number | null
+          enforcement_mode: string
+          id?: string
+          project_id?: string | null
+        }
+        Update: {
+          agent_slug?: string | null
+          attempted_credits?: number | null
+          blocked?: boolean
+          ceiling?: number | null
+          created_at?: string
+          current_spend?: number | null
+          enforcement_mode?: string
+          id?: string
+          project_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_violations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_violations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       canonical_conflicts: {
         Row: {
           canonical_value: Json | null
@@ -1912,6 +1963,39 @@ export type Database = {
           },
         ]
       }
+      forbidden_transitions: {
+        Row: {
+          created_at: string
+          description: string | null
+          domain: string
+          enforcement_mode: string
+          id: string
+          required_artifact: string | null
+          required_predecessor: string | null
+          to_state: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          domain: string
+          enforcement_mode?: string
+          id?: string
+          required_artifact?: string | null
+          required_predecessor?: string | null
+          to_state: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          domain?: string
+          enforcement_mode?: string
+          id?: string
+          required_artifact?: string | null
+          required_predecessor?: string | null
+          to_state?: string
+        }
+        Relationships: []
+      }
       governance_policies: {
         Row: {
           created_at: string
@@ -2546,6 +2630,7 @@ export type Database = {
           budget_limit_credits: number | null
           cost_mode: string
           created_at: string
+          enforcement_mode: string
           estimated_total_cost: number | null
           id: string
           per_scene_limit_credits: number | null
@@ -2557,6 +2642,7 @@ export type Database = {
           budget_limit_credits?: number | null
           cost_mode?: string
           created_at?: string
+          enforcement_mode?: string
           estimated_total_cost?: number | null
           id?: string
           per_scene_limit_credits?: number | null
@@ -2568,6 +2654,7 @@ export type Database = {
           budget_limit_credits?: number | null
           cost_mode?: string
           created_at?: string
+          enforcement_mode?: string
           estimated_total_cost?: number | null
           id?: string
           per_scene_limit_credits?: number | null
@@ -2953,6 +3040,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      reaper_runs: {
+        Row: {
+          agent_runs_reaped: number
+          completed_at: string | null
+          details: Json | null
+          errors: Json | null
+          exports_reaped: number
+          id: string
+          started_at: string
+          workflow_runs_reaped: number
+        }
+        Insert: {
+          agent_runs_reaped?: number
+          completed_at?: string | null
+          details?: Json | null
+          errors?: Json | null
+          exports_reaped?: number
+          id?: string
+          started_at?: string
+          workflow_runs_reaped?: number
+        }
+        Update: {
+          agent_runs_reaped?: number
+          completed_at?: string | null
+          details?: Json | null
+          errors?: Json | null
+          exports_reaped?: number
+          id?: string
+          started_at?: string
+          workflow_runs_reaped?: number
+        }
+        Relationships: []
       }
       redaction_profiles: {
         Row: {
@@ -4684,6 +4804,26 @@ export type Database = {
       }
     }
     Views: {
+      architecture_health_snapshot: {
+        Row: {
+          agent_runs_stuck: number | null
+          avg_agent_latency_ms_24h: number | null
+          budget_blocks_7d: number | null
+          budget_violations_7d: number | null
+          docs_failed: number | null
+          docs_legacy: number | null
+          docs_total: number | null
+          errors_7d: number | null
+          exports_stuck: number | null
+          governance_violations_7d: number | null
+          incidents_7d: number | null
+          jobs_reaped_7d: number | null
+          last_reaper_run: string | null
+          snapshot_at: string | null
+          workflow_runs_stuck: number | null
+        }
+        Relationships: []
+      }
       projects_public: {
         Row: {
           id: string | null
