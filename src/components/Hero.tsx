@@ -120,7 +120,7 @@ const Hero = () => {
           >
             <Button variant="hero" size="lg" className="group text-base px-8 py-6" onClick={handleGetStarted}>
               <Play className="w-5 h-5 group-hover:scale-110 transition-transform fill-current" />
-              Démarrer mon projet — 1 projet offert
+              Démarrer mon projet
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </Button>
             <Button
