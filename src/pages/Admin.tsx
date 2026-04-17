@@ -322,6 +322,9 @@ export default function Admin() {
           <Button variant="outline" size="sm" asChild>
             <Link to="/admin/audit">Journal d'audit</Link>
           </Button>
+          <Button variant="default" size="sm" asChild>
+            <Link to="/admin/architecture-health">🩺 Architecture Health</Link>
+          </Button>
         </div>
 
         {/* Tabs */}
