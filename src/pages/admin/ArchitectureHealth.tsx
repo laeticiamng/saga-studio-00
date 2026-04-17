@@ -17,6 +17,8 @@ import DLQPanel from "@/components/admin/DLQPanel";
 import PolicyModeSwitch from "@/components/admin/PolicyModeSwitch";
 import SecretsReadinessCard, { type SecretCheck } from "@/components/admin/SecretsReadinessCard";
 import ConflictRulesPanel from "@/components/admin/ConflictRulesPanel";
+import AuditChainCard from "@/components/admin/AuditChainCard";
+import RendererFallbackCard from "@/components/admin/RendererFallbackCard";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface HealthData {
@@ -248,10 +250,18 @@ export default function ArchitectureHealth() {
             <TabsTrigger value="reaper">Reaper</TabsTrigger>
             <TabsTrigger value="budgets">Budget</TabsTrigger>
             <TabsTrigger value="rules">Transitions</TabsTrigger>
+            <TabsTrigger value="integrity">Intégrité</TabsTrigger>
           </TabsList>
 
           <TabsContent value="conflicts">
             <ConflictRulesPanel />
+          </TabsContent>
+
+          <TabsContent value="integrity">
+            <div className="grid md:grid-cols-2 gap-4">
+              <AuditChainCard />
+              <RendererFallbackCard />
+            </div>
           </TabsContent>
 
           <TabsContent value="dlq">
