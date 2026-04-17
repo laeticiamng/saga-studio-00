@@ -4,12 +4,19 @@ import { Link } from "react-router-dom";
 import { Cookie } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const COOKIE_KEY = "cineclip-cookie-consent";
+const COOKIE_KEY = "saga-studio-cookie-consent";
+const LEGACY_COOKIE_KEY = "cineclip-cookie-consent";
 
 export default function CookieBanner() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
+    // Migration: read legacy key once and copy to new key
+    const legacy = localStorage.getItem(LEGACY_COOKIE_KEY);
+    if (legacy && !localStorage.getItem(COOKIE_KEY)) {
+      localStorage.setItem(COOKIE_KEY, legacy);
+      localStorage.removeItem(LEGACY_COOKIE_KEY);
+    }
     const consent = localStorage.getItem(COOKIE_KEY);
     if (!consent) {
       // Small delay so it doesn't flash on load
