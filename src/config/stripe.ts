@@ -41,18 +41,17 @@ const LIVE: StripePriceSet = {
   },
 };
 
-// TODO: paste actual TEST price IDs from Stripe test dashboard.
-// As long as these stay empty strings, we transparently fall back to LIVE.
+// TEST price IDs (Stripe test mode). Used automatically when not in production build.
 const TEST: StripePriceSet = {
   plans: {
-    auteur: { price_id: "", product_id: "" },
-    production: { price_id: "", product_id: "" },
-    studio: { price_id: "", product_id: "" },
+    auteur: { price_id: "price_1TNDhzDFa5Y9NR1IT4mtCno4", product_id: "prod_ULvZCHBh2qSv86" },
+    production: { price_id: "price_1TNDi0DFa5Y9NR1IuloQ9X64", product_id: "prod_ULvZ8lp569oxVk" },
+    studio: { price_id: "price_1TNDi1DFa5Y9NR1IPufQ1gcB", product_id: "prod_ULvZzkyNI2mOd3" },
   },
   packs: {
-    500: { price_id: "" },
-    2000: { price_id: "" },
-    5000: { price_id: "" },
+    500: { price_id: "price_1TNDi3DFa5Y9NR1If4KsP7dq" },
+    2000: { price_id: "price_1TNDi3DFa5Y9NR1IHxZlN1DD" },
+    5000: { price_id: "price_1TNDi4DFa5Y9NR1Ie7SMbLq6" },
   },
 };
 
