@@ -648,6 +648,8 @@ export type Database = {
           entity_type: string
           id: string
           ip_address: string | null
+          prev_hash: string | null
+          row_hash: string | null
           user_id: string | null
         }
         Insert: {
@@ -659,6 +661,8 @@ export type Database = {
           entity_type: string
           id?: string
           ip_address?: string | null
+          prev_hash?: string | null
+          row_hash?: string | null
           user_id?: string | null
         }
         Update: {
@@ -670,6 +674,8 @@ export type Database = {
           entity_type?: string
           id?: string
           ip_address?: string | null
+          prev_hash?: string | null
+          row_hash?: string | null
           user_id?: string | null
         }
         Relationships: []
@@ -2849,9 +2855,12 @@ export type Database = {
           audio_url: string | null
           clip_type: string | null
           created_at: string
+          credit_ceiling: number | null
+          credit_spent: number
           duration_sec: number | null
           face_urls: Json | null
           governance_state: string
+          guardrail_mode: string
           id: string
           mode: string | null
           provider_default: string | null
@@ -2872,9 +2881,12 @@ export type Database = {
           audio_url?: string | null
           clip_type?: string | null
           created_at?: string
+          credit_ceiling?: number | null
+          credit_spent?: number
           duration_sec?: number | null
           face_urls?: Json | null
           governance_state?: string
+          guardrail_mode?: string
           id?: string
           mode?: string | null
           provider_default?: string | null
@@ -2895,9 +2907,12 @@ export type Database = {
           audio_url?: string | null
           clip_type?: string | null
           created_at?: string
+          credit_ceiling?: number | null
+          credit_spent?: number
           duration_sec?: number | null
           face_urls?: Json | null
           governance_state?: string
+          guardrail_mode?: string
           id?: string
           mode?: string | null
           provider_default?: string | null
@@ -3429,6 +3444,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      renderer_fallback_state: {
+        Row: {
+          consecutive_failures: number
+          external_healthy: boolean
+          fallback_active: boolean
+          id: number
+          last_check_at: string
+          last_failure_at: string | null
+          notes: string | null
+        }
+        Insert: {
+          consecutive_failures?: number
+          external_healthy?: boolean
+          fallback_active?: boolean
+          id?: number
+          last_check_at?: string
+          last_failure_at?: string | null
+          notes?: string | null
+        }
+        Update: {
+          consecutive_failures?: number
+          external_healthy?: boolean
+          fallback_active?: boolean
+          id?: number
+          last_check_at?: string
+          last_failure_at?: string | null
+          notes?: string | null
+        }
+        Relationships: []
       }
       renders: {
         Row: {
@@ -5173,6 +5218,24 @@ export type Database = {
       }
     }
     Functions: {
+      check_project_budget: {
+        Args: { p_amount: number; p_project_id: string }
+        Returns: Json
+      }
+      compute_audit_hash: {
+        Args: {
+          _action: string
+          _correlation_id: string
+          _created_at: string
+          _details: Json
+          _entity_id: string
+          _entity_type: string
+          _id: string
+          _prev_hash: string
+          _user_id: string
+        }
+        Returns: string
+      }
       consume_rate_limit: {
         Args: {
           p_capacity?: number
@@ -5241,6 +5304,15 @@ export type Database = {
       }
       user_owns_project: { Args: { p_project_id: string }; Returns: boolean }
       user_owns_series: { Args: { p_series_id: string }; Returns: boolean }
+      verify_audit_chain: {
+        Args: { p_limit?: number }
+        Returns: {
+          actual_hash: string
+          broken_id: string
+          chain_position: number
+          expected_hash: string
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
