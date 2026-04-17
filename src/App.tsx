@@ -27,6 +27,7 @@ const Admin = lazy(() => import("./pages/Admin"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
 const Legal = lazy(() => import("./pages/Legal"));
+const Security = lazy(() => import("./pages/Security"));
 const About = lazy(() => import("./pages/About"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -134,6 +135,7 @@ const App = () => (
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/legal" element={<Legal />} />
+                <Route path="/security" element={<Security />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/changelog" element={<Changelog />} />

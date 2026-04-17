@@ -25,6 +25,7 @@ const Footer = () => {
     ],
     Légal: [
       { label: "Confidentialité", href: "/privacy" },
+      { label: "Sécurité", href: "/security" },
       { label: "CGU", href: "/terms" },
       { label: "Mentions légales", href: "/legal" },
     ],
