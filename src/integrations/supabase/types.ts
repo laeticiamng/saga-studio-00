@@ -150,6 +150,7 @@ export type Database = {
       agent_runs: {
         Row: {
           agent_slug: string
+          chain_depth: number | null
           completed_at: string | null
           correlation_id: string | null
           created_at: string
@@ -172,6 +173,7 @@ export type Database = {
         }
         Insert: {
           agent_slug: string
+          chain_depth?: number | null
           completed_at?: string | null
           correlation_id?: string | null
           created_at?: string
@@ -194,6 +196,7 @@ export type Database = {
         }
         Update: {
           agent_slug?: string
+          chain_depth?: number | null
           completed_at?: string | null
           correlation_id?: string | null
           created_at?: string
@@ -886,6 +889,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      canonical_field_schemas: {
+        Row: {
+          created_at: string
+          description: string | null
+          entity_type: string
+          field_key: string
+          id: string
+          is_active: boolean
+          json_schema: Json
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          entity_type?: string
+          field_key: string
+          id?: string
+          is_active?: boolean
+          json_schema: Json
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          entity_type?: string
+          field_key?: string
+          id?: string
+          is_active?: boolean
+          json_schema?: Json
+          version?: number
+        }
+        Relationships: []
       }
       canonical_fields: {
         Row: {
@@ -3041,6 +3077,39 @@ export type Database = {
           },
         ]
       }
+      rate_limit_buckets: {
+        Row: {
+          capacity: number
+          endpoint: string
+          id: string
+          last_refill_at: string
+          refill_per_minute: number
+          tokens: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          capacity?: number
+          endpoint: string
+          id?: string
+          last_refill_at?: string
+          refill_per_minute?: number
+          tokens?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          capacity?: number
+          endpoint?: string
+          id?: string
+          last_refill_at?: string
+          refill_per_minute?: number
+          tokens?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       reaper_runs: {
         Row: {
           agent_runs_reaped: number
@@ -3504,6 +3573,13 @@ export type Database = {
             columns: ["scene_id"]
             isOneToOne: false
             referencedRelation: "scenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_gates_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "active_review_gates"
             referencedColumns: ["id"]
           },
           {
@@ -4804,6 +4880,112 @@ export type Database = {
       }
     }
     Views: {
+      active_review_gates: {
+        Row: {
+          approved_by: string | null
+          created_at: string | null
+          decided_at: string | null
+          decided_by: string | null
+          decision_action: string | null
+          episode_id: string | null
+          gate_owner: string | null
+          gate_type: string | null
+          id: string | null
+          metadata: Json | null
+          notes: string | null
+          project_id: string | null
+          scene_id: string | null
+          stale: boolean | null
+          status: string | null
+          superseded_by: string | null
+          updated_at: string | null
+          version_ref: string | null
+        }
+        Insert: {
+          approved_by?: string | null
+          created_at?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_action?: string | null
+          episode_id?: string | null
+          gate_owner?: string | null
+          gate_type?: string | null
+          id?: string | null
+          metadata?: Json | null
+          notes?: string | null
+          project_id?: string | null
+          scene_id?: string | null
+          stale?: boolean | null
+          status?: string | null
+          superseded_by?: string | null
+          updated_at?: string | null
+          version_ref?: string | null
+        }
+        Update: {
+          approved_by?: string | null
+          created_at?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_action?: string | null
+          episode_id?: string | null
+          gate_owner?: string | null
+          gate_type?: string | null
+          id?: string | null
+          metadata?: Json | null
+          notes?: string | null
+          project_id?: string | null
+          scene_id?: string | null
+          stale?: boolean | null
+          status?: string | null
+          superseded_by?: string | null
+          updated_at?: string | null
+          version_ref?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_gates_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_gates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_gates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_gates_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "scenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_gates_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "active_review_gates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_gates_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "review_gates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       architecture_health_snapshot: {
         Row: {
           agent_runs_stuck: number | null
@@ -4821,6 +5003,21 @@ export type Database = {
           last_reaper_run: string | null
           snapshot_at: string | null
           workflow_runs_stuck: number | null
+        }
+        Relationships: []
+      }
+      dead_letter_jobs: {
+        Row: {
+          completed_at: string | null
+          correlation_id: string | null
+          created_at: string | null
+          episode_id: string | null
+          error_message: string | null
+          id: string | null
+          job_type: string | null
+          max_retries: number | null
+          retry_count: number | null
+          slug: string | null
         }
         Relationships: []
       }
@@ -4883,6 +5080,16 @@ export type Database = {
       }
     }
     Functions: {
+      consume_rate_limit: {
+        Args: {
+          p_capacity?: number
+          p_cost?: number
+          p_endpoint: string
+          p_refill_per_minute?: number
+          p_user_id: string
+        }
+        Returns: Json
+      }
       debit_credits: {
         Args: {
           p_amount: number
@@ -4924,6 +5131,10 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      set_policy_enforcement: {
+        Args: { p_mode: string; p_policy_key: string }
+        Returns: undefined
       }
       topup_credits: {
         Args: {

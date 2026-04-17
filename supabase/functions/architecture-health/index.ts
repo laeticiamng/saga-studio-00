@@ -50,7 +50,7 @@ serve(async (req) => {
   // Stuck jobs detail
   const { data: stuckAgents } = await supabase
     .from("agent_runs")
-    .select("id, agent_slug, status, started_at, episode_id")
+    .select("id, agent_slug, status, started_at, episode_id, chain_depth")
     .in("status", ["running", "queued"])
     .lt("started_at", new Date(Date.now() - 15 * 60_000).toISOString())
     .limit(20);
@@ -75,10 +75,34 @@ serve(async (req) => {
     .select("*")
     .order("domain");
 
+  // Phase 2: dead-letter jobs
+  const { data: dlqJobs } = await supabase
+    .from("dead_letter_jobs")
+    .select("*")
+    .order("completed_at", { ascending: false })
+    .limit(50);
+
+  // Phase 2: governance policies (for shadow→enforce switching)
+  const { data: policies } = await supabase
+    .from("governance_policies")
+    .select("id, policy_key, domain, description, enforcement_mode, is_active")
+    .eq("is_active", true)
+    .order("domain");
+
+  // Phase 2: deep-chain agents (warning signal for run-away chains)
+  const { data: deepChainAgents } = await supabase
+    .from("agent_runs")
+    .select("id, agent_slug, chain_depth, episode_id, created_at")
+    .gt("chain_depth", 10)
+    .order("chain_depth", { ascending: false })
+    .limit(10);
+
   // Compute health score (0-100)
   const s = snapshot as Record<string, number | string | null>;
   const stuck = (Number(s.agent_runs_stuck) || 0) + (Number(s.workflow_runs_stuck) || 0) + (Number(s.exports_stuck) || 0);
   const docsLegacyRatio = s.docs_total ? Number(s.docs_legacy) / Number(s.docs_total) : 0;
+  const dlqCount = dlqJobs?.length ?? 0;
+  const deepChains = deepChainAgents?.length ?? 0;
 
   let healthScore = 100;
   if (stuck > 0) healthScore -= Math.min(stuck * 5, 30);
@@ -87,6 +111,8 @@ serve(async (req) => {
   if (Number(s.errors_7d) > 10) healthScore -= 15;
   if (Number(s.budget_blocks_7d) > 0) healthScore -= 10;
   if (Number(s.docs_failed) > 0) healthScore -= 10;
+  if (dlqCount > 5) healthScore -= 10;
+  if (deepChains > 0) healthScore -= 5;
   healthScore = Math.max(0, healthScore);
 
   return new Response(
@@ -97,6 +123,9 @@ serve(async (req) => {
       reaper_runs: reaperRuns ?? [],
       budget_violations: violations ?? [],
       transition_rules: rules ?? [],
+      dlq_jobs: dlqJobs ?? [],
+      policies: policies ?? [],
+      deep_chain_agents: deepChainAgents ?? [],
     }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } },
   );
