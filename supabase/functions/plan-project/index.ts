@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -38,6 +39,12 @@ serve(async (req) => {
       authHeader.replace("Bearer ", "")
     );
     if (authErr || !user) throw new Error("Unauthorized");
+
+    // Rate limit — 15/min/user (planning is AI-heavy)
+    const rl = await checkRateLimit(supabase, user.id, {
+      endpoint: "plan-project", cost: 1, capacity: 15, refillPerMinute: 15,
+    });
+    if (!rl.allowed) return rateLimitResponse(rl, corsHeaders);
 
     const { project_id } = await req.json();
     if (!project_id) throw new Error("project_id required");

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -31,6 +32,12 @@ serve(async (req) => {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Rate limit — 20/min/user (AI synopsis enrichment is moderately expensive)
+    const rl = await checkRateLimit(supabase, user.id, {
+      endpoint: "enhance-synopsis", cost: 1, capacity: 20, refillPerMinute: 20,
+    });
+    if (!rl.allowed) return rateLimitResponse(rl, corsHeaders);
 
     const body = await req.json();
     const { project_id, idea, type, duration_sec, style_preset } = body;
