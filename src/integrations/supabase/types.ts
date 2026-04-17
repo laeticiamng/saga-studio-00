@@ -1084,6 +1084,77 @@ export type Database = {
           },
         ]
       }
+      conflict_resolution_log: {
+        Row: {
+          conflict_id: string | null
+          created_at: string
+          id: string
+          project_id: string | null
+          resolved_value: Json | null
+          rule_id: string | null
+          strategy_used: string
+        }
+        Insert: {
+          conflict_id?: string | null
+          created_at?: string
+          id?: string
+          project_id?: string | null
+          resolved_value?: Json | null
+          rule_id?: string | null
+          strategy_used: string
+        }
+        Update: {
+          conflict_id?: string | null
+          created_at?: string
+          id?: string
+          project_id?: string | null
+          resolved_value?: Json | null
+          rule_id?: string | null
+          strategy_used?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conflict_resolution_log_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "conflict_resolution_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conflict_resolution_rules: {
+        Row: {
+          created_at: string
+          entity_type: string
+          field_key: string
+          id: string
+          is_active: boolean
+          source_priority: Json | null
+          strategy: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          entity_type: string
+          field_key: string
+          id?: string
+          is_active?: boolean
+          source_priority?: Json | null
+          strategy: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          entity_type?: string
+          field_key?: string
+          id?: string
+          is_active?: boolean
+          source_priority?: Json | null
+          strategy?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       continuity_conflicts: {
         Row: {
           conflict_type: string
@@ -1400,6 +1471,7 @@ export type Database = {
           id: string
           manifest_type: string
           metadata: Json | null
+          qc_summary: Json | null
           series_id: string
           status: string
           updated_at: string
@@ -1410,6 +1482,7 @@ export type Database = {
           id?: string
           manifest_type?: string
           metadata?: Json | null
+          qc_summary?: Json | null
           series_id: string
           status?: string
           updated_at?: string
@@ -1420,6 +1493,7 @@ export type Database = {
           id?: string
           manifest_type?: string
           metadata?: Json | null
+          qc_summary?: Json | null
           series_id?: string
           status?: string
           updated_at?: string
@@ -1443,6 +1517,7 @@ export type Database = {
       }
       diagnostic_events: {
         Row: {
+          correlation_id: string | null
           created_at: string
           detail: string | null
           event_type: string
@@ -1455,6 +1530,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          correlation_id?: string | null
           created_at?: string
           detail?: string | null
           event_type: string
@@ -1467,6 +1543,7 @@ export type Database = {
           title: string
         }
         Update: {
+          correlation_id?: string | null
           created_at?: string
           detail?: string | null
           event_type?: string
@@ -2158,6 +2235,7 @@ export type Database = {
       incidents: {
         Row: {
           auto_retry_count: number
+          correlation_id: string | null
           created_at: string
           detail: string | null
           id: string
@@ -2173,6 +2251,7 @@ export type Database = {
         }
         Insert: {
           auto_retry_count?: number
+          correlation_id?: string | null
           created_at?: string
           detail?: string | null
           id?: string
@@ -2188,6 +2267,7 @@ export type Database = {
         }
         Update: {
           auto_retry_count?: number
+          correlation_id?: string | null
           created_at?: string
           detail?: string | null
           id?: string
@@ -4830,6 +4910,7 @@ export type Database = {
           agents: string[] | null
           auto_advance_threshold: number | null
           completed_at: string | null
+          correlation_id: string | null
           created_at: string
           id: string
           label: string | null
@@ -4844,6 +4925,7 @@ export type Database = {
           agents?: string[] | null
           auto_advance_threshold?: number | null
           completed_at?: string | null
+          correlation_id?: string | null
           created_at?: string
           id?: string
           label?: string | null
@@ -4858,6 +4940,7 @@ export type Database = {
           agents?: string[] | null
           auto_advance_threshold?: number | null
           completed_at?: string | null
+          correlation_id?: string | null
           created_at?: string
           id?: string
           label?: string | null
@@ -5042,6 +5125,16 @@ export type Database = {
           style_preset?: string | null
           title?: string | null
           type?: Database["public"]["Enums"]["project_type"] | null
+        }
+        Relationships: []
+      }
+      qc_pass_rate_by_week: {
+        Row: {
+          avg_pass_rate: number | null
+          total_blocking: number | null
+          total_completed: number | null
+          total_failed: number | null
+          week: string | null
         }
         Relationships: []
       }
