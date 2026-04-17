@@ -205,7 +205,7 @@ export default function Auth() {
             </p>
             {!isLogin && (
               <p className="text-center text-xs text-muted-foreground">
-                🎁 Votre premier clip offert — Aucune carte bancaire requise
+                Aucune carte bancaire requise
               </p>
             )}
           </CardContent>
