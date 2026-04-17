@@ -302,7 +302,21 @@ serve(async (req) => {
       });
     } else {
       // ─── PATH B: Client assembly required — upload manifest, NO fake master URL ──
-      console.log("[stitch-render] PATH B: Client assembly mode (no external render service)");
+      console.log("[stitch-render] PATH B: Client assembly mode" + (fallbackForced ? " (FORCED by renderer fallback)" : ""));
+
+      // Diagnostic event when fallback was forced (for admin visibility)
+      if (fallbackForced) {
+        await supabase.from("diagnostic_events").insert({
+          project_id,
+          severity: "warning",
+          scope: "infrastructure",
+          event_type: "renderer_fallback_engaged",
+          title: "Bascule renderer activée",
+          detail: "Le service FFmpeg externe est dégradé — assemblage client utilisé.",
+          raw_data: { project_id, render_mode: "client_assembly_forced" },
+        });
+      }
+
       const manifestPath = `${project_id}/manifest.json`;
       const manifestJson = JSON.stringify(manifest);
       const encoder = new TextEncoder();
@@ -342,10 +356,13 @@ serve(async (req) => {
           cuts_count: beatAlignedCuts.length,
           bpm,
           render_mode: "client_assembly",
+          fallback_forced: fallbackForced,
           manifest_url: manifestUrl,
           stitched_at: new Date().toISOString(),
           shot_types: manifest.shot_types,
-          note: "No external render service configured. Client-side FFmpeg assembly required.",
+          note: fallbackForced
+            ? "Renderer externe dégradé — bascule auto vers client-assembly."
+            : "No external render service configured. Client-side FFmpeg assembly required.",
         }),
       }, { onConflict: "project_id" });
 
@@ -355,10 +372,13 @@ serve(async (req) => {
       return jsonResponse({
         success: true,
         render_mode: "client_assembly",
+        fallback_forced: fallbackForced,
         shots_stitched: shots.length,
         beat_sync: { enabled: true, cuts: beatAlignedCuts.length, bpm },
         manifest_url: manifestUrl,
-        note: "No external render service. Use browser FFmpeg to assemble the final video.",
+        note: fallbackForced
+          ? "External renderer degraded — auto-switched to client assembly."
+          : "No external render service. Use browser FFmpeg to assemble the final video.",
       });
     }
   } catch (err: unknown) {
