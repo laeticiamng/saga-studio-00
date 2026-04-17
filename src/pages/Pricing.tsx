@@ -200,7 +200,7 @@ export default function Pricing() {
         >
           <p className="text-sm text-muted-foreground">
             <Sparkles className="inline h-4 w-4 text-primary mr-1.5 -mt-0.5" />
-            <strong className="text-foreground">Essai Découverte</strong> — 10 crédits offerts, 1 projet, sans carte bancaire.
+            <strong className="text-foreground">Essai Découverte</strong> — 10 crédits offerts pour tester, sans carte bancaire.
             <Button variant="link" size="sm" className="ml-1 text-primary p-0 h-auto" onClick={() => navigate("/auth?signup")}>
               Créer un compte <ArrowRight className="h-3 w-3 ml-0.5" />
             </Button>

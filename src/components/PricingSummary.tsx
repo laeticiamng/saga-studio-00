@@ -63,7 +63,7 @@ export default function PricingSummary() {
             <p>Pour les créateurs, les équipes et les studios.</p>
             <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-sm text-foreground/90">
               <Coins className="h-4 w-4 text-primary" />
-              <span><strong>1 projet complet offert</strong> à l'inscription · sans carte bancaire</span>
+              <span>Sans carte bancaire requise</span>
             </div>
           </div>
         </AnimatedSection>
