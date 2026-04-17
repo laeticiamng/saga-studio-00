@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCreateExportVersion } from "@/hooks/useExportVersions";
 import { useToast } from "@/hooks/use-toast";
 import { Download, Film, Monitor, Smartphone, Image, Clock, CheckCircle, Loader2, AlertCircle, ExternalLink, Zap } from "lucide-react";
+import { useSignedRenderUrl } from "@/hooks/useSignedRenderUrl";
 
 const STATUS_MAP: Record<string, { label: string; icon: React.ElementType; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   pending: { label: "En attente", icon: Clock, variant: "outline" },
