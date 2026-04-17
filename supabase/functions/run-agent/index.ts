@@ -73,6 +73,18 @@ serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // Rate limit per episode (or series, or run.id) — limite l'emballement de chaîne
+    // 30 runs/min par épisode max. Utilise un user_id pseudo dérivé.
+    const rlKey = run.episode_id || run.series_id || run.id;
+    const rlPseudoUser = rlKey; // UUID valide
+    const rl = await checkRateLimit(supabase, rlPseudoUser, {
+      endpoint: "run-agent", cost: 1, capacity: 30, refillPerMinute: 30,
+    });
+    if (!rl.allowed) {
+      console.warn(`[run-agent] rate-limited episode/series=${rlKey} remaining=${rl.remaining}`);
+      return rateLimitResponse(rl, corsHeaders);
+    }
+
     // Mark as running
     const startedAt = new Date().toISOString();
     await supabase
