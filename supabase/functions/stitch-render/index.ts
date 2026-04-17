@@ -220,28 +220,49 @@ serve(async (req) => {
 
     const thumbs = shots.slice(0, 6).map(s => s.output_url).filter(Boolean);
 
-    // ─── Try external FFmpeg render service first ──
+    // ─── Try external FFmpeg render service (with auto-fallback observability) ──
     const renderServiceUrl = Deno.env.get("FFMPEG_RENDER_SERVICE_URL");
     let renderResult: any = null;
+    let fallbackForced = false;
 
+    // Check current renderer health state — if fallback is active, skip external call
     if (renderServiceUrl) {
+      const { data: stateData } = await supabase.rpc("get_renderer_fallback_state");
+      if (stateData?.fallback_active) {
+        fallbackForced = true;
+        console.log("[stitch-render] Fallback active (consecutive_failures=" + stateData.consecutive_failures + ") — skipping external render");
+      }
+    }
+
+    if (renderServiceUrl && !fallbackForced) {
       try {
         console.log("[stitch-render] Attempting external render service:", renderServiceUrl);
         const res = await fetch(renderServiceUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(manifest),
+          signal: AbortSignal.timeout(120_000),
         });
         if (res.ok) {
           renderResult = await res.json();
           console.log("[stitch-render] External render result:", JSON.stringify(renderResult));
+          // Report success — resets the failure counter
+          await supabase.rpc("report_renderer_health", { p_success: true, p_notes: null });
         } else {
           const errText = await res.text();
           console.warn("[stitch-render] External render service returned", res.status, errText);
+          await supabase.rpc("report_renderer_health", {
+            p_success: false,
+            p_notes: `HTTP ${res.status}: ${errText.slice(0, 200)}`,
+          });
         }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "Unknown error";
         console.warn("[stitch-render] External render service failed:", message);
+        await supabase.rpc("report_renderer_health", {
+          p_success: false,
+          p_notes: message.slice(0, 200),
+        });
       }
     }
 
