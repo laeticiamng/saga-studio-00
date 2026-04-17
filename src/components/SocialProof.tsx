@@ -3,13 +3,13 @@ import AnimatedSection, { StaggerContainer, StaggerItem } from "./AnimatedSectio
 import { Shield, Layers, Eye, Download, FileText, Brain, Clapperboard } from "lucide-react";
 
 const signals = [
-  { icon: Shield, text: "Validation anti-aberrations à chaque étape" },
-  { icon: FileText, text: "Ingestion intelligente de documents" },
-  { icon: Brain, text: "Continuité narrative inter-épisodes" },
-  { icon: Layers, text: "Timeline multi-pistes avec rough cut + fine cut" },
-  { icon: Eye, text: "6 review gates humaines" },
-  { icon: Clapperboard, text: "Finishing cinématique + normalisation audio" },
-  { icon: Download, text: "Exports versionnés avec QC obligatoire" },
+  { icon: Shield, text: "Détection automatique des défauts visuels" },
+  { icon: FileText, text: "Comprend vos scripts et documents" },
+  { icon: Brain, text: "Continuité narrative entre épisodes" },
+  { icon: Layers, text: "Timeline multi-pistes (vidéo, audio, FX)" },
+  { icon: Eye, text: "6 points de validation humaine" },
+  { icon: Clapperboard, text: "Finishing & normalisation audio" },
+  { icon: Download, text: "Exports vérifiés avant livraison" },
 ];
 
 export default function SocialProof() {
@@ -20,11 +20,14 @@ export default function SocialProof() {
       <div className="container mx-auto relative z-10">
         <AnimatedSection variant="blurIn">
           <div className="text-center mb-12">
-            <p className="text-sm font-semibold text-primary uppercase tracking-widest mb-4">Signaux qualité</p>
+            <p className="text-sm font-semibold text-primary uppercase tracking-widest mb-4">Architecture</p>
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">
               Conçu pour la production
               <span className="text-primary"> professionnelle</span>
             </h2>
+            <p className="text-muted-foreground text-base max-w-2xl mx-auto">
+              Une infrastructure pensée pour la qualité, pas un simple générateur de clips.
+            </p>
           </div>
         </AnimatedSection>
 
@@ -42,23 +45,6 @@ export default function SocialProof() {
             </StaggerItem>
           ))}
         </StaggerContainer>
-
-        {/* Trust metrics */}
-        <AnimatedSection variant="fadeUp" delay={0.2}>
-          <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-6 max-w-3xl mx-auto text-center">
-            {[
-              { value: "13+", label: "Styles visuels" },
-              { value: "8", label: "Étapes pipeline" },
-              { value: "6", label: "Review gates" },
-              { value: "4", label: "Formats d'export" },
-            ].map((m) => (
-              <div key={m.label}>
-                <p className="text-3xl sm:text-4xl font-bold text-primary">{m.value}</p>
-                <p className="text-sm text-muted-foreground mt-1">{m.label}</p>
-              </div>
-            ))}
-          </div>
-        </AnimatedSection>
       </div>
     </section>
   );

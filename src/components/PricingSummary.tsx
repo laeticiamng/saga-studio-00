@@ -59,8 +59,12 @@ export default function PricingSummary() {
       <div className="container mx-auto relative z-10">
         <AnimatedSection variant="blurIn">
           <div className="page-header">
-            <h2>Infrastructure de production professionnelle</h2>
-            <p>Trois plans conçus pour les créateurs, les équipes et les studios.</p>
+            <h2>Trois plans, un studio complet</h2>
+            <p>Pour les créateurs, les équipes et les studios.</p>
+            <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-sm text-foreground/90">
+              <Coins className="h-4 w-4 text-primary" />
+              <span><strong>1 projet complet offert</strong> à l'inscription · sans carte bancaire</span>
+            </div>
           </div>
         </AnimatedSection>
 
