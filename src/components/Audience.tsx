@@ -1,37 +1,27 @@
-import { Building2, Users, Video, Megaphone, Layers, Workflow } from "lucide-react";
+import { Building2, Video, Megaphone, Layers } from "lucide-react";
 import { motion } from "framer-motion";
 import AnimatedSection from "./AnimatedSection";
 
 const audiences = [
   {
-    icon: Building2,
-    title: "Studios créatifs",
-    description: "Industrialiser la production de formats visuels sans sacrifier la direction artistique.",
-  },
-  {
-    icon: Users,
-    title: "Équipes contenu",
-    description: "Produire plus vite des formats narratifs cohérents pour leurs marques ou plateformes.",
-  },
-  {
     icon: Video,
     title: "Créateurs vidéo",
-    description: "Passer du script ou du brief au rendu final sans assembler dix outils.",
+    description: "Du script au rendu final sans jongler entre dix outils. Concentrez-vous sur la création.",
+  },
+  {
+    icon: Building2,
+    title: "Studios créatifs",
+    description: "Industrialisez la production sans sacrifier la direction artistique ni la qualité.",
   },
   {
     icon: Megaphone,
     title: "Marques narratives",
-    description: "Construire des formats vidéo récurrents avec une identité visuelle maîtrisée.",
+    description: "Produisez des formats vidéo récurrents avec une identité visuelle maîtrisée.",
   },
   {
     icon: Layers,
-    title: "Projets éditoriaux sériels",
-    description: "Maintenir la continuité d'univers, de personnages et de style sur plusieurs épisodes.",
-  },
-  {
-    icon: Workflow,
-    title: "Équipes de production",
-    description: "Structurer un pipeline reproductible avec validation qualité et review gates.",
+    title: "Équipes séries",
+    description: "Maintenez la continuité de personnages, décors et style sur plusieurs épisodes.",
   },
 ];
 
@@ -55,7 +45,7 @@ const Audience = () => {
           </div>
         </AnimatedSection>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 max-w-6xl mx-auto">
           {audiences.map((item, idx) => (
             <AnimatedSection key={item.title} delay={0.05 * idx}>
               <motion.article

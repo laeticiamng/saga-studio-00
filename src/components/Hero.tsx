@@ -70,7 +70,7 @@ const Hero = () => {
           >
             <Sparkles className="w-4 h-4 text-primary" />
             <span className="text-sm text-foreground/80 font-medium">
-              Le premier studio de production IA end-to-end
+              Studio audiovisuel IA · Films, séries, clips
             </span>
           </motion.div>
 
@@ -82,11 +82,11 @@ const Hero = () => {
             className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6 sm:mb-8 leading-[1.02] tracking-tight"
           >
             <span className="bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
-              Produisez des vidéos, clips et formats narratifs
+              Du script au master final,
             </span>
             <br />
             <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
-              avec un workflow IA de bout en bout
+              dans un seul studio.
             </span>
           </motion.h1>
 
@@ -97,7 +97,7 @@ const Hero = () => {
             transition={{ duration: 0.7, delay: 0.35 }}
             className="text-lg sm:text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-10 sm:mb-14 leading-relaxed"
           >
-            Saga Studio aide les équipes créatives à transformer scripts, documents et idées en productions audiovisuelles structurées : génération, validation, montage et export dans un même workflow.
+            Transformez vos scripts, documents ou idées en vidéos, séries et clips musicaux complets — génération, montage et export, sans assembler dix outils.
           </motion.p>
 
           {/* CTA */}
@@ -109,7 +109,7 @@ const Hero = () => {
           >
             <Button variant="hero" size="lg" className="group text-base px-8 py-6" onClick={handleGetStarted}>
               <Play className="w-5 h-5 group-hover:scale-110 transition-transform fill-current" />
-              Commencer un projet
+              Démarrer mon projet — 1 projet offert
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </Button>
             <Button
@@ -117,30 +117,30 @@ const Hero = () => {
               size="lg"
               className="text-base px-8 py-6"
               onClick={() => {
-                document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" });
+                document.getElementById("gallery")?.scrollIntoView({ behavior: "smooth" });
               }}
             >
-              Découvrir le workflow
+              Voir des exemples
             </Button>
           </motion.div>
 
-          {/* Stats bar */}
+          {/* Concrete benefits bar */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 1, delay: 0.8 }}
-            className="mt-16 sm:mt-20 flex flex-wrap justify-center gap-8 sm:gap-12 text-center"
+            className="mt-12 sm:mt-16 flex flex-wrap justify-center gap-x-8 gap-y-3 text-center text-sm text-muted-foreground"
           >
             {[
-              { value: "4", label: "types de projets" },
-              { value: "13+", label: "styles visuels" },
-              { value: "6", label: "review gates" },
-              { value: "1", label: "workflow unifié" },
-            ].map((stat) => (
-              <div key={stat.label} className="flex flex-col items-center">
-                <span className="text-2xl sm:text-3xl font-bold text-primary">{stat.value}</span>
-                <span className="text-xs sm:text-sm text-muted-foreground mt-1">{stat.label}</span>
-              </div>
+              "Premier livrable en ~10 min",
+              "Continuité visuelle garantie",
+              "Export 1080p / 4K / 9:16",
+              "Sans carte bancaire",
+            ].map((b) => (
+              <span key={b} className="inline-flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary/70" />
+                {b}
+              </span>
             ))}
           </motion.div>
         </div>
