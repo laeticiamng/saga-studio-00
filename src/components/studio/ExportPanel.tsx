@@ -217,7 +217,7 @@ export function ExportPanel({ projectId, exports: exportVersions, timelineId }: 
   );
 }
 
-// Sub-component: Show current render row status with download links
+// Sub-component: Show current render row status with download links (signed URLs)
 function RenderStatusCard({ projectId }: { projectId: string }) {
   const { data: render } = useQuery({
     queryKey: ["render_status", projectId],
@@ -231,9 +231,24 @@ function RenderStatusCard({ projectId }: { projectId: string }) {
     },
   });
 
-  if (!render) return null;
+  const master16 = useSignedRenderUrl({
+    path: render?.master_path_16_9 ?? null,
+    projectId,
+    fallbackUrl: render?.master_url_16_9 ?? null,
+  });
+  const master9 = useSignedRenderUrl({
+    path: render?.master_path_9_16 ?? null,
+    projectId,
+    fallbackUrl: render?.master_url_9_16 ?? null,
+  });
+  const teaser = useSignedRenderUrl({
+    path: render?.teaser_path ?? null,
+    projectId,
+    fallbackUrl: render?.teaser_url ?? null,
+  });
 
-  const hasUrls = render.master_url_16_9 || render.master_url_9_16 || render.teaser_url || render.manifest_url;
+  if (!render) return null;
+  const hasUrls = master16.url || master9.url || teaser.url || render.manifest_url;
   if (!hasUrls) return null;
 
   return (
@@ -248,8 +263,8 @@ function RenderStatusCard({ projectId }: { projectId: string }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
-        {render.master_url_16_9 && (
-          <a href={render.master_url_16_9} target="_blank" rel="noopener noreferrer"
+        {master16.url && (
+          <a href={master16.url} target="_blank" rel="noopener noreferrer"
             className="flex items-center justify-between p-2.5 rounded-lg border hover:bg-secondary/30 transition-colors">
             <div className="flex items-center gap-2">
               <Monitor className="h-4 w-4 text-primary" />
@@ -258,8 +273,8 @@ function RenderStatusCard({ projectId }: { projectId: string }) {
             <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
           </a>
         )}
-        {render.master_url_9_16 && (
-          <a href={render.master_url_9_16} target="_blank" rel="noopener noreferrer"
+        {master9.url && (
+          <a href={master9.url} target="_blank" rel="noopener noreferrer"
             className="flex items-center justify-between p-2.5 rounded-lg border hover:bg-secondary/30 transition-colors">
             <div className="flex items-center gap-2">
               <Smartphone className="h-4 w-4 text-muted-foreground" />
@@ -268,8 +283,8 @@ function RenderStatusCard({ projectId }: { projectId: string }) {
             <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
           </a>
         )}
-        {render.teaser_url && (
-          <a href={render.teaser_url} target="_blank" rel="noopener noreferrer"
+        {teaser.url && (
+          <a href={teaser.url} target="_blank" rel="noopener noreferrer"
             className="flex items-center justify-between p-2.5 rounded-lg border hover:bg-secondary/30 transition-colors">
             <div className="flex items-center gap-2">
               <Film className="h-4 w-4 text-muted-foreground" />
@@ -278,7 +293,7 @@ function RenderStatusCard({ projectId }: { projectId: string }) {
             <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
           </a>
         )}
-        {render.manifest_url && !render.master_url_16_9 && (
+        {render.manifest_url && !master16.url && (
           <div className="p-2.5 rounded-lg border bg-secondary/10">
             <p className="text-xs text-muted-foreground">
               Mode assemblage client — le manifest est prêt. Le rendu final sera effectué côté navigateur.
