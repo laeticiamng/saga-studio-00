@@ -184,11 +184,12 @@ export default function ShareView() {
           </Card>
         )}
       </div>
+      <footer className="border-t border-border/50 py-6 text-center text-xs text-muted-foreground mt-12">
+        © {new Date().getFullYear()} EMOTIONSCARE SASU — Saga Studio. Tous droits réservés.
+      </footer>
     </div>
   );
 }
-
-export default function ShareView() {
   const { id } = useParams<{ id: string }>();
   usePageTitle("Partage vidéo");
 
