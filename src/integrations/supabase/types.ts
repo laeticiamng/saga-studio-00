@@ -5264,6 +5264,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      get_renderer_fallback_state: { Args: never; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -5287,6 +5288,10 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      report_renderer_health: {
+        Args: { p_notes?: string; p_success: boolean }
+        Returns: Json
       }
       set_policy_enforcement: {
         Args: { p_mode: string; p_policy_key: string }
